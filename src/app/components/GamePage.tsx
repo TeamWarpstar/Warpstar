@@ -1,4 +1,4 @@
-import { useParams, Link } from "react-router";
+import { useParams, Link } from "react-router-dom";
 import { StarPolarDiagram } from "./StarPolarDiagram";
 import { ReviewCard } from "./ReviewCard";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
