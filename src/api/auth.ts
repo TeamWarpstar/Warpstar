@@ -26,6 +26,16 @@ export async function login(email: string, password: string): Promise<AuthTokens
   return tokens;
 }
 
+export async function googleLogin(googleCredential: string): Promise<AuthTokens> {
+  const tokens = await apiFetch<AuthTokens>("/api/auth/google", {
+    method:   "POST",
+    body:     JSON.stringify({ credential: googleCredential }),
+    skipAuth: true,
+  });
+  setTokens(tokens.access_token, tokens.refresh_token);
+  return tokens;
+}
+
 export function logout() {
   clearTokens();
 }

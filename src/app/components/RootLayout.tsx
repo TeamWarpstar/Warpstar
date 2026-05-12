@@ -9,9 +9,7 @@ export function RootLayout() {
 
   useEffect(() => {
     if (isLoading) return;
-    if (!user) {
-      navigate("/login", { replace: true });
-    } else if (!user.profileComplete) {
+    if (user && !user.profileComplete) {
       navigate("/onboarding", { replace: true });
     }
   }, [user, isLoading, navigate]);

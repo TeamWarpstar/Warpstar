@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { login as apiLogin, register as apiRegister, logout as apiLogout } from "../../api/auth";
+import { login as apiLogin, register as apiRegister, logout as apiLogout, googleLogin as apiGoogleLogin } from "../../api/auth";
 import { getMe, BackendUser } from "../../api/users";
 import { clearTokens } from "../../api/client";
 
@@ -22,6 +22,7 @@ interface AuthContextType {
   user:          WarpstarUser | null;
   isLoading:     boolean;
   login:         (email: string, password: string) => Promise<void>;
+  googleLogin:   (credential: string) => Promise<void>;
   register:      (username: string, email: string, password: string) => Promise<void>;
   signOut:       () => void;
   updateProfile: (data: Partial<WarpstarUser>) => void;
@@ -54,10 +55,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const token = localStorage.getItem("ws_access_token");
     if (!token) { setIsLoading(false); return; }
+
+    const timeout = setTimeout(() => {
+      clearTokens();
+      setIsLoading(false);
+    }, 5000);
+
     getMe()
       .then(u => setUser(mapBackendUser(u)))
       .catch(() => clearTokens())
-      .finally(() => setIsLoading(false));
+      .finally(() => {
+        clearTimeout(timeout);
+        setIsLoading(false);
+      });
   }, []);
 
   const refreshUser = async () => {
@@ -67,6 +77,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string) => {
     await apiLogin(email, password);
+    const u = await getMe();
+    setUser(mapBackendUser(u));
+  };
+
+  const googleLogin = async (credential: string) => {
+    await apiGoogleLogin(credential);
     const u = await getMe();
     setUser(mapBackendUser(u));
   };
@@ -88,7 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, register, signOut, updateProfile, refreshUser }}>
+    <AuthContext.Provider value={{ user, isLoading, login, googleLogin, register, signOut, updateProfile, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );
