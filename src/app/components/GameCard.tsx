@@ -11,7 +11,7 @@ interface GameCardProps {
   platforms: string[];
   developer: string;
   year: number;
-  genre: string;
+  genres: string[];
   scores: {
     gameplay: number;
     content: number;
@@ -19,9 +19,10 @@ interface GameCardProps {
     aesthetics: number;
     polish: number;
   };
+  igdbRating: number;
 }
 
-export function GameCard({ id, title, coverArt, platforms, developer, year, genre, scores }: GameCardProps) {
+export function GameCard({ id, title, coverArt, platforms, developer, year, genre, scores, igdbRating }: GameCardProps) {
   const [showDiagram, setShowDiagram] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const [popoverStyle, setPopoverStyle] = useState<React.CSSProperties>({});
@@ -78,22 +79,15 @@ export function GameCard({ id, title, coverArt, platforms, developer, year, genr
               className="w-full h-full object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-
+//Chang Back to totalScore on release
             <div className="absolute top-3 right-3 px-3 py-1 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full text-white font-bold text-sm shadow-lg">
-              {totalScore.toFixed(1)}
+              {igdbRating.toFixed(1)}
             </div>
 
             <div className="absolute bottom-3 left-3 right-3">
               <h3 className="text-white font-bold text-lg mb-2 line-clamp-2">{title}</h3>
               <div className="flex flex-wrap gap-1">
-                {platforms.map(platform => (
-                  <span
-                    key={platform}
-                    className="px-2 py-1 bg-purple-900/80 text-purple-200 text-xs rounded-md border border-purple-500/30"
-                  >
-                    {platform}
-                  </span>
-                ))}
+        
               </div>
             </div>
           </div>
@@ -111,7 +105,7 @@ export function GameCard({ id, title, coverArt, platforms, developer, year, genr
               <div className="flex items-start justify-between gap-3">
                 <h3 className="text-white font-bold text-lg leading-tight">{title}</h3>
                 <div className="shrink-0 px-3 py-1 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full text-white font-bold text-sm shadow-lg">
-                  {totalScore.toFixed(1)}
+                  {igdbRating.toFixed(1)}
                 </div>
               </div>
               <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-purple-300">

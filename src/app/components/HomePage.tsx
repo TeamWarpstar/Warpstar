@@ -18,15 +18,17 @@ const GENRE_EMOJIS: Record<string,string> = {
   Platformer:"🎮", Racing:"🏎️",
 };
 
+// Backend now returns resolved `genres` and `platforms` string arrays
+// directly — no need to map over IDs
 function gameToCardProps(g: Game) {
   return {
     id:        g.id,
     title:     g.name,
     coverArt:  g.coverUrl ?? "https://images.unsplash.com/photo-1538481199705-c710c4e965fc?w=400&h=600&fit=crop",
-    platforms: [],
+    platforms: g.platforms ?? [],
     developer: "",
     year:      g.releaseDate ? new Date(g.releaseDate).getFullYear() : 0,
-    genre:     "",
+    genre:     (g.genres ?? []).join(", "),
     scores: {
       gameplay:   g.gameplayAvg,
       content:    g.contentAvg,
@@ -34,6 +36,7 @@ function gameToCardProps(g: Game) {
       aesthetics: g.aestheticsAvg,
       polish:     g.polishAvg,
     },
+    igdbRating: g.igdbRating,
   };
 }
 
@@ -57,7 +60,7 @@ export function HomePage() {
     }).finally(() => setLoading(false));
   }, []);
 
-  const recSlice = recommended.slice(recPage * REC_PAGE_SIZE, (recPage + 1) * REC_PAGE_SIZE);
+  const recSlice   = recommended.slice(recPage * REC_PAGE_SIZE, (recPage + 1) * REC_PAGE_SIZE);
   const maxRecPage = Math.max(0, Math.ceil(recommended.length / REC_PAGE_SIZE) - 1);
 
   if (loading) return (
@@ -70,10 +73,26 @@ export function HomePage() {
     <div className="max-w-7xl mx-auto px-4 py-8 space-y-12">
       <section>
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-3xl font-bold bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent">Recommended for You</h2>
+          <h2 className="text-3xl font-bold bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent">
+            Recommended for You
+          </h2>
           <div className="flex gap-2">
-            <button onClick={() => setRecPage(p => Math.max(0, p-1))} disabled={recPage===0} className="p-2 bg-purple-950/50 border border-purple-500/30 rounded-lg hover:border-pink-500/50 transition-colors disabled:opacity-40" aria-label="Previous"><ChevronLeft className="w-5 h-5 text-purple-300"/></button>
-            <button onClick={() => setRecPage(p => Math.min(maxRecPage, p+1))} disabled={recPage>=maxRecPage} className="p-2 bg-purple-950/50 border border-purple-500/30 rounded-lg hover:border-pink-500/50 transition-colors disabled:opacity-40" aria-label="Next"><ChevronRight className="w-5 h-5 text-purple-300"/></button>
+            <button
+              onClick={() => setRecPage(p => Math.max(0, p - 1))}
+              disabled={recPage === 0}
+              className="p-2 bg-purple-950/50 border border-purple-500/30 rounded-lg hover:border-pink-500/50 transition-colors disabled:opacity-40"
+              aria-label="Previous"
+            >
+              <ChevronLeft className="w-5 h-5 text-purple-300"/>
+            </button>
+            <button
+              onClick={() => setRecPage(p => Math.min(maxRecPage, p + 1))}
+              disabled={recPage >= maxRecPage}
+              className="p-2 bg-purple-950/50 border border-purple-500/30 rounded-lg hover:border-pink-500/50 transition-colors disabled:opacity-40"
+              aria-label="Next"
+            >
+              <ChevronRight className="w-5 h-5 text-purple-300"/>
+            </button>
           </div>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
@@ -82,18 +101,25 @@ export function HomePage() {
       </section>
 
       <section>
-        <h2 className="text-3xl font-bold bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent mb-6">Top Rated</h2>
+        <h2 className="text-3xl font-bold bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent mb-6">
+          Top Rated
+        </h2>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
           {trending.map(g => <GameCard key={g.id} {...gameToCardProps(g)} />)}
         </div>
       </section>
 
       <section>
-        <h2 className="text-3xl font-bold bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent mb-6">Browse by Genre</h2>
+        <h2 className="text-3xl font-bold bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent mb-6">
+          Browse by Genre
+        </h2>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           {genres.map(genre => (
-            <Link key={genre.id} to={`/genre/${genre.name.toLowerCase()}`}
-              className="group relative overflow-hidden rounded-xl p-6 aspect-square flex flex-col items-center justify-center gap-3 bg-purple-950/30 border border-purple-500/20 hover:border-pink-500/50 hover:scale-105 transition-all duration-300">
+            <Link
+              key={genre.id}
+              to={`/genre/${genre.name.toLowerCase()}`}
+              className="group relative overflow-hidden rounded-xl p-6 aspect-square flex flex-col items-center justify-center gap-3 bg-purple-950/30 border border-purple-500/20 hover:border-pink-500/50 hover:scale-105 transition-all duration-300"
+            >
               <div className={`absolute inset-0 bg-gradient-to-br ${GENRE_COLORS[genre.name] ?? "from-purple-500 to-pink-500"} opacity-20 group-hover:opacity-30 transition-opacity`} />
               <span className="text-5xl relative z-10">{GENRE_EMOJIS[genre.name] ?? "🎮"}</span>
               <span className="text-white font-semibold relative z-10">{genre.name}</span>
