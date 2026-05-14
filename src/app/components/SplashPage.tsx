@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
+import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
 import { useAuth } from "../context/AuthContext";
-import { Gamepad2, Star, Users, ChevronRight } from "lucide-react";
+import { Gamepad2, Star, Users } from "lucide-react";
 import warpstarWhiteLogo from "../../imports/warpstarwhite.png";
 
 const spaceBackground =
@@ -42,14 +43,20 @@ export function SplashPage() {
   const navigate = useNavigate();
   const [isSigningIn, setIsSigningIn] = useState(false);
 
-  const handleGoogleSignIn = async () => {
+  const handleGoogleSuccess = async (credentialResponse: any) => {
     setIsSigningIn(true);
     try {
-      await signInWithGoogle();
+      await signInWithGoogle(credentialResponse.credential);
       navigate("/onboarding");
-    } catch {
+    } catch (error) {
+      console.error("Sign-in error:", error);
       setIsSigningIn(false);
     }
+  };
+
+  const handleGoogleError = () => {
+    console.log("Login Failed");
+    setIsSigningIn(false);
   };
 
   return (
@@ -88,13 +95,14 @@ export function SplashPage() {
           <div className="flex items-center">
             <img src={warpstarWhiteLogo} alt="Warpstar" className="h-24 w-auto" />
           </div>
-          <button
-            onClick={handleGoogleSignIn}
-            disabled={isSigningIn}
-            className="px-5 py-2.5 text-sm text-white/70 border border-white/20 rounded-full hover:border-white/50 hover:text-white transition-all duration-200 disabled:opacity-50 -translate-y-8"
-          >
-            Sign in
-          </button>
+          <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || ""}>
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={handleGoogleError}
+              text="signin_with"
+              size="large"
+            />
+          </GoogleOAuthProvider>
         </header>
 
         {/* Hero */}

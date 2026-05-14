@@ -26,6 +26,7 @@ export function GameCard({ id, title, coverArt, platforms, developer, year, genr
   const [showDiagram, setShowDiagram] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const [popoverStyle, setPopoverStyle] = useState<React.CSSProperties>({});
+  const [showPlatforms, setShowPlatforms] = useState(false);
 
   const DIAGRAM_SIZE = 240;
   const POPOVER_WIDTH = 320;
@@ -74,8 +75,14 @@ export function GameCard({ id, title, coverArt, platforms, developer, year, genr
       <Link
         to={`/game/${id}`}
         className="group relative block"
-        onMouseEnter={() => setShowDiagram(true)}
-        onMouseLeave={() => setShowDiagram(false)}
+        onMouseEnter={() => {
+          setShowDiagram(true);
+          setShowPlatforms(true);
+        }}
+        onMouseLeave={() => {
+          setShowDiagram(false);
+          setShowPlatforms(false);
+        }}
       >
         <div ref={cardRef} className="game-card relative overflow-hidden rounded-xl bg-purple-950/30 border border-purple-500/20 transition-all duration-300 hover:border-pink-500/50 hover:scale-105 hover:shadow-2xl hover:shadow-pink-500/20">
           <div className="aspect-[3/4] relative">
@@ -92,16 +99,18 @@ export function GameCard({ id, title, coverArt, platforms, developer, year, genr
 
             <div className="absolute bottom-3 left-3 right-3">
               <h3 className="text-[#ffffff] font-bold text-lg mb-2 line-clamp-2">{title}</h3>
-              <div className="flex flex-wrap gap-1">
-                {platforms.map(platform => (
-                  <span
-                    key={platform}
-                    className="px-2 py-1 bg-purple-900/80 text-purple-200 text-xs rounded-md border border-purple-500/30"
-                  >
-                    {platform}
-                  </span>
-                ))}
-              </div>
+              {showPlatforms && (
+                <div className="flex flex-wrap gap-1">
+                  {platforms.map(platform => (
+                    <span
+                      key={platform}
+                      className="px-2 py-1 bg-purple-900/80 text-purple-200 text-xs rounded-md border border-purple-500/30"
+                    >
+                      {platform}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>

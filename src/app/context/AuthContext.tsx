@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { googleLogin } from "../api/auth";
 
 export interface WarpstarUser {
   id: string;
@@ -16,7 +17,7 @@ export interface WarpstarUser {
 interface AuthContextType {
   user: WarpstarUser | null;
   isLoading: boolean;
-  signInWithGoogle: () => Promise<void>;
+  signInWithGoogle: (googleCredential: string) => Promise<void>;
   signOut: () => void;
   updateProfile: (data: Partial<WarpstarUser>) => void;
 }
@@ -24,16 +25,6 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 const STORAGE_KEY = "warpstar_user";
-
-// Mock Google accounts to cycle through for demo purposes
-const MOCK_GOOGLE_USERS = [
-  {
-    id: "google_uid_001",
-    email: "alex.nova@gmail.com",
-    googleName: "Alex Nova",
-    googleAvatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80&h=80&fit=crop&crop=face",
-  },
-];
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<WarpstarUser | null>(null);
@@ -62,18 +53,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(u);
   };
 
-  const signInWithGoogle = async () => {
-    // Simulate a short OAuth round-trip
-    await new Promise(r => setTimeout(r, 1200));
-    const mock = MOCK_GOOGLE_USERS[0];
-    const newUser: WarpstarUser = {
-      ...mock,
-      profileComplete: false,
-    };
-    persist(newUser);
+  const signInWithGoogle = async (googleCredential: string) => {
+    try {
+      const response = await googleLogin(googleCredential);
+      const newUser: WarpstarUser = {
+        id: response.user.id,
+        email: response.user.email,
+        googleName: response.user.googleName || "",
+        googleAvatar: response.user.googleAvatar || "",
+        profileComplete: false,
+      };
+      persist(newUser);
+    } catch (error) {
+      console.error("Google login failed:", error);
+      throw error;
+    }
   };
 
   const signOut = () => {
+    localStorage.removeItem("ws_access_token");
+    localStorage.removeItem("ws_refresh_token");
     persist(null);
   };
 

@@ -1,132 +1,51 @@
+import { useState, useEffect } from "react";
 import { GameCard } from "./GameCard";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Link } from "react-router";
+import { getGames, Game, GamesResponse } from "../api/games";
 
-const recommendedGames = [
+// Fallback mock data for when API is unavailable
+const FALLBACK_GAMES = [
   {
     id: "1",
-    title: "Stellar Odyssey",
-    coverArt: "https://images.unsplash.com/photo-1538481199705-c710c4e965fc?w=400&h=600&fit=crop",
+    name: "Stellar Odyssey",
+    coverUrl: "https://images.unsplash.com/photo-1538481199705-c710c4e965fc?w=400&h=600&fit=crop",
     platforms: ["PC", "PS5", "Xbox"],
-    developer: "Nova Interactive",
-    year: 2024,
-    genre: "Sci-Fi RPG",
-    scores: { gameplay: 9.2, content: 8.5, narrative: 9.0, aesthetics: 9.5, polish: 8.8 },
+    genres: ["Sci-Fi", "RPG"],
+    gameplayAvg: 9.2,
+    contentAvg: 8.5,
+    narrativeAvg: 9.0,
+    aestheticsAvg: 9.5,
+    polishAvg: 8.8,
+    releaseDate: "2024-01-15",
   },
   {
     id: "3",
-    title: "Dragon's Legacy",
-    coverArt: "https://images.unsplash.com/photo-1511512578047-dfb367046420?w=400&h=600&fit=crop",
+    name: "Dragon's Legacy",
+    coverUrl: "https://images.unsplash.com/photo-1511512578047-dfb367046420?w=400&h=600&fit=crop",
     platforms: ["PC", "PS5"],
-    developer: "Ember Studios",
-    year: 2024,
-    genre: "Fantasy RPG",
-    scores: { gameplay: 9.6, content: 9.5, narrative: 9.8, aesthetics: 9.7, polish: 9.6 },
+    genres: ["Fantasy", "RPG"],
+    gameplayAvg: 9.6,
+    contentAvg: 9.5,
+    narrativeAvg: 9.8,
+    aestheticsAvg: 9.7,
+    polishAvg: 9.6,
+    releaseDate: "2024-03-20",
   },
   {
     id: "12",
-    title: "Hollow Frontier",
-    coverArt: "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400&h=600&fit=crop",
+    name: "Hollow Frontier",
+    coverUrl: "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400&h=600&fit=crop",
     platforms: ["PC"],
-    developer: "Dusk Engine",
-    year: 2025,
-    genre: "Survival",
-    scores: { gameplay: 7.8, content: 6.9, narrative: 6.2, aesthetics: 7.5, polish: 6.8 },
+    genres: ["Survival"],
+    gameplayAvg: 7.8,
+    contentAvg: 6.9,
+    narrativeAvg: 6.2,
+    aestheticsAvg: 7.5,
+    polishAvg: 6.8,
+    releaseDate: "2025-02-10",
   },
-  {
-    id: "13",
-    title: "Chrono Break",
-    coverArt: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&h=600&fit=crop",
-    platforms: ["PC", "Switch"],
-    developer: "TimeLock Studios",
-    year: 2023,
-    genre: "Puzzle",
-    scores: { gameplay: 6.0, content: 5.5, narrative: 6.5, aesthetics: 6.2, polish: 5.8 },
-  },
-  {
-    id: "14",
-    title: "Iron Fist Arena",
-    coverArt: "https://images.unsplash.com/photo-1527576539890-dfa815648363?w=400&h=600&fit=crop",
-    platforms: ["PC", "PS5", "Xbox"],
-    developer: "KnuckleCode",
-    year: 2022,
-    genre: "Fighting",
-    scores: { gameplay: 4.5, content: 3.8, narrative: 2.5, aesthetics: 4.0, polish: 3.2 },
-  },
-];
-
-const trendingGames = [
-  {
-    id: "6",
-    title: "Cyber Revolution",
-    coverArt: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=400&h=600&fit=crop",
-    platforms: ["PC"],
-    developer: "Darkframe Studio",
-    year: 2025,
-    genre: "Cyberpunk",
-    scores: { gameplay: 8.5, content: 8.8, narrative: 9.2, aesthetics: 9.7, polish: 8.3 },
-  },
-  {
-    id: "7",
-    title: "Galaxy Command",
-    coverArt: "https://images.unsplash.com/photo-1614732414444-096e5f1122d5?w=400&h=600&fit=crop",
-    platforms: ["PC", "Xbox"],
-    developer: "Starfield Games",
-    year: 2025,
-    genre: "Strategy",
-    scores: { gameplay: 9.1, content: 8.9, narrative: 8.5, aesthetics: 9.0, polish: 9.3 },
-  },
-  {
-    id: "15",
-    title: "Bog Wanderer",
-    coverArt: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400&h=600&fit=crop",
-    platforms: ["PC"],
-    developer: "Mudpipe Games",
-    year: 2021,
-    genre: "Adventure",
-    scores: { gameplay: 2.5, content: 1.8, narrative: 3.0, aesthetics: 2.2, polish: 1.5 },
-  },
-  {
-    id: "16",
-    title: "Neon Kart GP",
-    coverArt: "https://images.unsplash.com/photo-1493711662062-fa541adb3fc8?w=400&h=600&fit=crop",
-    platforms: ["PC", "Switch"],
-    developer: "Apex Drive Co.",
-    year: 2024,
-    genre: "Racing",
-    scores: { gameplay: 7.2, content: 6.5, narrative: 4.0, aesthetics: 8.0, polish: 7.0 },
-  },
-  {
-    id: "17",
-    title: "Starfall: Reborn",
-    coverArt: "https://images.unsplash.com/photo-1462331940025-496dfbfc7564?w=400&h=600&fit=crop",
-    platforms: ["PC", "PS5"],
-    developer: "Nebula Works",
-    year: 2025,
-    genre: "Sci-Fi RPG",
-    scores: { gameplay: 9.7, content: 9.6, narrative: 9.8, aesthetics: 9.9, polish: 9.5 },
-  },
-  {
-    id: "18",
-    title: "Clockwork Siege",
-    coverArt: "https://images.unsplash.com/photo-1553481187-be93c21490a9?w=400&h=600&fit=crop",
-    platforms: ["PC"],
-    developer: "Brass Gear Dev",
-    year: 2023,
-    genre: "Strategy",
-    scores: { gameplay: 5.5, content: 5.0, narrative: 4.5, aesthetics: 5.8, polish: 4.8 },
-  },
-  {
-    id: "19",
-    title: "Galactic Shovelware",
-    coverArt: "https://images.unsplash.com/photo-1608306448197-e83633f1261c?w=400&h=600&fit=crop",
-    platforms: ["PC", "Switch"],
-    developer: "Lazy Pixel Inc.",
-    year: 2023,
-    genre: "Platformer",
-    scores: { gameplay: 1.2, content: 0.8, narrative: 0.5, aesthetics: 1.5, polish: 0.6 },
-  },
-];
+] as Game[];
 
 const genres = [
   { name: "Action",    gradient: "from-red-600    to-orange-500" },
@@ -138,6 +57,51 @@ const genres = [
 ];
 
 export function HomePage() {
+  const [recommendedGames, setRecommendedGames] = useState<Game[]>(FALLBACK_GAMES);
+  const [trendingGames, setTrendingGames] = useState<Game[]>(FALLBACK_GAMES);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchGames = async () => {
+      try {
+        // Fetch recommended games
+        const recommendedRes = await getGames({ limit: 10, sort: "-reviewTotal" });
+        if (recommendedRes.results?.length) {
+          setRecommendedGames(recommendedRes.results);
+        }
+
+        // Fetch trending games
+        const trendingRes = await getGames({ limit: 10, sort: "-gameplayAvg" });
+        if (trendingRes.results?.length) {
+          setTrendingGames(trendingRes.results);
+        }
+      } catch (error) {
+        console.error("Failed to fetch games:", error);
+        // Keep fallback data
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchGames();
+  }, []);
+
+  const transformGame = (game: Game) => ({
+    id: game.id,
+    title: game.name,
+    coverArt: game.coverUrl || "https://via.placeholder.com/400x600?text=No+Image",
+    platforms: game.platforms || [],
+    developer: game.genres?.[0] || "Unknown",
+    year: game.releaseDate ? new Date(game.releaseDate).getFullYear() : 2024,
+    genre: game.genres?.join(", ") || "Game",
+    scores: {
+      gameplay: game.gameplayAvg || 0,
+      content: game.contentAvg || 0,
+      narrative: game.narrativeAvg || 0,
+      aesthetics: game.aestheticsAvg || 0,
+      polish: game.polishAvg || 0,
+    },
+  });
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 space-y-12">
       <section>
@@ -155,7 +119,7 @@ export function HomePage() {
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-6">
           {recommendedGames.map(game => (
-            <GameCard key={game.id} {...game} />
+            <GameCard key={game.id} {...transformGame(game)} />
           ))}
         </div>
       </section>
@@ -167,7 +131,7 @@ export function HomePage() {
 
         <div className="grid grid-cols-3 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-6">
           {trendingGames.map(game => (
-            <GameCard key={game.id} {...game} />
+            <GameCard key={game.id} {...transformGame(game)} />
           ))}
         </div>
       </section>
