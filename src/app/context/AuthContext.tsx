@@ -1,110 +1,90 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { login as apiLogin, register as apiRegister, logout as apiLogout, googleLogin as apiGoogleLogin } from "../../api/auth";
-import { getMe, BackendUser } from "../../api/users";
-import { clearTokens } from "../../api/client";
 
 export interface WarpstarUser {
-  id:              string;
-  username:        string;
-  email?:          string;
-  displayName?:    string;
+  id: string;
+  email: string;
+  googleName: string;
+  googleAvatar: string;
+  username?: string;
+  displayName?: string;
   profilePicture?: string;
-  bannerImage?:    string;
-  topGenres?:      string[];
+  bannerImage?: string;
+  topGenres?: string[];
   profileComplete: boolean;
-  favoriteGames:   string[];
-  followers:       string[];
-  following:       string[];
-  preferences:     Record<string, unknown>;
 }
 
 interface AuthContextType {
-  user:          WarpstarUser | null;
-  isLoading:     boolean;
-  login:         (email: string, password: string) => Promise<void>;
-  googleLogin:   (credential: string) => Promise<void>;
-  register:      (username: string, email: string, password: string) => Promise<void>;
-  signOut:       () => void;
+  user: WarpstarUser | null;
+  isLoading: boolean;
+  signInWithGoogle: () => Promise<void>;
+  signOut: () => void;
   updateProfile: (data: Partial<WarpstarUser>) => void;
-  refreshUser:   () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-function mapBackendUser(u: BackendUser, extra: Partial<WarpstarUser> = {}): WarpstarUser {
-  return {
-    id:              u.id,
-    username:        u.username,
-    favoriteGames:   u.favoriteGames,
-    followers:       u.followers,
-    following:       u.following,
-    preferences:     u.preferences,
-    profileComplete: !!u.username,
-    displayName:     (u.preferences?.displayName as string) ?? u.username,
-    profilePicture:  u.preferences?.profilePicture as string | undefined,
-    bannerImage:     u.preferences?.bannerImage as string | undefined,
-    topGenres:       u.preferences?.topGenres as string[] | undefined,
-    ...extra,
-  };
-}
+const STORAGE_KEY = "warpstar_user";
+
+// Mock Google accounts to cycle through for demo purposes
+const MOCK_GOOGLE_USERS = [
+  {
+    id: "google_uid_001",
+    email: "alex.nova@gmail.com",
+    googleName: "Alex Nova",
+    googleAvatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80&h=80&fit=crop&crop=face",
+  },
+];
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser]           = useState<WarpstarUser | null>(null);
+  const [user, setUser] = useState<WarpstarUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Rehydrate from localStorage on mount
   useEffect(() => {
-    const token = localStorage.getItem("ws_access_token");
-    if (!token) { setIsLoading(false); return; }
-
-    const timeout = setTimeout(() => {
-      clearTokens();
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        setUser(JSON.parse(stored));
+      }
+    } catch {
+      // ignore
+    } finally {
       setIsLoading(false);
-    }, 5000);
-
-    getMe()
-      .then(u => setUser(mapBackendUser(u)))
-      .catch(() => clearTokens())
-      .finally(() => {
-        clearTimeout(timeout);
-        setIsLoading(false);
-      });
+    }
   }, []);
 
-  const refreshUser = async () => {
-    const u = await getMe();
-    setUser(mapBackendUser(u));
+  const persist = (u: WarpstarUser | null) => {
+    if (u) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(u));
+    } else {
+      localStorage.removeItem(STORAGE_KEY);
+    }
+    setUser(u);
   };
 
-  const login = async (email: string, password: string) => {
-    await apiLogin(email, password);
-    const u = await getMe();
-    setUser(mapBackendUser(u));
-  };
-
-  const googleLogin = async (credential: string) => {
-    await apiGoogleLogin(credential);
-    const u = await getMe();
-    setUser(mapBackendUser(u));
-  };
-
-  const register = async (username: string, email: string, password: string) => {
-    await apiRegister(username, email, password);
-    const u = await getMe();
-    setUser(mapBackendUser(u));
+  const signInWithGoogle = async () => {
+    // Simulate a short OAuth round-trip
+    await new Promise(r => setTimeout(r, 1200));
+    const mock = MOCK_GOOGLE_USERS[0];
+    const newUser: WarpstarUser = {
+      ...mock,
+      profileComplete: false,
+    };
+    persist(newUser);
   };
 
   const signOut = () => {
-    apiLogout();
-    setUser(null);
+    persist(null);
   };
 
   const updateProfile = (data: Partial<WarpstarUser>) => {
     if (!user) return;
-    setUser({ ...user, ...data });
+    const updated = { ...user, ...data };
+    persist(updated);
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, googleLogin, register, signOut, updateProfile, refreshUser }}>
+    <AuthContext.Provider value={{ user, isLoading, signInWithGoogle, signOut, updateProfile }}>
       {children}
     </AuthContext.Provider>
   );

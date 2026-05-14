@@ -1,5 +1,24 @@
-import { ThumbsUp, ThumbsDown, MessageCircle, User } from "lucide-react";
+import { useState } from "react";
+import { ThumbsUp, ThumbsDown, MessageCircle, User, Pin, ChevronDown, ChevronUp } from "lucide-react";
 import { Link } from "react-router";
+import { StarPolarDiagram } from "./StarPolarDiagram";
+import { scoreStyle } from "./scoreStyle";
+
+const FACTOR_COLORS: Record<string, string> = {
+  gameplay:   '#818cf8',
+  content:    '#a78bfa',
+  narrative:  '#f472b6',
+  aesthetics: '#fb923c',
+  polish:     '#34d399',
+};
+
+const CATEGORY_LABELS: Record<string, string> = {
+  gameplay:   'Gameplay',
+  content:    'Content',
+  narrative:  'Narrative',
+  aesthetics: 'Aesthetics',
+  polish:     'Polish',
+};
 
 interface ReviewCardProps {
   reviewer: {
@@ -13,6 +32,13 @@ interface ReviewCardProps {
     aesthetics: number;
     polish: number;
   };
+  categoryText?: {
+    gameplay?: string;
+    content?: string;
+    narrative?: string;
+    aesthetics?: string;
+    polish?: string;
+  };
   review: string;
   likes: number;
   dislikes: number;
@@ -23,74 +49,128 @@ interface ReviewCardProps {
 export function ReviewCard({
   reviewer,
   scores,
+  categoryText,
   review,
   likes,
   dislikes,
   comments,
   isPinned = false,
 }: ReviewCardProps) {
+  const [liked, setLiked] = useState(false);
+  const [disliked, setDisliked] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+
   const totalScore = (
-    scores.gameplay +
-    scores.content +
-    scores.narrative +
-    scores.aesthetics +
-    scores.polish
+    scores.gameplay + scores.content + scores.narrative + scores.aesthetics + scores.polish
   ) / 5;
 
+  const { bg: totalBg, text: totalText } = scoreStyle(totalScore);
+
+  const hasBlurbs = categoryText && Object.values(categoryText).some(t => t && t.trim().length > 0);
+
   return (
-    <div className={`bg-purple-950/30 border rounded-xl p-6 ${isPinned ? 'border-pink-500/50 shadow-lg shadow-pink-500/10' : 'border-purple-500/20'}`}>
+    <div className={`bg-white/5 border rounded-xl overflow-hidden ${isPinned ? 'border-white/25 shadow-lg shadow-white/5' : 'border-white/10'}`}>
       {isPinned && (
-        <div className="mb-3 text-pink-400 text-sm font-semibold flex items-center gap-2">
-          📌 Pinned Review
+        <div className="px-5 py-2 border-b border-white/10 flex items-center gap-2" style={{ background: 'rgba(255,255,255,0.04)' }}>
+          <Pin className="w-3.5 h-3.5" style={{ color: 'rgba(255,255,255,0.5)' }} />
+          <span className="text-xs font-semibold" style={{ color: 'rgba(255,255,255,0.5)' }}>Pinned Review</span>
         </div>
       )}
 
-      <div className="flex items-start gap-4 mb-4">
-        <Link to={`/profile/${reviewer.username}`} className="flex-shrink-0">
-          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center">
-            {reviewer.avatar ? (
-              <img src={reviewer.avatar} alt={reviewer.username} className="w-full h-full rounded-full object-cover" />
-            ) : (
-              <User className="w-6 h-6 text-white" />
-            )}
-          </div>
-        </Link>
-
-        <div className="flex-1">
-          <Link to={`/profile/${reviewer.username}`} className="font-semibold text-white hover:text-pink-400 transition-colors">
-            @{reviewer.username}
+      <div className="p-5 sm:p-6">
+        {/* Header */}
+        <div className="flex items-center justify-between gap-4 mb-5">
+          <Link to={`/profile/${reviewer.username}`} className="flex items-center gap-3 group">
+            <div className="w-10 h-10 rounded-full bg-zinc-700 flex items-center justify-center overflow-hidden ring-2 ring-white/10 flex-shrink-0">
+              {reviewer.avatar ? (
+                <img src={reviewer.avatar} alt={reviewer.username} className="w-full h-full object-cover" />
+              ) : (
+                <User className="w-5 h-5 text-[#ffffff]" />
+              )}
+            </div>
+            <span className="font-semibold text-[#ffffff] group-hover:opacity-70 transition-opacity">
+              @{reviewer.username}
+            </span>
           </Link>
 
-          <div className="mt-3 grid grid-cols-5 gap-3">
-            {Object.entries(scores).map(([key, value]) => (
-              <div key={key} className="text-center">
-                <div className="text-xs text-purple-300 capitalize mb-1">{key}</div>
-                <div className="text-lg font-bold text-pink-400">{value.toFixed(1)}</div>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-3 px-4 py-2 bg-gradient-to-r from-pink-500 to-purple-600 rounded-lg inline-block">
-            <span className="text-white font-bold">Total: {totalScore.toFixed(1)}</span>
+          <div className={`px-3 py-1 rounded-lg text-sm font-bold flex-shrink-0 ${totalBg} ${totalText}`}>
+            {totalScore.toFixed(1)}
           </div>
         </div>
-      </div>
 
-      <p className="text-purple-100 leading-relaxed mb-4">{review}</p>
+        {/* Score breakdown + diagram */}
+        <div className="flex flex-col sm:flex-row gap-5 mb-5">
+          {/* Scores with optional blurbs */}
+          <div className="flex-1 space-y-2.5">
+            {Object.entries(scores).map(([key, value]) => {
+              const { bg } = scoreStyle(value as number);
+              const color = FACTOR_COLORS[key];
+              const blurb = categoryText?.[key as keyof typeof categoryText];
+              return (
+                <div key={key}>
+                  <div className="flex items-center gap-2.5">
+                    <div
+                      className="w-2 h-2 rounded-full flex-shrink-0"
+                      style={{ background: color }}
+                    />
+                    <span className="text-xs capitalize flex-1" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                      {CATEGORY_LABELS[key]}
+                    </span>
+                    <div className={`px-2 py-0.5 rounded text-xs font-bold ${bg}`} style={{ color: '#ffffff' }}>
+                      {(value as number).toFixed(1)}
+                    </div>
+                  </div>
+                  {blurb && (
+                    <p className="ml-4.5 mt-0.5 text-xs leading-relaxed pl-2.5" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                      {blurb}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
 
-      <div className="flex items-center gap-6">
-        <button className="flex items-center gap-2 text-purple-300 hover:text-pink-400 transition-colors">
-          <ThumbsUp className="w-4 h-4" />
-          <span>{likes}</span>
-        </button>
-        <button className="flex items-center gap-2 text-purple-300 hover:text-pink-400 transition-colors">
-          <ThumbsDown className="w-4 h-4" />
-          <span>{dislikes}</span>
-        </button>
-        <button className="flex items-center gap-2 text-purple-300 hover:text-pink-400 transition-colors">
-          <MessageCircle className="w-4 h-4" />
-          <span>{comments}</span>
-        </button>
+          {/* Polar diagram */}
+          <div className="flex-shrink-0 flex items-center justify-center">
+            <StarPolarDiagram scores={scores} size={160} showTotal={false} showLabels={true} />
+          </div>
+        </div>
+
+        {/* Overall review */}
+        <div className="mb-4">
+          <p
+            className="text-sm leading-relaxed"
+            style={{ color: 'rgba(255,255,255,0.75)' }}
+          >
+            {review}
+          </p>
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center gap-1 pt-4 border-t border-white/8">
+          <button
+            onClick={() => { setLiked(l => !l); if (disliked) setDisliked(false); }}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${
+              liked ? 'bg-white/10 text-[#ffffff]' : 'text-white/40 hover:text-white/70 hover:bg-white/5'
+            }`}
+          >
+            <ThumbsUp className="w-3.5 h-3.5" />
+            <span>{liked ? likes + 1 : likes}</span>
+          </button>
+          <button
+            onClick={() => { setDisliked(d => !d); if (liked) setLiked(false); }}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${
+              disliked ? 'bg-white/10 text-[#ffffff]' : 'text-white/40 hover:text-white/70 hover:bg-white/5'
+            }`}
+          >
+            <ThumbsDown className="w-3.5 h-3.5" />
+            <span>{disliked ? dislikes + 1 : dislikes}</span>
+          </button>
+          <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-white/40 hover:text-white/70 hover:bg-white/5 transition-colors">
+            <MessageCircle className="w-3.5 h-3.5" />
+            <span>{comments}</span>
+          </button>
+        </div>
       </div>
     </div>
   );

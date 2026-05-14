@@ -5,6 +5,7 @@ import { GamePage } from "./components/GamePage";
 import { ProfilePage } from "./components/ProfilePage";
 import { SettingsPage } from "./components/SettingsPage";
 import { GenrePage } from "./components/GenrePage";
+import { DiscoverPage } from "./components/DiscoverPage";
 import { CreateReviewPage } from "./components/CreateReviewPage";
 import { SplashPage } from "./components/SplashPage";
 import { OnboardingPage } from "./components/OnboardingPage";
@@ -45,6 +46,7 @@ export const router = createBrowserRouter([
           { path: "game/:gameId/review", Component: CreateReviewPage },
           { path: "profile/:username", Component: ProfilePage },
           { path: "settings", Component: SettingsPage },
+          { path: "discover", Component: DiscoverPage },
           { path: "genre/:genreName", Component: GenrePage },
         ],
       },

@@ -1,94 +1,223 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router";
-import { useAuth } from "../context/AuthContext";
 import { InteractiveStarDiagram } from "./InteractiveStarDiagram";
-import { createReview } from "../../api/reviews";
+import { ImageWithFallback } from "./ImageWithFallback";
 
-const DIMENSIONS = ["gameplay","content","narrative","aesthetics","polish"] as const;
-type Dim = typeof DIMENSIONS[number];
+interface ReviewScores {
+  gameplay: number;
+  content: number;
+  narrative: number;
+  aesthetics: number;
+  polish: number;
+}
+
+interface CategoryText {
+  gameplay: string;
+  content: string;
+  narrative: string;
+  aesthetics: string;
+  polish: string;
+}
+
+const gameData: any = {
+  "1":  { title: "Stellar Odyssey",    coverArt: "https://images.unsplash.com/photo-1538481199705-c710c4e965fc?w=400&h=600&fit=crop" },
+  "2":  { title: "Neon Breach",        coverArt: "https://images.unsplash.com/photo-1552820728-8b83bb6b773f?w=400&h=600&fit=crop" },
+  "3":  { title: "Dragon's Legacy",    coverArt: "https://images.unsplash.com/photo-1511512578047-dfb367046420?w=400&h=600&fit=crop" },
+  "4":  { title: "Velocity Racer",     coverArt: "https://images.unsplash.com/photo-1493711662062-fa541adb3fc8?w=400&h=600&fit=crop" },
+  "5":  { title: "Mythic Realms",      coverArt: "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=400&h=600&fit=crop" },
+  "6":  { title: "Cyber Revolution",   coverArt: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=400&h=600&fit=crop" },
+  "7":  { title: "Galaxy Command",     coverArt: "https://images.unsplash.com/photo-1614732414444-096e5f1122d5?w=400&h=600&fit=crop" },
+  "8":  { title: "Shadow Tactics",     coverArt: "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=400&h=600&fit=crop" },
+  "9":  { title: "Mystic Chronicles",  coverArt: "https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?w=400&h=600&fit=crop" },
+  "10": { title: "Wasteland Warriors",  coverArt: "https://images.unsplash.com/photo-1556438064-2d7646166914?w=400&h=600&fit=crop" },
+  "11": { title: "Pixel Dungeon",       coverArt: "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=400&h=600&fit=crop" },
+};
 
 export function CreateReviewPage() {
-  const { gameId } = useParams<{ gameId: string }>();
-  const { user }   = useAuth();
-  const navigate   = useNavigate();
+  const { gameId } = useParams();
+  const navigate = useNavigate();
+  const game = gameData[gameId as string] || gameData["1"];
 
-  const [scores, setScores] = useState<Record<Dim,number>>({ gameplay:5, content:5, narrative:5, aesthetics:5, polish:5 });
-  const [title,  setTitle]  = useState("");
-  const [body,   setBody]   = useState("");
-  const [spoilers, setSpoilers] = useState(false);
-  const [loading,  setLoading]  = useState(false);
-  const [error,    setError]    = useState("");
+  const [scores, setScores] = useState<ReviewScores>({
+    gameplay: 5, content: 5, narrative: 5, aesthetics: 5, polish: 5,
+  });
 
-  if (!user) return (
-    <div className="max-w-2xl mx-auto px-4 py-20 text-center">
-      <p className="text-purple-300 text-lg">Please sign in to write a review.</p>
-    </div>
-  );
+  const [categoryText, setCategoryText] = useState<CategoryText>({
+    gameplay: "", content: "", narrative: "", aesthetics: "", polish: "",
+  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!gameId) return;
-    if (!title.trim()) { setError("Please add a title for your review."); return; }
-    setError(""); setLoading(true);
-    try {
-      await createReview(gameId, { ...scores, title: title.trim(), body, containsSpoilers: spoilers });
-      navigate(`/game/${gameId}`);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to submit review.");
-    } finally {
-      setLoading(false);
-    }
+  const [summary, setSummary] = useState("");
+
+  const handleScoreChange = (category: keyof ReviewScores, value: number) => {
+    setScores(prev => ({ ...prev, [category]: Math.min(10, Math.max(1, Math.round(value))) }));
   };
 
+  const handleCategoryTextChange = (category: keyof CategoryText, value: string) => {
+    setCategoryText(prev => ({ ...prev, [category]: value }));
+  };
+
+  const handlePost = () => {
+    if (!summary.trim()) {
+      alert("Please write an overall review before posting.");
+      return;
+    }
+
+    const review = { gameId, scores, categoryText, summary, timestamp: new Date().toISOString() };
+    const existingReviews = JSON.parse(localStorage.getItem("warpstar-reviews") || "[]");
+    existingReviews.push(review);
+    localStorage.setItem("warpstar-reviews", JSON.stringify(existingReviews));
+    navigate(`/game/${gameId}`);
+  };
+
+  const totalScore = (
+    scores.gameplay + scores.content + scores.narrative + scores.aesthetics + scores.polish
+  ) / 5;
+
+  const categories: Array<{ key: keyof ReviewScores; label: string; description: string }> = [
+    { key: "gameplay",   label: "Gameplay",   description: "Mechanics, controls, and core gameplay loop" },
+    { key: "content",    label: "Content",    description: "Amount and variety of content" },
+    { key: "narrative",  label: "Narrative",  description: "Story, characters, and world-building" },
+    { key: "aesthetics", label: "Aesthetics", description: "Art direction, visuals, and audio" },
+    { key: "polish",     label: "Polish",     description: "Technical quality and refinement" },
+  ];
+
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent mb-8">Write a Review</h1>
-      <form onSubmit={handleSubmit} className="space-y-8">
-        <div className="bg-purple-950/30 border border-purple-500/20 rounded-xl p-8 flex flex-col items-center gap-6">
-          <InteractiveStarDiagram scores={scores} onChange={(dim, val) => setScores(s => ({...s, [dim]: val}))} size={300}/>
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 w-full">
-            {DIMENSIONS.map(dim => (
-              <div key={dim} className="text-center">
-                <div className="text-xs text-purple-300 capitalize mb-1">{dim}</div>
-                <div className="text-2xl font-bold text-pink-400">{scores[dim].toFixed(1)}</div>
+    <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="mb-8">
+        <h1 className="text-4xl font-bold text-white mb-2">Write a Review</h1>
+        <div className="flex items-center gap-4">
+          <div className="w-16 h-24 rounded-lg overflow-hidden border border-white/15">
+            <ImageWithFallback
+              src={game.coverArt}
+              alt={game.title}
+              className="w-full h-full object-cover"
+            />
+          </div>
+          <div>
+            <h2 className="text-2xl font-semibold text-white">{game.title}</h2>
+            <div className="text-white/50">Share your thoughts with the community</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid lg:grid-cols-2 gap-8">
+        <div className="space-y-6">
+          <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+            <h3 className="text-xl font-bold text-white mb-6">Rate the Game</h3>
+
+            {categories.map(category => (
+              <div key={category.key} className="mb-6 last:mb-0">
+                <div className="flex items-start justify-between gap-4 mb-3">
+                  <div className="flex-1 min-w-0">
+                    <label className="text-white/80 font-semibold">{category.label}</label>
+                    <p className="text-sm text-white/40">{category.description}</p>
+                  </div>
+
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleScoreChange(category.key, scores[category.key] - 1)}
+                      className="w-8 h-8 rounded-lg bg-white/8 border border-white/15 text-white/60 hover:text-white hover:border-white/30 transition-colors flex items-center justify-center text-lg select-none"
+                    >
+                      −
+                    </button>
+                    <input
+                      type="number"
+                      min={1}
+                      max={10}
+                      value={scores[category.key]}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value, 10);
+                        if (!isNaN(val)) handleScoreChange(category.key, val);
+                      }}
+                      className="w-12 h-8 text-center bg-white/5 border border-white/15 rounded-lg text-white font-bold focus:outline-none focus:border-white/40 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleScoreChange(category.key, scores[category.key] + 1)}
+                      className="w-8 h-8 rounded-lg bg-white/8 border border-white/15 text-white/60 hover:text-white hover:border-white/30 transition-colors flex items-center justify-center text-lg select-none"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+
+                <input
+                  type="range"
+                  min="1"
+                  max="10"
+                  step="1"
+                  value={scores[category.key]}
+                  onChange={(e) => handleScoreChange(category.key, parseInt(e.target.value, 10))}
+                  className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer slider-mono mb-3"
+                />
+
+                <textarea
+                  placeholder={`What did you think about the ${category.label.toLowerCase()}?`}
+                  value={categoryText[category.key]}
+                  onChange={(e) => handleCategoryTextChange(category.key, e.target.value)}
+                  className="w-full bg-white/5 border border-white/15 rounded-lg px-4 py-3 text-white placeholder:text-white/25 focus:outline-none focus:border-white/40 transition-colors resize-none"
+                  rows={3}
+                />
               </div>
             ))}
           </div>
-        </div>
 
-        <div>
-          <label className="block text-sm font-medium text-purple-200 mb-2">Review Title *</label>
-          <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="Summarise your experience in one line..." maxLength={200} required
-            className="w-full bg-purple-950/60 border border-purple-500/30 rounded-xl px-4 py-3 text-white placeholder:text-purple-400/40 focus:outline-none focus:border-pink-500/60 transition-colors"/>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-purple-200 mb-2">Your Review</label>
-          <textarea value={body} onChange={e => setBody(e.target.value)} placeholder="Share your thoughts on the game..." rows={6}
-            className="w-full bg-purple-950/60 border border-purple-500/30 rounded-xl px-4 py-3 text-white placeholder:text-purple-400/40 focus:outline-none focus:border-pink-500/60 transition-colors resize-none"/>
-        </div>
-
-        <label className="flex items-center gap-3 cursor-pointer">
-          <div onClick={() => setSpoilers(p=>!p)}
-            className={`w-10 h-6 rounded-full transition-colors ${spoilers ? "bg-pink-500" : "bg-purple-700/50"} relative`}>
-            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${spoilers ? "translate-x-5" : "translate-x-1"}`}/>
+          <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+            <h3 className="text-xl font-bold text-white mb-4">Overall Review</h3>
+            <textarea
+              placeholder="Write your overall thoughts about the game..."
+              value={summary}
+              onChange={(e) => setSummary(e.target.value)}
+              className="w-full bg-white/5 border border-white/15 rounded-lg px-4 py-3 text-white placeholder:text-white/25 focus:outline-none focus:border-white/40 transition-colors resize-none"
+              rows={6}
+            />
           </div>
-          <span className="text-purple-200 text-sm">Contains spoilers</span>
-        </label>
 
-        {error && <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-2">{error}</p>}
-
-        <div className="flex gap-4">
-          <button type="button" onClick={() => navigate(-1)}
-            className="flex-1 py-3 bg-purple-950/50 border border-purple-500/30 text-purple-300 font-semibold rounded-xl hover:border-pink-500/50 transition-all">
-            Cancel
-          </button>
-          <button type="submit" disabled={loading}
-            className="flex-1 py-3 bg-gradient-to-r from-pink-500 to-purple-600 text-white font-bold rounded-xl hover:shadow-lg hover:shadow-pink-500/30 transition-all disabled:opacity-60">
-            {loading ? "Submitting…" : "Publish Review"}
-          </button>
+          <div className="flex gap-4">
+            <button
+              onClick={() => navigate(`/game/${gameId}`)}
+              className="flex-1 px-6 py-4 bg-white/5 border border-white/15 text-white/70 font-bold text-lg rounded-lg hover:border-white/30 transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handlePost}
+              className="flex-1 px-6 py-4 bg-white text-zinc-900 font-bold text-lg rounded-lg hover:shadow-lg hover:shadow-white/10 transition-all"
+            >
+              Post Review
+            </button>
+          </div>
         </div>
-      </form>
+
+        <div className="lg:sticky lg:top-24 h-fit">
+          <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+            <h3 className="text-xl font-bold text-white mb-4">Your Rating</h3>
+
+            <div className="text-center mb-6">
+              <div className="text-6xl font-bold text-white">
+                {totalScore.toFixed(1)}
+              </div>
+              <div className="text-white/50">Overall Score</div>
+            </div>
+
+            <div className="flex justify-center mb-6">
+              <div className="w-full max-w-[min(400px,100%)] aspect-square">
+                <InteractiveStarDiagram
+                  scores={scores}
+                  onScoreChange={handleScoreChange}
+                  size={400}
+                />
+              </div>
+            </div>
+
+            <div className="text-sm text-white/50 text-center bg-white/5 rounded-lg p-3 border border-white/10">
+              <span className="block mb-1">💡 Interactive Controls</span>
+              <span className="text-xs">Drag star points, use sliders, or type a score (1–10)</span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

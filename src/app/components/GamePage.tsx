@@ -1,4 +1,5 @@
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link } from "react-router";
+import { scoreStyle } from "./scoreStyle";
 import { StarPolarDiagram } from "./StarPolarDiagram";
 import { ReviewCard } from "./ReviewCard";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
@@ -29,6 +30,13 @@ const reviews = [
   {
     reviewer: { username: "gamerpro88", avatar: "" },
     scores: { gameplay: 9.5, content: 9.0, narrative: 9.5, aesthetics: 9.8, polish: 9.2 },
+    categoryText: {
+      gameplay:   "Combat is tight and endlessly satisfying — every build feels distinct.",
+      content:    "Dozens of hours of meaningful side content, nothing feels like filler.",
+      narrative:  "Every choice carries weight. I replayed twice just to see different outcomes.",
+      aesthetics: "Jaw-dropping art direction. Some scenes genuinely look like paintings.",
+      polish:     "Hit one bug in 80 hours. Rock solid across the board.",
+    },
     review: "An absolute masterpiece! The narrative depth is incredible, and every choice feels meaningful. The art direction is stunning, and the gameplay loop keeps you engaged for hours. This is easily one of the best games of the year.",
     likes: 342,
     dislikes: 12,
@@ -38,6 +46,13 @@ const reviews = [
   {
     reviewer: { username: "criticalplayer", avatar: "" },
     scores: { gameplay: 8.5, content: 8.0, narrative: 9.0, aesthetics: 9.5, polish: 8.0 },
+    categoryText: {
+      gameplay:   "Responsive and fun, though some abilities feel underpowered late-game.",
+      content:    "Solid amount of content, a few side quests feel padded.",
+      narrative:  "Captivating world-building with genuinely surprising twists.",
+      aesthetics: "Stunning visuals and an incredible soundtrack.",
+      polish:     "A handful of crashes early on — hopefully patched soon.",
+    },
     review: "Great game overall, though I did encounter some minor technical issues. The story is captivating and the world-building is top-notch. Combat feels responsive and rewarding. Could use some optimization patches but still highly recommend.",
     likes: 189,
     dislikes: 8,
@@ -47,6 +62,13 @@ const reviews = [
   {
     reviewer: { username: "indiegamer", avatar: "" },
     scores: { gameplay: 9.0, content: 8.5, narrative: 8.5, aesthetics: 9.0, polish: 9.5 },
+    categoryText: {
+      gameplay:   "Doesn't reinvent the wheel but everything clicks together perfectly.",
+      content:    "Good volume of content — I'd love more post-game though.",
+      narrative:  "Enjoyable story, though the ending felt slightly rushed.",
+      aesthetics: "Cohesive and beautiful — love the environmental storytelling.",
+      polish:     "Zero crashes, fast loads, and buttery smooth frame rate.",
+    },
     review: "Polished to perfection! The attention to detail is remarkable. Every animation, sound effect, and visual element comes together beautifully. The gameplay might not revolutionize the genre, but it executes everything extremely well.",
     likes: 276,
     dislikes: 15,
@@ -56,6 +78,13 @@ const reviews = [
   {
     reviewer: { username: "hotTake2026", avatar: "" },
     scores: { gameplay: 7.5, content: 7.0, narrative: 10.0, aesthetics: 8.5, polish: 7.5 },
+    categoryText: {
+      gameplay:   "Competent but safe — nothing you haven't done before.",
+      content:    "Side content exists but the main story is the real draw.",
+      narrative:  "Genuinely one of the best stories in gaming. Full stop.",
+      aesthetics: "Great art direction that services the narrative perfectly.",
+      polish:     "A few too many rough edges for a game at this price point.",
+    },
     review: "Unpopular opinion: The narrative is PHENOMENAL but the gameplay is just okay. Don't get me wrong, it's competent, but you're really here for the story. If you're a narrative-focused player, this is a must-play. If you want innovative gameplay, look elsewhere.",
     likes: 412,
     dislikes: 198,
@@ -71,6 +100,32 @@ const distributionData = [
   { range: "6-8", gameplay: 312, content: 287, narrative: 245, aesthetics: 298, polish: 276 },
   { range: "8-10", gameplay: 797, content: 766, narrative: 906, aesthetics: 833, polish: 813 },
 ];
+
+function DistributionChart() {
+  return (
+    <ResponsiveContainer width="100%" height={300}>
+      <BarChart data={distributionData} key="distribution-bar-chart">
+        <CartesianGrid key="grid" strokeDasharray="3 3" stroke="#a1a1aa" opacity={0.3} />
+        <XAxis key="x" dataKey="range" stroke="#71717a" />
+        <YAxis key="y" stroke="#71717a" />
+        <Tooltip
+          key="tooltip"
+          contentStyle={{
+            backgroundColor: "#111111",
+            border: "1px solid rgba(255,255,255,0.15)",
+            borderRadius: "8px",
+            color: "#ffffff",
+          }}
+        />
+        <Bar key="gameplay"   dataKey="gameplay"   name="Gameplay"   fill="#818cf8" isAnimationActive={false} />
+        <Bar key="content"    dataKey="content"    name="Content"    fill="#a78bfa" isAnimationActive={false} />
+        <Bar key="narrative"  dataKey="narrative"  name="Narrative"  fill="#f472b6" isAnimationActive={false} />
+        <Bar key="aesthetics" dataKey="aesthetics" name="Aesthetics" fill="#fb923c" isAnimationActive={false} />
+        <Bar key="polish"     dataKey="polish"     name="Polish"     fill="#34d399" isAnimationActive={false} />
+      </BarChart>
+    </ResponsiveContainer>
+  );
+}
 
 export function GamePage() {
   const { gameId } = useParams();
@@ -95,11 +150,12 @@ export function GamePage() {
     : reviews;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      <div className="grid lg:grid-cols-3 gap-8 mb-12">
-        <div className="lg:col-span-1">
-          <div className="sticky top-24">
-            <div className="rounded-xl overflow-hidden border border-purple-500/20 shadow-2xl">
+    <div className="max-w-7xl mx-auto px-4 py-6 sm:py-8">
+      <div className="grid lg:grid-cols-3 gap-6 sm:gap-8 mb-10 sm:mb-12">
+        {/* Cover art — hidden on mobile, shown md+ as sidebar */}
+        <div className="hidden lg:block lg:col-span-1">
+          <div className="sticky top-20">
+            <div className="rounded-xl overflow-hidden border border-white/10 shadow-2xl">
               <ImageWithFallback
                 src={game.coverArt}
                 alt={game.title}
@@ -109,105 +165,95 @@ export function GamePage() {
           </div>
         </div>
 
-        <div className="lg:col-span-2 space-y-8">
-          <div>
-            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
-              <h1 className="text-4xl sm:text-5xl font-bold text-white">{game.title}</h1>
-              <Link
-                to={`/game/${gameId}/review`}
-                className="flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-pink-500 to-purple-600 text-white font-semibold rounded-lg hover:shadow-lg hover:shadow-pink-500/30 transition-all whitespace-nowrap"
-              >
-                <Edit3 className="w-5 h-5" />
-                <span>Write Review</span>
-              </Link>
+        <div className="lg:col-span-2 space-y-6 sm:space-y-8">
+          {/* Mobile cover + title row */}
+          <div className="flex gap-4 lg:block">
+            <div className="lg:hidden flex-shrink-0 w-28 sm:w-36 rounded-xl overflow-hidden border border-white/10 shadow-2xl">
+              <ImageWithFallback
+                src={game.coverArt}
+                alt={game.title}
+                className="w-full aspect-[3/4] object-cover"
+              />
             </div>
-            <div className="flex flex-wrap items-center gap-4 mb-4">
-              {game.platforms.map((platform: string) => (
-                <span
-                  key={platform}
-                  className="px-3 py-1 bg-purple-900/50 text-purple-200 rounded-md border border-purple-500/30"
+            <div className="flex-1 min-w-0">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-3 sm:mb-4">
+                <h1 className="text-2xl sm:text-4xl lg:text-5xl font-bold text-white leading-tight">{game.title}</h1>
+                <Link
+                  to={`/game/${gameId}/review`}
+                  className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-white text-zinc-900 font-semibold rounded-lg hover:shadow-lg hover:shadow-white/10 transition-all whitespace-nowrap text-sm sm:text-base"
                 >
-                  {platform}
-                </span>
-              ))}
-              <span className="text-purple-300">Released: {game.releaseDate}</span>
+                  <Edit3 className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <span>Write Review</span>
+                </Link>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+                {game.platforms.map((platform: string) => (
+                  <span key={platform} className="px-2 sm:px-3 py-1 bg-white/8 text-white/70 rounded-md border border-white/15 text-sm">
+                    {platform}
+                  </span>
+                ))}
+                <span className="text-white/50 text-sm">Released: {game.releaseDate}</span>
+              </div>
             </div>
           </div>
 
-          <div className="bg-purple-950/30 border border-purple-500/20 rounded-xl p-8">
-            <div className="flex flex-col lg:flex-row items-center gap-8">
+          <div className="bg-white/5 border border-white/10 rounded-xl p-4 sm:p-8">
+            <div className="flex flex-col lg:flex-row items-center gap-6 sm:gap-8">
               <div className="flex-shrink-0">
-                <StarPolarDiagram scores={game.scores} size={280} showTotal={true} />
+                <StarPolarDiagram scores={game.scores} size={220} showTotal={true} />
               </div>
 
-              <div className="flex-1 space-y-4">
+              <div className="flex-1 w-full space-y-4">
                 <div className="text-center lg:text-left">
-                  <div className="text-6xl font-bold bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent mb-2">
+                  <div className={`inline-block px-4 sm:px-5 py-2 rounded-2xl mb-2 text-4xl sm:text-6xl font-bold ${scoreStyle(totalScore).bg} ${scoreStyle(totalScore).text}`}>
                     {totalScore.toFixed(1)}
                   </div>
-                  <div className="text-purple-300">Based on {game.reviewCount.toLocaleString()} reviews</div>
+                  <div className="text-white/50 text-sm sm:text-base">Based on {game.reviewCount.toLocaleString()} reviews</div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  {Object.entries(game.scores).map(([key, value]) => (
-                    <div key={key} className="bg-purple-900/30 rounded-lg p-3 border border-purple-500/20">
-                      <div className="text-sm text-purple-300 capitalize mb-1">{key}</div>
-                      <div className="text-2xl font-bold text-pink-400">{(value as number).toFixed(1)}</div>
-                    </div>
-                  ))}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
+                  {Object.entries(game.scores).map(([key, value]) => {
+                    const { bg, text } = scoreStyle(value as number);
+                    return (
+                      <div key={key} className={`rounded-lg p-3 ${bg}`}>
+                        <div className="text-sm capitalize mb-1" style={{ color: "rgba(255,255,255,0.7)" }}>{key}</div>
+                        <div className={`text-2xl font-bold ${text}`}>{(value as number).toFixed(1)}</div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="bg-purple-950/30 border border-purple-500/20 rounded-xl p-6">
+          <div className="bg-white/5 border border-white/10 rounded-xl p-6">
             <h3 className="text-xl font-bold text-white mb-4">Review Distribution</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={distributionData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#8b5cf6" opacity={0.1} />
-                <XAxis dataKey="range" stroke="#c4b5fd" />
-                <YAxis stroke="#c4b5fd" />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#1e1b4b",
-                    border: "1px solid #8b5cf6",
-                    borderRadius: "8px",
-                  }}
-                />
-                <Bar dataKey="gameplay" name="Gameplay" fill="#ec4899" isAnimationActive={false} />
-                <Bar dataKey="content" name="Content" fill="#8b5cf6" isAnimationActive={false} />
-                <Bar dataKey="narrative" name="Narrative" fill="#06b6d4" isAnimationActive={false} />
-                <Bar dataKey="aesthetics" name="Aesthetics" fill="#fbbf24" isAnimationActive={false} />
-                <Bar dataKey="polish" name="Polish" fill="#10b981" isAnimationActive={false} />
-              </BarChart>
-            </ResponsiveContainer>
+            <DistributionChart />
           </div>
         </div>
       </div>
 
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h2 className="text-3xl font-bold bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent">
-            Reviews
-          </h2>
+        <div className="flex items-center justify-between gap-4">
+          <h2 className="text-xl sm:text-3xl font-bold text-white">Reviews</h2>
 
           <div className="flex gap-2">
             <button
               onClick={() => setSortBy("top")}
-              className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+              className={`px-3 sm:px-4 py-2 rounded-lg font-semibold transition-all text-sm sm:text-base ${
                 sortBy === "top"
-                  ? "bg-gradient-to-r from-pink-500 to-purple-600 text-white"
-                  : "bg-purple-950/50 text-purple-300 border border-purple-500/30 hover:border-pink-500/50"
+                  ? "bg-white text-zinc-900"
+                  : "bg-white/5 text-white/60 border border-white/10 hover:border-white/25"
               }`}
             >
               Top Rated
             </button>
             <button
               onClick={() => setSortBy("hot")}
-              className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+              className={`px-3 sm:px-4 py-2 rounded-lg font-semibold transition-all text-sm sm:text-base ${
                 sortBy === "hot"
-                  ? "bg-gradient-to-r from-pink-500 to-purple-600 text-white"
-                  : "bg-purple-950/50 text-purple-300 border border-purple-500/30 hover:border-pink-500/50"
+                  ? "bg-white text-zinc-900"
+                  : "bg-white/5 text-white/60 border border-white/10 hover:border-white/25"
               }`}
             >
               🔥 Hottest Take
