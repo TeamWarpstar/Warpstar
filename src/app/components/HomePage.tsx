@@ -93,7 +93,7 @@ export function HomePage() {
     platforms: game.platforms || [],
     developer: game.genres?.[0] || "Unknown",
     year: game.releaseDate ? new Date(game.releaseDate).getFullYear() : 2024,
-    genre: game.genres?.join(", ") || "Game",
+    genres: game.genres || ["Game"],
     scores: {
       gameplay: game.gameplayAvg || 0,
       content: game.contentAvg || 0,
@@ -101,6 +101,7 @@ export function HomePage() {
       aesthetics: game.aestheticsAvg || 0,
       polish: game.polishAvg || 0,
     },
+    igdbRating: game.igdbRating || 0,
   });
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 space-y-12">
