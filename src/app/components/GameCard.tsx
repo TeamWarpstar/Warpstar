@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router";
 import { StarPolarDiagram } from "./StarPolarDiagram";
 import { ImageWithFallback } from "./ImageWithFallback";
+import { scoreStyle } from "./scoreStyle";
 import { createPortal } from "react-dom";
 
 interface GameCardProps {
@@ -37,7 +38,6 @@ export function GameCard({ id, title, coverArt, platforms, developer, year, genr
     const rect = cardRef.current.getBoundingClientRect();
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
-    // Height is flexible — estimate header (~90px) + diagram + padding
     const popoverHeight = DIAGRAM_SIZE + 120;
 
     // Prefer positioning to the right, fall back to left
@@ -45,12 +45,12 @@ export function GameCard({ id, title, coverArt, platforms, developer, year, genr
     if (left + POPOVER_WIDTH > viewportWidth - 8) {
       left = rect.left - POPOVER_WIDTH - 10;
     }
-    left = Math.max(8, left);
+    left = Math.max(8, Math.min(left, viewportWidth - POPOVER_WIDTH - 8));
 
     // Vertically center on the card, clamp to viewport
-    let top = rect.top + rect.height / 2 - popoverHeight / 2 + window.scrollY;
-    const minTop = window.scrollY + 8;
-    const maxTop = window.scrollY + viewportHeight - popoverHeight - 8;
+    let top = rect.top + rect.height / 2 - popoverHeight / 2;
+    const minTop = 8;
+    const maxTop = viewportHeight - popoverHeight - 8;
     top = Math.max(minTop, Math.min(maxTop, top));
 
     setPopoverStyle({ left, top, width: POPOVER_WIDTH });
@@ -63,6 +63,8 @@ export function GameCard({ id, title, coverArt, platforms, developer, year, genr
     scores.aesthetics +
     scores.polish
   ) / 5;
+
+  const scoreColor = scoreStyle(totalScore);
 
   return (
     <>
@@ -87,7 +89,7 @@ export function GameCard({ id, title, coverArt, platforms, developer, year, genr
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
-            <div className="absolute top-3 right-3 px-3 py-1 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full text-white font-bold text-sm shadow-lg">
+            <div className={`absolute top-3 right-3 px-3 py-1 ${scoreColor.bg} rounded-full text-white font-bold text-sm shadow-lg`}>
               {igdbRating?.toFixed(1) ?? totalScore.toFixed(1)}
             </div>
 
@@ -120,8 +122,8 @@ export function GameCard({ id, title, coverArt, platforms, developer, year, genr
             <div className="px-5 pt-5 pb-4 border-b border-purple-500/20">
               <div className="flex items-start justify-between gap-3">
                 <h3 className="text-white font-bold text-lg leading-tight">{title}</h3>
-                <div className="shrink-0 px-3 py-1 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full text-white font-bold text-sm shadow-lg">
-                  {igdbRating.toFixed(1)}
+                <div className={`shrink-0 px-3 py-1 ${scoreColor.bg} rounded-full text-white font-bold text-sm shadow-lg`}>
+                  {(igdbRating ?? totalScore).toFixed(1)}
                 </div>
               </div>
               <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-purple-300">

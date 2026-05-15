@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
 import { useAuth } from "../context/AuthContext";
-import { Gamepad2, Star, Users } from "lucide-react";
+import { Gamepad2, Star, Users, ChevronRight } from "lucide-react";
 import warpstarWhiteLogo from "../../imports/warpstarwhite.png";
 
 const spaceBackground =
@@ -45,17 +45,22 @@ export function SplashPage() {
 
   const handleGoogleSuccess = async (credentialResponse: any) => {
     setIsSigningIn(true);
+    console.log("[SplashPage] Google login successful, credential received");
     try {
+      console.log("[SplashPage] Starting sign-in with Google credential...");
       await signInWithGoogle(credentialResponse.credential);
+      console.log("[SplashPage] Sign-in successful, navigating to onboarding");
       navigate("/onboarding");
     } catch (error) {
-      console.error("Sign-in error:", error);
+      console.error("[SplashPage] Sign-in error:", error);
+      console.error("[SplashPage] Error type:", error instanceof Error ? error.message : String(error));
       setIsSigningIn(false);
     }
   };
 
   const handleGoogleError = () => {
-    console.log("Login Failed");
+    console.error("[SplashPage] Google OAuth error occurred");
+    console.error("[SplashPage] Login Failed");
     setIsSigningIn(false);
   };
 
@@ -120,7 +125,7 @@ export function SplashPage() {
 
           {/* CTA */}
           <button
-            onClick={handleGoogleSignIn}
+            onClick={handleGoogleSuccess}
             disabled={isSigningIn}
             className="group relative flex items-center gap-3 px-8 py-4 bg-white rounded-2xl text-gray-900 font-bold text-lg shadow-2xl hover:scale-105 active:scale-100 transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed mb-4"
           >

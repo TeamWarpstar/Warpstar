@@ -33,7 +33,7 @@ export function Header() {
 
   const handleSignOut = () => {
     signOut();
-    navigate("/login");
+    navigate("/");
   };
 
   const closeMobile = () => setShowMobileMenu(false);
@@ -66,9 +66,9 @@ export function Header() {
         {/* Desktop nav — hidden on mobile */}
         <nav className="hidden md:flex items-center gap-6 ml-auto">
           <Link to="/" className="text-white/70 hover:text-white transition-colors">Home</Link>
-          <Link to="/discover" className="text-white/70 hover:text-white transition-colors">Discover</Link>
+          <Link to="/home/discover" className="text-white/70 hover:text-white transition-colors">Discover</Link>
           <Link to={profileUrl} className="text-white/70 hover:text-white transition-colors">Profile</Link>
-          <Link to="/settings" className="text-white/70 hover:text-white transition-colors">
+          <Link to="/home/settings" className="text-white/70 hover:text-white transition-colors">
             <Settings className="w-5 h-5" />
           </Link>
           <button className="relative text-white/70 hover:text-white transition-colors" aria-label="Notifications">
@@ -99,7 +99,7 @@ export function Header() {
                   <p className="text-white/40 text-xs truncate">@{user?.username}</p>
                 </div>
                 <Link to={profileUrl} className="block px-4 py-3 text-white/70 hover:bg-white/8 hover:text-white transition-colors text-sm" onClick={() => setShowUserMenu(false)}>View Profile</Link>
-                <Link to="/settings" className="block px-4 py-3 text-white/70 hover:bg-white/8 hover:text-white transition-colors text-sm" onClick={() => setShowUserMenu(false)}>Settings</Link>
+                <Link to="/home/settings" className="block px-4 py-3 text-white/70 hover:bg-white/8 hover:text-white transition-colors text-sm" onClick={() => setShowUserMenu(false)}>Settings</Link>
                 {user?.topGenres && user.topGenres.length > 0 && (
                   <div className="px-4 py-3 border-t border-white/10">
                     <p className="text-white/40 text-xs mb-2">Top Genres</p>
@@ -161,9 +161,9 @@ export function Header() {
           {/* Nav links */}
           <nav className="flex flex-col gap-1">
             <Link to="/" onClick={closeMobile} className="px-4 py-3 text-white/70 hover:text-white hover:bg-white/5 rounded-xl transition-colors">Home</Link>
-            <Link to="/discover" onClick={closeMobile} className="px-4 py-3 text-white/70 hover:text-white hover:bg-white/5 rounded-xl transition-colors">Discover</Link>
+            <Link to="/home/discover" onClick={closeMobile} className="px-4 py-3 text-white/70 hover:text-white hover:bg-white/5 rounded-xl transition-colors">Discover</Link>
             <Link to={profileUrl} onClick={closeMobile} className="px-4 py-3 text-white/70 hover:text-white hover:bg-white/5 rounded-xl transition-colors">Profile</Link>
-            <Link to="/settings" onClick={closeMobile} className="px-4 py-3 text-white/70 hover:text-white hover:bg-white/5 rounded-xl transition-colors">Settings</Link>
+            <Link to="/home/settings" onClick={closeMobile} className="px-4 py-3 text-white/70 hover:text-white hover:bg-white/5 rounded-xl transition-colors">Settings</Link>
             <button onClick={() => { handleSignOut(); closeMobile(); }} className="text-left px-4 py-3 text-white/60 hover:text-white hover:bg-white/5 rounded-xl transition-colors">Sign Out</button>
           </nav>
         </div>

@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { googleLogin } from "../api/auth";
+import { googleLogin } from "../../api/auth";
 
 export interface WarpstarUser {
   id: string;
@@ -55,7 +55,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithGoogle = async (googleCredential: string) => {
     try {
+      console.log("[AuthContext] Calling googleLogin API...");
       const response = await googleLogin(googleCredential);
+      console.log("[AuthContext] API response received:", { userId: response.user.id, email: response.user.email });
       const newUser: WarpstarUser = {
         id: response.user.id,
         email: response.user.email,
@@ -63,9 +65,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         googleAvatar: response.user.googleAvatar || "",
         profileComplete: false,
       };
+      console.log("[AuthContext] Creating new user object and persisting...");
       persist(newUser);
+      console.log("[AuthContext] User successfully persisted");
     } catch (error) {
-      console.error("Google login failed:", error);
+      console.error("[AuthContext] Google login failed:", error);
+      console.error("[AuthContext] Error details:", error instanceof Error ? { message: error.message, stack: error.stack } : String(error));
       throw error;
     }
   };

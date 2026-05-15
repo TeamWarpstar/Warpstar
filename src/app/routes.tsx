@@ -30,7 +30,7 @@ export const router = createBrowserRouter([
     Component: ProvidersWrapper,
     children: [
       {
-        path: "/login",
+        path: "/",
         Component: SplashPage,
       },
       {
@@ -38,7 +38,7 @@ export const router = createBrowserRouter([
         Component: OnboardingPage,
       },
       {
-        path: "/",
+        path: "/home",
         Component: RootLayout,
         children: [
           { index: true, Component: HomePage },

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { GameCard } from "./GameCard";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Link } from "react-router";
-import { getGames, Game, GamesResponse } from "../api/games";
+import { getGames, Game, GamesResponse } from "../../api/games";
 
 // Fallback mock data for when API is unavailable
 const FALLBACK_GAMES = [
@@ -144,7 +144,7 @@ export function HomePage() {
           {genres.map(genre => (
             <Link
               key={genre.name}
-              to={`/genre/${genre.name.toLowerCase()}`}
+              to={`genre/${genre.name.toLowerCase()}`}
               className={`group relative overflow-hidden rounded-xl aspect-square flex items-end p-4 border border-white/10 hover:scale-105 transition-all duration-300 bg-gradient-to-br ${genre.gradient}`}
             >
               <span className="text-[#ffffff] text-xl font-bold relative z-10 drop-shadow">{genre.name}</span>

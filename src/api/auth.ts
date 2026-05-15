@@ -21,16 +21,26 @@ export interface AuthResponse {
  * Exchange Google credential for Warpstar auth tokens.
  */
 export async function googleLogin(googleCredential: string): Promise<AuthResponse> {
-  const data = await apiFetch<AuthResponse>("/api/auth/google", {
-    method: "POST",
-    body: JSON.stringify({ credential: googleCredential }),
-  });
+  try {
+    console.log("[auth.ts] Making POST request to /api/auth/google");
+    const data = await apiFetch<AuthResponse>("/api/auth/google", {
+      method: "POST",
+      body: JSON.stringify({ credential: googleCredential }),
+    });
+    console.log("[auth.ts] API response received successfully");
 
-  // Store tokens
-  localStorage.setItem("ws_access_token", data.accessToken);
-  localStorage.setItem("ws_refresh_token", data.refreshToken);
+    // Store tokens
+    console.log("[auth.ts] Storing access and refresh tokens...");
+    localStorage.setItem("ws_access_token", data.accessToken);
+    localStorage.setItem("ws_refresh_token", data.refreshToken);
+    console.log("[auth.ts] Tokens stored successfully");
 
-  return data;
+    return data;
+  } catch (error) {
+    console.error("[auth.ts] googleLogin failed:", error);
+    console.error("[auth.ts] Error details:", error instanceof Error ? { message: error.message, stack: error.stack } : String(error));
+    throw error;
+  }
 }
 
 export async function logout() {
