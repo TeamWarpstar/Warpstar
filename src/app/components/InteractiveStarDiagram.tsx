@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+﻿import { useState, useRef, useEffect } from "react";
 
 interface Scores {
   gameplay: number;
@@ -42,7 +42,7 @@ export function InteractiveStarDiagram({ scores, onScoreChange, size = 400 }: In
     return { x: centerX + radius * Math.cos(rad), y: centerY + radius * Math.sin(rad) };
   };
 
-  // Snap to nearest integer (1–10) — no decimals
+  // Snap to nearest integer (1â€“10) â€” no decimals
   const getValueFromPoint = (x: number, y: number) => {
     const dx = x - centerX;
     const dy = y - centerY;
@@ -107,7 +107,7 @@ export function InteractiveStarDiagram({ scores, onScoreChange, size = 400 }: In
   return (
     // Fills whatever square container is given; no internal aspect-ratio imposed.
     <div className="relative w-full h-full select-none">
-      {/* Single SVG — everything (grid, shape, circles, labels) lives here,
+      {/* Single SVG â€” everything (grid, shape, circles, labels) lives here,
           so all coordinates are in the same space and scale uniformly. */}
       <svg
         ref={svgRef}
@@ -158,7 +158,7 @@ export function InteractiveStarDiagram({ scores, onScoreChange, size = 400 }: In
           pointerEvents="none"
         />
 
-        {/* Drag-handle circles — positioned entirely in SVG space */}
+        {/* Drag-handle circles â€” positioned entirely in SVG space */}
         {points.map((pt, i) => {
           const active = draggingIndex === i || hoveringIndex === i;
           return (
@@ -184,7 +184,7 @@ export function InteractiveStarDiagram({ scores, onScoreChange, size = 400 }: In
           );
         })}
 
-        {/* Factor labels — SVG text ensures they scale with the diagram */}
+        {/* Factor labels â€” SVG text ensures they scale with the diagram */}
         {factors.map(f => {
           const lp    = getPoint(f.angle, 12);
           const score = scores[f.key];
@@ -211,7 +211,7 @@ export function InteractiveStarDiagram({ scores, onScoreChange, size = 400 }: In
         })}
       </svg>
 
-      {/* Total score overlay — centred over the SVG via absolute flex */}
+      {/* Total score overlay â€” centred over the SVG via absolute flex */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
         <div className="text-center">
           <div className="font-bold bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent"

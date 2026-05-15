@@ -1,60 +1,101 @@
-/**
+﻿/**
  * src/api/auth.ts
- * Authentication endpoints: Google login, logout, profile updates.
+ * Authentication endpoints â€” email/password, Google OAuth, logout.
  */
 
-import { apiFetch } from "./client";
+import { apiFetch, setTokens, clearTokens } from "./client";
 
-export interface AuthResponse {
-  accessToken: string;
-  refreshToken: string;
-  user: {
-    id: string;
-    email: string;
-    googleName?: string;
-    googleAvatar?: string;
-    username?: string;
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+export interface AuthTokens {
+  access_token:  string;
+  refresh_token: string;
+  token_type:    string;
+}
+
+// Shape returned by the Google endpoint â€” our backend returns the same
+// JWT pair as email login, so we normalise it to AuthTokens
+export interface GoogleAuthResponse {
+  access_token:  string;
+  refresh_token: string;
+  token_type:    string;
+  // Optional user info the backend may include
+  user?: {
+    id:           string;
+    email:        string;
+    username?:    string;
+    displayName?: string;
+    avatar?:      string;
   };
 }
 
-/**
- * Exchange Google credential for Warpstar auth tokens.
- */
-export async function googleLogin(googleCredential: string): Promise<AuthResponse> {
-  try {
-    console.log("[auth.ts] Making POST request to /api/auth/google");
-    const data = await apiFetch<AuthResponse>("/api/auth/google", {
-      method: "POST",
-      body: JSON.stringify({ credential: googleCredential }),
-    });
-    console.log("[auth.ts] API response received successfully");
+// ---------------------------------------------------------------------------
+// Email / password
+// ---------------------------------------------------------------------------
 
-    // Store tokens
-    console.log("[auth.ts] Storing access and refresh tokens...");
-    localStorage.setItem("ws_access_token", data.accessToken);
-    localStorage.setItem("ws_refresh_token", data.refreshToken);
-    console.log("[auth.ts] Tokens stored successfully");
-
-    return data;
-  } catch (error) {
-    console.error("[auth.ts] googleLogin failed:", error);
-    console.error("[auth.ts] Error details:", error instanceof Error ? { message: error.message, stack: error.stack } : String(error));
-    throw error;
-  }
-}
-
-export async function logout() {
-  localStorage.removeItem("ws_access_token");
-  localStorage.removeItem("ws_refresh_token");
-}
-
-export async function getProfile() {
-  return apiFetch("/api/auth/profile");
-}
-
-export async function updateProfile(data: any) {
-  return apiFetch("/api/auth/profile", {
-    method: "PATCH",
-    body: JSON.stringify(data),
+export async function register(
+  username: string,
+  email: string,
+  password: string,
+): Promise<AuthTokens> {
+  const tokens = await apiFetch<AuthTokens>("/api/auth/register", {
+    method:   "POST",
+    body:     JSON.stringify({ username, email, password }),
+    skipAuth: true,
   });
+  setTokens(tokens.access_token, tokens.refresh_token);
+  return tokens;
+}
+
+export async function login(
+  email: string,
+  password: string,
+): Promise<AuthTokens> {
+  const tokens = await apiFetch<AuthTokens>("/api/auth/login", {
+    method:   "POST",
+    body:     JSON.stringify({ email, password }),
+    skipAuth: true,
+  });
+  setTokens(tokens.access_token, tokens.refresh_token);
+  return tokens;
+}
+
+// ---------------------------------------------------------------------------
+// Google OAuth
+// ---------------------------------------------------------------------------
+
+export async function googleLogin(
+  googleCredential: string,
+): Promise<GoogleAuthResponse> {
+  const data = await apiFetch<GoogleAuthResponse>("/api/auth/google", {
+    method:   "POST",
+    body:     JSON.stringify({ credential: googleCredential }),
+    skipAuth: true,
+  });
+  setTokens(data.access_token, data.refresh_token);
+  return data;
+}
+
+// ---------------------------------------------------------------------------
+// Token refresh
+// ---------------------------------------------------------------------------
+
+export async function refreshTokens(refreshToken: string): Promise<AuthTokens> {
+  const tokens = await apiFetch<AuthTokens>("/api/auth/refresh", {
+    method:   "POST",
+    body:     JSON.stringify({ refresh_token: refreshToken }),
+    skipAuth: true,
+  });
+  setTokens(tokens.access_token, tokens.refresh_token);
+  return tokens;
+}
+
+// ---------------------------------------------------------------------------
+// Logout
+// ---------------------------------------------------------------------------
+
+export function logout(): void {
+  clearTokens();
 }

@@ -1,4 +1,4 @@
-declare module '*.png' {
+﻿eclare module '*.png' {
   const content: string;
   export default content;
 }

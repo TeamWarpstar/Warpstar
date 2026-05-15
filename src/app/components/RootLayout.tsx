@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+﻿import { useEffect } from "react";
 import { Outlet, useNavigate } from "react-router";
 import { Header } from "./Header";
 import { useAuth } from "../context/AuthContext";
@@ -10,14 +10,15 @@ export function RootLayout() {
 
   useEffect(() => {
     if (isLoading) return;
-    if (!user) {
-      navigate("/", { replace: true });
-    } else if (!user.profileComplete) {
+    // Only redirect to onboarding if logged in but profile not complete
+    // Guests (user === null) are allowed through
+    if (user && !user.profileComplete) {
       navigate("/onboarding", { replace: true });
     }
   }, [user, isLoading, navigate]);
 
-  if (isLoading || !user || !user.profileComplete) {
+  // Show spinner only while restoring session from token
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">

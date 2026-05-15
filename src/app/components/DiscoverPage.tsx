@@ -1,4 +1,4 @@
-import { Link } from "react-router";
+﻿import { Link } from "react-router";
 
 const genres = [
   { name: "Action",     gradient: "from-red-600     to-orange-500"  },

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+﻿import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router";
 import { StarPolarDiagram } from "./StarPolarDiagram";
 import { ImageWithFallback } from "./ImageWithFallback";
@@ -128,9 +128,9 @@ export function GameCard({ id, title, coverArt, platforms, developer, year, genr
               </div>
               <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-purple-300">
                 <span>{developer}</span>
-                <span className="text-purple-600">·</span>
+                <span className="text-purple-600">Â·</span>
                 <span>{year}</span>
-                <span className="text-purple-600">·</span>
+                <span className="text-purple-600">Â·</span>
                 <span className="text-pink-400">{genres?.join(", ") ?? "Game"}</span>
               </div>
               <div className="mt-2 flex flex-wrap gap-1">

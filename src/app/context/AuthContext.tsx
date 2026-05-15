@@ -1,98 +1,152 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { googleLogin } from "../../api/auth";
+﻿import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { login as apiLogin, register as apiRegister, logout as apiLogout, googleLogin as apiGoogleLogin } from "../../api/auth";
+import { getMe, BackendUser } from "../../api/users";
+import { clearTokens } from "../../api/client";
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
 
 export interface WarpstarUser {
-  id: string;
-  email: string;
-  googleName: string;
-  googleAvatar: string;
-  username?: string;
-  displayName?: string;
+  id:              string;
+  email?:          string;
+  username:        string;
+  displayName?:    string;
+  // Google-specific fields from the designer's version
+  googleName?:     string;
+  googleAvatar?:   string;
+  // Profile fields
   profilePicture?: string;
-  bannerImage?: string;
-  topGenres?: string[];
+  bannerImage?:    string;
+  topGenres?:      string[];
   profileComplete: boolean;
+  // Raw backend fields
+  favoriteGames:   string[];
+  followers:       string[];
+  following:       string[];
+  preferences:     Record<string, unknown>;
 }
 
 interface AuthContextType {
-  user: WarpstarUser | null;
-  isLoading: boolean;
+  user:             WarpstarUser | null;
+  isLoading:        boolean;
+  login:            (email: string, password: string) => Promise<void>;
+  register:         (username: string, email: string, password: string) => Promise<void>;
   signInWithGoogle: (googleCredential: string) => Promise<void>;
-  signOut: () => void;
-  updateProfile: (data: Partial<WarpstarUser>) => void;
+  signOut:          () => void;
+  updateProfile:    (data: Partial<WarpstarUser>) => void;
+  refreshUser:      () => Promise<void>;
 }
+
+// ---------------------------------------------------------------------------
+// Context
+// ---------------------------------------------------------------------------
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-const STORAGE_KEY = "warpstar_user";
+function mapBackendUser(u: BackendUser): WarpstarUser {
+  return {
+    id:              u.id,
+    username:        u.username,
+    favoriteGames:   u.favoriteGames ?? [],
+    followers:       u.followers ?? [],
+    following:       u.following ?? [],
+    preferences:     u.preferences ?? {},
+    profileComplete: !!u.username,
+    displayName:     (u.preferences?.displayName as string) ?? u.username,
+    profilePicture:  u.preferences?.profilePicture as string | undefined,
+    bannerImage:     u.preferences?.bannerImage as string | undefined,
+    topGenres:       u.preferences?.topGenres as string[] | undefined,
+    googleName:      u.preferences?.googleName as string | undefined,
+    googleAvatar:    u.preferences?.googleAvatar as string | undefined,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Provider
+// ---------------------------------------------------------------------------
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<WarpstarUser | null>(null);
+  const [user, setUser]           = useState<WarpstarUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Rehydrate from localStorage on mount
+  // On mount â€” restore session from stored JWT if present
+  // Uses a 5s timeout so a dead backend never leaves users stuck loading
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        setUser(JSON.parse(stored));
-      }
-    } catch {
-      // ignore
-    } finally {
+    const token = localStorage.getItem("ws_access_token");
+
+    if (!token) {
       setIsLoading(false);
+      return;
     }
+
+    const timeout = setTimeout(() => {
+      clearTokens();
+      setIsLoading(false);
+    }, 5000);
+
+    getMe()
+      .then(u => setUser(mapBackendUser(u)))
+      .catch(() => clearTokens())
+      .finally(() => {
+        clearTimeout(timeout);
+        setIsLoading(false);
+      });
   }, []);
 
-  const persist = (u: WarpstarUser | null) => {
-    if (u) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(u));
-    } else {
-      localStorage.removeItem(STORAGE_KEY);
-    }
-    setUser(u);
+  // ---------------------------------------------------------------------------
+  // Auth actions
+  // ---------------------------------------------------------------------------
+
+  const refreshUser = async () => {
+    const u = await getMe();
+    setUser(mapBackendUser(u));
+  };
+
+  const login = async (email: string, password: string) => {
+    await apiLogin(email, password);
+    const u = await getMe();
+    setUser(mapBackendUser(u));
+  };
+
+  const register = async (username: string, email: string, password: string) => {
+    await apiRegister(username, email, password);
+    const u = await getMe();
+    setUser(mapBackendUser(u));
   };
 
   const signInWithGoogle = async (googleCredential: string) => {
-    try {
-      console.log("[AuthContext] Calling googleLogin API...");
-      const response = await googleLogin(googleCredential);
-      console.log("[AuthContext] API response received:", { userId: response.user.id, email: response.user.email });
-      const newUser: WarpstarUser = {
-        id: response.user.id,
-        email: response.user.email,
-        googleName: response.user.googleName || "",
-        googleAvatar: response.user.googleAvatar || "",
-        profileComplete: false,
-      };
-      console.log("[AuthContext] Creating new user object and persisting...");
-      persist(newUser);
-      console.log("[AuthContext] User successfully persisted");
-    } catch (error) {
-      console.error("[AuthContext] Google login failed:", error);
-      console.error("[AuthContext] Error details:", error instanceof Error ? { message: error.message, stack: error.stack } : String(error));
-      throw error;
-    }
+    await apiGoogleLogin(googleCredential);
+    const u = await getMe();
+    setUser(mapBackendUser(u));
   };
 
   const signOut = () => {
-    localStorage.removeItem("ws_access_token");
-    localStorage.removeItem("ws_refresh_token");
-    persist(null);
+    apiLogout();
+    setUser(null);
   };
 
+  // Local-only update â€” for optimistic UI before saving to backend
   const updateProfile = (data: Partial<WarpstarUser>) => {
     if (!user) return;
-    const updated = { ...user, ...data };
-    persist(updated);
+    setUser({ ...user, ...data });
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, signInWithGoogle, signOut, updateProfile }}>
+    <AuthContext.Provider value={{
+      user, isLoading,
+      login, register,
+      signInWithGoogle, signOut,
+      updateProfile, refreshUser,
+    }}>
       {children}
     </AuthContext.Provider>
   );
 }
+
+// ---------------------------------------------------------------------------
+// Hook
+// ---------------------------------------------------------------------------
 
 export function useAuth() {
   const ctx = useContext(AuthContext);

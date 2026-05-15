@@ -1,4 +1,4 @@
-export function scoreStyle(s: number): { bg: string; text: string } {
+﻿export function scoreStyle(s: number): { bg: string; text: string } {
   if (s < 1)   return { bg: "bg-black",     text: "text-red-500"   };
   if (s < 3)   return { bg: "bg-red-600",   text: "text-[#ffffff]" };
   if (s < 5)   return { bg: "bg-orange-500",text: "text-[#ffffff]" };

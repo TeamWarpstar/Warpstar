@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { GameCard } from "./GameCard";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Link } from "react-router";
