@@ -11,7 +11,7 @@ import { toggleFavoriteGame } from "../../api/users";
 import { useAuth } from "../context/AuthContext";
 
 // ---------------------------------------------------------------------------
-// Review distribution chart â€” built from real review data
+// Review distribution chart — built from real review data
 // ---------------------------------------------------------------------------
 
 function buildDistributionData(reviews: any[]) {
@@ -58,6 +58,37 @@ function DistributionChart({ reviews }: { reviews: any[] }) {
       </BarChart>
     </ResponsiveContainer>
   );
+}
+
+
+// Map flat backend review doc to the shape ReviewCard expects
+function mapReview(r: any) {
+  return {
+    reviewer: {
+      username: r.username ?? r.userId ?? "unknown",
+      avatar:   r.avatar ?? undefined,
+    },
+    scores: {
+      gameplay:   r.gameplay   ?? 0,
+      content:    r.content    ?? 0,
+      narrative:  r.narrative  ?? 0,
+      aesthetics: r.aesthetics ?? 0,
+      polish:     r.polish     ?? 0,
+    },
+    categoryText: {
+      gameplay:   r.gp_body  ?? "",
+      content:    r.con_body ?? "",
+      narrative:  r.ntv_body ?? "",
+      aesthetics: r.aes_body ?? "",
+      polish:     r.pol_body ?? "",
+    },
+    review:   r.body ?? r.title ?? "",
+    likes:    r.likes         ?? 0,
+    dislikes: 0,
+    comments: r.commentsCount ?? 0,
+    isPinned: false,
+    id:       r.id,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -132,7 +163,7 @@ export function GamePage() {
     <div className="max-w-7xl mx-auto px-4 py-6 sm:py-8">
       <div className="grid lg:grid-cols-3 gap-6 sm:gap-8 mb-10 sm:mb-12">
 
-        {/* Sidebar cover â€” desktop only */}
+        {/* Sidebar cover — desktop only */}
         <div className="hidden lg:block lg:col-span-1">
           <div className="sticky top-20 space-y-4">
             <div className="rounded-xl overflow-hidden border border-white/10 shadow-2xl">
@@ -143,7 +174,7 @@ export function GamePage() {
               />
             </div>
 
-            {/* Favorite button â€” logged in users only */}
+            {/* Favorite button — logged in users only */}
             {user && (
               <button onClick={handleFavorite} disabled={favoriting}
                 className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border font-semibold transition-all text-sm ${isFavorited ? "bg-pink-500/20 border-pink-500/50 text-pink-400" : "bg-white/5 border-white/10 text-white/70 hover:border-white/25"}`}>
@@ -299,7 +330,7 @@ export function GamePage() {
             </div>
           </div>
 
-          {/* Distribution chart â€” only shown when there are reviews */}
+          {/* Distribution chart — only shown when there are reviews */}
           {reviews.length > 0 && (
             <div className="bg-white/5 border border-white/10 rounded-xl p-6">
               <h3 className="text-xl font-bold text-white mb-4">Review Distribution</h3>
@@ -351,7 +382,7 @@ export function GamePage() {
                   : "bg-white/5 text-white/60 border border-white/10 hover:border-white/25"
               }`}
             >
-               Hottest Take
+              🔥 Hottest Take
             </button>
           </div>
         </div>
@@ -360,7 +391,7 @@ export function GamePage() {
           {sortedReviews.length === 0
             ? <p className="text-white/40 text-center py-12">No reviews yet. Be the first!</p>
             : sortedReviews.map((review, index) => (
-                <ReviewCard key={review.id ?? `review-${index}`} {...review} />
+                <ReviewCard key={review.id ?? `review-${index}`} {...mapReview(review)} />
               ))
           }
         </div>

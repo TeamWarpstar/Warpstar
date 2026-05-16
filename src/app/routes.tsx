@@ -5,15 +5,14 @@ import { GamePage } from "./components/GamePage";
 import { ProfilePage } from "./components/ProfilePage";
 import { SettingsPage } from "./components/SettingsPage";
 import { GenrePage } from "./components/GenrePage";
-import { DiscoverPage } from "./components/DiscoverPage";
 import { CreateReviewPage } from "./components/CreateReviewPage";
 import { SplashPage } from "./components/SplashPage";
 import { OnboardingPage } from "./components/OnboardingPage";
 import { AuthProvider } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
 
-// Root wrapper â€” puts both providers inside the React Router tree so every
-// route component (RootLayout, SplashPage, OnboardingPage, â€¦) can call
+// Root wrapper — puts both providers inside the React Router tree so every
+// route component (RootLayout, SplashPage, OnboardingPage, …) can call
 // useAuth() and useTheme() without "must be used within Provider" errors.
 function ProvidersWrapper() {
   return (
@@ -30,7 +29,7 @@ export const router = createBrowserRouter([
     Component: ProvidersWrapper,
     children: [
       {
-        path: "/",
+        path: "/login",
         Component: SplashPage,
       },
       {
@@ -38,7 +37,7 @@ export const router = createBrowserRouter([
         Component: OnboardingPage,
       },
       {
-        path: "/home",
+        path: "/",
         Component: RootLayout,
         children: [
           { index: true, Component: HomePage },
@@ -46,7 +45,6 @@ export const router = createBrowserRouter([
           { path: "game/:gameId/review", Component: CreateReviewPage },
           { path: "profile/:username", Component: ProfilePage },
           { path: "settings", Component: SettingsPage },
-          { path: "discover", Component: DiscoverPage },
           { path: "genre/:genreName", Component: GenrePage },
         ],
       },

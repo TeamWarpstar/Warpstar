@@ -1,41 +1,41 @@
-﻿import { Link, useNavigate } from "react-router";
+﻿import { Link, useNavigate, useLocation } from "react-router";
 import { Search, Bell, Settings, Menu, X, Loader2 } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import { getGames, Game } from "../../api/games";
 import warpstarWhiteLogo from "../../imports/warpstarwhite.png";
 import warpstarDarkLogo from "../../imports/warpstartransparent.png";
 
-export function Header() {
-  const { user, signOut } = useAuth();
-  const { isDark } = useTheme();
-  const navigate = useNavigate();
-  const [showUserMenu,   setShowUserMenu]   = useState(false);
-  const [showMobileMenu, setShowMobileMenu] = useState(false);
-  const [query,          setQuery]          = useState("");
-  const [results,        setResults]        = useState<Game[]>([]);
-  const [searching,      setSearching]      = useState(false);
-  const menuRef    = useRef<HTMLDivElement>(null);
-  const searchRef  = useRef<HTMLDivElement>(null);
-  const debounceRef= useRef<ReturnType<typeof setTimeout> | null>(null);
+// ---------------------------------------------------------------------------
+// Search box — defined outside Header so it never re-mounts on parent renders
+// ---------------------------------------------------------------------------
 
-  const profileUrl = user?.username ? `/profile/${user.username}` : "/login";
+interface SearchBoxProps {
+  className?: string;
+  onNavigate?: () => void;
+}
 
-  // Close user menu on outside click
+function SearchBox({ className = "", onNavigate }: SearchBoxProps) {
+  const [query,     setQuery]     = useState("");
+  const [results,   setResults]   = useState<Game[]>([]);
+  const [searching, setSearching] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef     = useRef<HTMLInputElement>(null);
+  const debounceRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Close dropdown on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (menuRef.current   && !menuRef.current.contains(e.target as Node))   setShowUserMenu(false);
-      if (searchRef.current && !searchRef.current.contains(e.target as Node)) setResults([]);
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setResults([]);
+      }
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // Close mobile menu on navigate
-  useEffect(() => { setShowMobileMenu(false); }, [navigate]);
-
-  // Debounced search
+  // Debounced search — does NOT clear input, only updates results
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     if (!query.trim()) { setResults([]); return; }
@@ -44,17 +44,26 @@ export function Header() {
       try {
         const res = await getGames({ q: query, limit: 6 });
         setResults(res.results);
-      } finally { setSearching(false); }
+      } catch {
+        setResults([]);
+      } finally {
+        setSearching(false);
+      }
     }, 350);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [query]);
 
-  const handleSignOut = () => { signOut(); navigate("/"); };
-  const closeMobile   = () => setShowMobileMenu(false);
+  const handleSelect = () => {
+    setQuery("");
+    setResults([]);
+    onNavigate?.();
+  };
 
-  const SearchBox = ({ className = "" }: { className?: string }) => (
-    <div ref={searchRef} className={`relative ${className}`}>
+  return (
+    <div ref={containerRef} className={`relative ${className}`}>
       <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/30 pointer-events-none" />
       <input
+        ref={inputRef}
         type="text"
         value={query}
         onChange={e => setQuery(e.target.value)}
@@ -62,30 +71,44 @@ export function Header() {
         className="w-full bg-white/5 border border-white/10 rounded-full pl-12 pr-10 py-3 text-white placeholder:text-white/30 focus:outline-none focus:border-white/30 transition-colors"
       />
       {query && (
-        <button onClick={() => { setQuery(""); setResults([]); }}
-          className="absolute right-4 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60">
+        <button
+          type="button"
+          onClick={() => { setQuery(""); setResults([]); inputRef.current?.focus(); }}
+          className="absolute right-4 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60"
+        >
           <X className="w-4 h-4" />
         </button>
       )}
 
-      {/* Dropdown results */}
+      {/* Dropdown */}
       {query && (results.length > 0 || searching) && (
         <div className="absolute top-full mt-2 left-0 right-0 bg-[#111111] border border-white/10 rounded-2xl overflow-hidden shadow-2xl shadow-black/60 z-50">
           {searching
-            ? <div className="flex items-center justify-center py-5"><Loader2 className="w-5 h-5 text-white/40 animate-spin"/></div>
+            ? <div className="flex items-center justify-center py-5">
+                <Loader2 className="w-5 h-5 text-white/40 animate-spin" />
+              </div>
             : results.map(g => (
-                <Link key={g.id} to={`/game/${g.id}`}
-                  onClick={() => { setQuery(""); setResults([]); closeMobile(); }}
-                  className="flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors">
-                  <img src={g.coverUrl ?? ""} alt="" className="w-8 h-10 object-cover rounded border border-white/10"
-                    onError={e => (e.currentTarget.style.display = "none")} />
+                <Link
+                  key={g.id}
+                  to={`/game/${g.id}`}
+                  onClick={handleSelect}
+                  className="flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors"
+                >
+                  <img
+                    src={g.coverUrl ?? ""}
+                    alt=""
+                    className="w-8 h-10 object-cover rounded border border-white/10 flex-shrink-0"
+                    onError={e => (e.currentTarget.style.display = "none")}
+                  />
                   <div className="flex-1 min-w-0">
                     <p className="text-white text-sm font-medium truncate">{g.name}</p>
-                    {g.releaseDate && <p className="text-white/40 text-xs">{new Date(g.releaseDate).getFullYear()}</p>}
+                    {g.releaseDate && (
+                      <p className="text-white/40 text-xs">{new Date(g.releaseDate).getFullYear()}</p>
+                    )}
                   </div>
                   {g.reviewTotal > 0 && (
                     <span className="text-white/60 text-sm font-bold flex-shrink-0">
-                      {((g.gameplayAvg+g.contentAvg+g.narrativeAvg+g.aestheticsAvg+g.polishAvg)/5).toFixed(1)}
+                      {((g.gameplayAvg + g.contentAvg + g.narrativeAvg + g.aestheticsAvg + g.polishAvg) / 5).toFixed(1)}
                     </span>
                   )}
                 </Link>
@@ -95,13 +118,53 @@ export function Header() {
       )}
     </div>
   );
+}
+
+// ---------------------------------------------------------------------------
+// Header
+// ---------------------------------------------------------------------------
+
+export function Header() {
+  const { user, signOut }  = useAuth();
+  const { isDark }         = useTheme();
+  const navigate           = useNavigate();
+  const location           = useLocation();
+  const [showUserMenu,   setShowUserMenu]   = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  const profileUrl = user?.username ? `/profile/${user.username}` : "/login";
+
+  // Close menus on route change
+  useEffect(() => {
+    setShowMobileMenu(false);
+    setShowUserMenu(false);
+  }, [location.pathname]);
+
+  // Close user menu on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setShowUserMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const handleSignOut = () => { signOut(); navigate("/"); };
+  const closeMobile   = () => setShowMobileMenu(false);
 
   return (
     <header className="warpstar-header sticky top-0 z-50 bg-[#0a0a0a]/80 backdrop-blur-xl border-b border-white/10">
       <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-4">
         {/* Logo */}
         <Link to="/" className="flex items-center flex-shrink-0">
-          <img src={isDark ? warpstarWhiteLogo : warpstarDarkLogo} alt="Warpstar" className="h-10 md:h-12 w-auto" />
+          <img
+            src={isDark ? warpstarWhiteLogo : warpstarDarkLogo}
+            alt="Warpstar"
+            className="h-10 md:h-12 w-auto"
+          />
         </Link>
 
         {/* Desktop search */}
@@ -113,7 +176,9 @@ export function Header() {
         <nav className="hidden md:flex items-center gap-6 ml-auto">
           <Link to="/" className="text-white/70 hover:text-white transition-colors">Home</Link>
           <Link to="/discover" className="text-white/70 hover:text-white transition-colors">Discover</Link>
-          {user && <Link to={profileUrl} className="text-white/70 hover:text-white transition-colors">Profile</Link>}
+          {user && (
+            <Link to={profileUrl} className="text-white/70 hover:text-white transition-colors">Profile</Link>
+          )}
           <Link to="/settings" className="text-white/70 hover:text-white transition-colors">
             <Settings className="w-5 h-5" />
           </Link>
@@ -124,9 +189,11 @@ export function Header() {
 
           {user ? (
             <div className="relative" ref={menuRef}>
-              <button onClick={() => setShowUserMenu(p => !p)}
+              <button
+                onClick={() => setShowUserMenu(p => !p)}
                 className="w-10 h-10 rounded-full overflow-hidden border-2 border-white/20 hover:border-white/50 hover:scale-110 transition-all"
-                aria-label="User menu">
+                aria-label="User menu"
+              >
                 {user.profilePicture
                   ? <img src={user.profilePicture} alt={user.displayName ?? "User"} className="w-full h-full object-cover" />
                   : <div className="w-full h-full bg-zinc-700 flex items-center justify-center text-white font-bold text-sm">
@@ -141,8 +208,12 @@ export function Header() {
                     <p className="text-white font-semibold text-sm truncate">{user.displayName}</p>
                     <p className="text-white/40 text-xs truncate">@{user.username}</p>
                   </div>
-                  <Link to={profileUrl} onClick={() => setShowUserMenu(false)} className="block px-4 py-3 text-white/70 hover:bg-white/5 hover:text-white transition-colors text-sm">View Profile</Link>
-                  <Link to="/settings" onClick={() => setShowUserMenu(false)} className="block px-4 py-3 text-white/70 hover:bg-white/5 hover:text-white transition-colors text-sm border-t border-white/10">Settings</Link>
+                  <Link to={profileUrl} onClick={() => setShowUserMenu(false)} className="block px-4 py-3 text-white/70 hover:bg-white/5 hover:text-white transition-colors text-sm">
+                    View Profile
+                  </Link>
+                  <Link to="/settings" onClick={() => setShowUserMenu(false)} className="block px-4 py-3 text-white/70 hover:bg-white/5 hover:text-white transition-colors text-sm border-t border-white/10">
+                    Settings
+                  </Link>
                   {user.topGenres && user.topGenres.length > 0 && (
                     <div className="px-4 py-3 border-t border-white/10">
                       <p className="text-white/40 text-xs mb-2">Top Genres</p>
@@ -154,7 +225,9 @@ export function Header() {
                     </div>
                   )}
                   <div className="border-t border-white/10">
-                    <button onClick={handleSignOut} className="w-full text-left px-4 py-3 text-white/60 hover:bg-white/5 hover:text-white transition-colors text-sm">Sign Out</button>
+                    <button onClick={handleSignOut} className="w-full text-left px-4 py-3 text-white/60 hover:bg-white/5 hover:text-white transition-colors text-sm">
+                      Sign Out
+                    </button>
                   </div>
                 </div>
               )}
@@ -176,11 +249,17 @@ export function Header() {
             <Link to={profileUrl} className="w-9 h-9 rounded-full overflow-hidden border-2 border-white/20 flex-shrink-0">
               {user.profilePicture
                 ? <img src={user.profilePicture} alt={user.displayName ?? "User"} className="w-full h-full object-cover" />
-                : <div className="w-full h-full bg-zinc-700 flex items-center justify-center text-white font-bold text-xs">{user.displayName?.[0]?.toUpperCase() ?? "?"}</div>
+                : <div className="w-full h-full bg-zinc-700 flex items-center justify-center text-white font-bold text-xs">
+                    {user.displayName?.[0]?.toUpperCase() ?? "?"}
+                  </div>
               }
             </Link>
           )}
-          <button onClick={() => setShowMobileMenu(v => !v)} className="text-white/70 hover:text-white transition-colors p-1" aria-label="Toggle menu">
+          <button
+            onClick={() => setShowMobileMenu(v => !v)}
+            className="text-white/70 hover:text-white transition-colors p-1"
+            aria-label="Toggle menu"
+          >
             {showMobileMenu ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
         </div>
@@ -189,18 +268,23 @@ export function Header() {
       {/* Mobile drawer */}
       {showMobileMenu && (
         <div className="md:hidden border-t border-white/10 bg-[#0a0a0a]/95 backdrop-blur-xl px-4 py-4 space-y-4">
-          <SearchBox />
+          <SearchBox onNavigate={closeMobile} />
           <nav className="flex flex-col gap-1">
             <Link to="/" onClick={closeMobile} className="px-4 py-3 text-white/70 hover:text-white hover:bg-white/5 rounded-xl transition-colors">Home</Link>
             <Link to="/discover" onClick={closeMobile} className="px-4 py-3 text-white/70 hover:text-white hover:bg-white/5 rounded-xl transition-colors">Discover</Link>
-            {user
-              ? <>
-                  <Link to={profileUrl} onClick={closeMobile} className="px-4 py-3 text-white/70 hover:text-white hover:bg-white/5 rounded-xl transition-colors">Profile</Link>
-                  <Link to="/settings" onClick={closeMobile} className="px-4 py-3 text-white/70 hover:text-white hover:bg-white/5 rounded-xl transition-colors">Settings</Link>
-                  <button onClick={() => { handleSignOut(); closeMobile(); }} className="text-left px-4 py-3 text-white/60 hover:text-white hover:bg-white/5 rounded-xl transition-colors">Sign Out</button>
-                </>
-              : <Link to="/login" onClick={closeMobile} className="px-4 py-3 text-white font-semibold bg-white/10 hover:bg-white/15 rounded-xl transition-colors">Sign In</Link>
-            }
+            {user ? (
+              <>
+                <Link to={profileUrl} onClick={closeMobile} className="px-4 py-3 text-white/70 hover:text-white hover:bg-white/5 rounded-xl transition-colors">Profile</Link>
+                <Link to="/settings" onClick={closeMobile} className="px-4 py-3 text-white/70 hover:text-white hover:bg-white/5 rounded-xl transition-colors">Settings</Link>
+                <button onClick={() => { handleSignOut(); closeMobile(); }} className="text-left px-4 py-3 text-white/60 hover:text-white hover:bg-white/5 rounded-xl transition-colors">
+                  Sign Out
+                </button>
+              </>
+            ) : (
+              <Link to="/login" onClick={closeMobile} className="px-4 py-3 text-white font-semibold bg-white/10 hover:bg-white/15 rounded-xl transition-colors">
+                Sign In
+              </Link>
+            )}
           </nav>
         </div>
       )}

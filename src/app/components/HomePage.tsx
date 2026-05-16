@@ -4,48 +4,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Link } from "react-router";
 import { getGames, Game, GamesResponse } from "../../api/games";
 
-// Fallback mock data for when API is unavailable
-const FALLBACK_GAMES = [
-  {
-    id: "1",
-    name: "Stellar Odyssey",
-    coverUrl: "https://images.unsplash.com/photo-1538481199705-c710c4e965fc?w=400&h=600&fit=crop",
-    platforms: ["PC", "PS5", "Xbox"],
-    genres: ["Sci-Fi", "RPG"],
-    gameplayAvg: 9.2,
-    contentAvg: 8.5,
-    narrativeAvg: 9.0,
-    aestheticsAvg: 9.5,
-    polishAvg: 8.8,
-    releaseDate: "2024-01-15",
-  },
-  {
-    id: "3",
-    name: "Dragon's Legacy",
-    coverUrl: "https://images.unsplash.com/photo-1511512578047-dfb367046420?w=400&h=600&fit=crop",
-    platforms: ["PC", "PS5"],
-    genres: ["Fantasy", "RPG"],
-    gameplayAvg: 9.6,
-    contentAvg: 9.5,
-    narrativeAvg: 9.8,
-    aestheticsAvg: 9.7,
-    polishAvg: 9.6,
-    releaseDate: "2024-03-20",
-  },
-  {
-    id: "12",
-    name: "Hollow Frontier",
-    coverUrl: "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400&h=600&fit=crop",
-    platforms: ["PC"],
-    genres: ["Survival"],
-    gameplayAvg: 7.8,
-    contentAvg: 6.9,
-    narrativeAvg: 6.2,
-    aestheticsAvg: 7.5,
-    polishAvg: 6.8,
-    releaseDate: "2025-02-10",
-  },
-] as Game[];
+
 
 const genres = [
   { name: "Action",    gradient: "from-red-600    to-orange-500" },
@@ -57,8 +16,8 @@ const genres = [
 ];
 
 export function HomePage() {
-  const [recommendedGames, setRecommendedGames] = useState<Game[]>(FALLBACK_GAMES);
-  const [trendingGames, setTrendingGames] = useState<Game[]>(FALLBACK_GAMES);
+  const [recommendedGames, setRecommendedGames] = useState<Game[]>([]);
+  const [trendingGames, setTrendingGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -77,7 +36,6 @@ export function HomePage() {
         }
       } catch (error) {
         console.error("Failed to fetch games:", error);
-        // Keep fallback data
       } finally {
         setLoading(false);
       }

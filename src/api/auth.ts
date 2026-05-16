@@ -1,13 +1,4 @@
-﻿/**
- * src/api/auth.ts
- * Authentication endpoints â€” email/password, Google OAuth, logout.
- */
-
-import { apiFetch, setTokens, clearTokens } from "./client";
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
+﻿import { apiFetch, setTokens, clearTokens } from "./client";
 
 export interface AuthTokens {
   access_token:  string;
@@ -15,31 +6,7 @@ export interface AuthTokens {
   token_type:    string;
 }
 
-// Shape returned by the Google endpoint â€” our backend returns the same
-// JWT pair as email login, so we normalise it to AuthTokens
-export interface GoogleAuthResponse {
-  access_token:  string;
-  refresh_token: string;
-  token_type:    string;
-  // Optional user info the backend may include
-  user?: {
-    id:           string;
-    email:        string;
-    username?:    string;
-    displayName?: string;
-    avatar?:      string;
-  };
-}
-
-// ---------------------------------------------------------------------------
-// Email / password
-// ---------------------------------------------------------------------------
-
-export async function register(
-  username: string,
-  email: string,
-  password: string,
-): Promise<AuthTokens> {
+export async function register(username: string, email: string, password: string): Promise<AuthTokens> {
   const tokens = await apiFetch<AuthTokens>("/api/auth/register", {
     method:   "POST",
     body:     JSON.stringify({ username, email, password }),
@@ -49,10 +16,7 @@ export async function register(
   return tokens;
 }
 
-export async function login(
-  email: string,
-  password: string,
-): Promise<AuthTokens> {
+export async function login(email: string, password: string): Promise<AuthTokens> {
   const tokens = await apiFetch<AuthTokens>("/api/auth/login", {
     method:   "POST",
     body:     JSON.stringify({ email, password }),
@@ -62,40 +26,16 @@ export async function login(
   return tokens;
 }
 
-// ---------------------------------------------------------------------------
-// Google OAuth
-// ---------------------------------------------------------------------------
-
-export async function googleLogin(
-  googleCredential: string,
-): Promise<GoogleAuthResponse> {
-  const data = await apiFetch<GoogleAuthResponse>("/api/auth/google", {
+export async function googleLogin(googleCredential: string): Promise<AuthTokens> {
+  const tokens = await apiFetch<AuthTokens>("/api/auth/google", {
     method:   "POST",
     body:     JSON.stringify({ credential: googleCredential }),
-    skipAuth: true,
-  });
-  setTokens(data.access_token, data.refresh_token);
-  return data;
-}
-
-// ---------------------------------------------------------------------------
-// Token refresh
-// ---------------------------------------------------------------------------
-
-export async function refreshTokens(refreshToken: string): Promise<AuthTokens> {
-  const tokens = await apiFetch<AuthTokens>("/api/auth/refresh", {
-    method:   "POST",
-    body:     JSON.stringify({ refresh_token: refreshToken }),
     skipAuth: true,
   });
   setTokens(tokens.access_token, tokens.refresh_token);
   return tokens;
 }
 
-// ---------------------------------------------------------------------------
-// Logout
-// ---------------------------------------------------------------------------
-
-export function logout(): void {
+export function logout() {
   clearTokens();
 }

@@ -4,19 +4,19 @@ import { Loader2 } from "lucide-react";
 import { GameCard } from "./GameCard";
 import { getGames, getGenres, Game } from "../../api/games";
 
-const GENRE_INFO: Record<string, { emoji: string; description: string }> = {
-  action:     { emoji: "âš”ï¸",  description: "Fast-paced games with intense combat and exciting gameplay" },
-  rpg:        { emoji: "ðŸŽ­",  description: "Immersive role-playing games with deep stories and character development" },
-  strategy:   { emoji: "ðŸŽ¯",  description: "Tactical games that require planning and strategic thinking" },
-  indie:      { emoji: "ðŸŽ¨",  description: "Creative independent games with unique mechanics and art styles" },
-  adventure:  { emoji: "ðŸ—ºï¸", description: "Exploration-focused games with rich worlds to discover" },
-  horror:     { emoji: "ðŸ‘»",  description: "Terrifying experiences that will keep you on the edge of your seat" },
-  puzzle:     { emoji: "ðŸ§©",  description: "Brain-teasing challenges and logic games" },
-  sports:     { emoji: "ðŸ†",  description: "Competitive sports and athletic simulations" },
-  simulation: { emoji: "ðŸŒ",  description: "Build, manage, and explore lifelike systems" },
-  fighting:   { emoji: "ðŸ¥Š",  description: "Head-to-head combat with deep mechanics" },
-  platformer: { emoji: "ðŸŽ®",  description: "Jump and run through exciting levels" },
-  racing:     { emoji: "ðŸŽï¸", description: "High-speed racing across thrilling tracks" },
+const GENRE_INFO: Record<string, { description: string }> = {
+  action:     { description: "Fast-paced games with intense combat and exciting gameplay" },
+  rpg:        { description: "Immersive role-playing games with deep stories and character development" },
+  strategy:   { description: "Tactical games that require planning and strategic thinking" },
+  indie:      { description: "Creative independent games with unique mechanics and art styles" },
+  adventure:  { description: "Exploration-focused games with rich worlds to discover" },
+  horror:     { description: "Terrifying experiences that will keep you on the edge of your seat" },
+  puzzle:     { description: "Brain-teasing challenges and logic games" },
+  sports:     { description: "Competitive sports and athletic simulations" },
+  simulation: { description: "Build, manage, and explore lifelike systems" },
+  fighting:   { description: "Head-to-head combat with deep mechanics" },
+  platformer: { description: "Jump and run through exciting levels" },
+  racing:     { description: "High-speed racing across thrilling tracks" },
 };
 
 const SORT_OPTIONS = [
@@ -37,22 +37,44 @@ export function GenrePage() {
   const [sort,    setSort]    = useState("reviewTotal");
 
   const genre = genreName?.toLowerCase() ?? "";
-  const info  = GENRE_INFO[genre] ?? { emoji: "ðŸŽ®", description: "Browse games in this genre" };
+  const info  = GENRE_INFO[genre] ?? { description: "Browse games in this genre" };
   const label = genreName ? genreName.charAt(0).toUpperCase() + genreName.slice(1) : "";
 
   useEffect(() => {
     if (!genreName) return;
     setLoading(true);
-    // Look up the genre ID from the genres collection, then fetch games
-    getGenres().then(genres => {
-      const matched = genres.find(g => g.name.toLowerCase() === genre);
-      if (!matched) { setLoading(false); return; }
-      return getGames({ genre: matched.id, sort, limit: LIMIT, skip });
-    }).then(res => {
-      if (!res) return;
-      setGames(res.results);
-      setTotal(res.total);
-    }).finally(() => setLoading(false));
+    setGames([]);
+
+    (async () => {
+      try {
+        console.log("[GenrePage] Fetching genres...");
+        const genres = await getGenres();
+        console.log("[GenrePage] Available genres:", genres.map(g => g.name));
+        
+        const matched = genres.find(g => g.name.toLowerCase() === genre);
+        console.log(`[GenrePage] Looking for genre "${genre}", matched:`, matched);
+        
+        if (!matched) {
+          console.warn(`[GenrePage] No genre found matching "${genre}"`);
+          setGames([]);
+          setTotal(0);
+          return;
+        }
+
+        console.log(`[GenrePage] Fetching games for genre ID "${matched.id}" with sort "${sort}"`);
+        const res = await getGames({ genre: matched.id, sort, limit: LIMIT, skip });
+        console.log(`[GenrePage] Games response:`, res);
+        
+        setGames(res.results || []);
+        setTotal(res.total || 0);
+      } catch (error) {
+        console.error("[GenrePage] Error fetching games:", error);
+        setGames([]);
+        setTotal(0);
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, [genreName, sort, skip]);
 
   return (
@@ -60,19 +82,15 @@ export function GenrePage() {
       {/* Header */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-zinc-800 to-zinc-900 p-6 sm:p-12 mb-8 border border-white/10">
         <div className="relative z-10">
-          <div className="text-4xl sm:text-7xl mb-3 sm:mb-4">{info.emoji}</div>
           <h1 className="text-3xl sm:text-5xl font-bold text-white mb-2 sm:mb-3 capitalize">{label}</h1>
           <p className="text-base sm:text-xl text-white/70 max-w-2xl">{info.description}</p>
-        </div>
-        <div className="absolute top-0 right-0 w-1/2 h-full opacity-5 overflow-hidden">
-          <div className="text-[8rem] sm:text-[20rem] leading-none">{info.emoji}</div>
         </div>
       </div>
 
       {/* Controls */}
       <div className="mb-6 flex items-center justify-between gap-4">
         <h2 className="text-xl sm:text-2xl font-bold text-white">
-          {loading ? "Loadingâ€¦" : `${total.toLocaleString()} Games`}
+          {loading ? "Loading" : `${total.toLocaleString()} Games`}
         </h2>
         <select value={sort} onChange={e => { setSort(e.target.value); setSkip(0); }}
           className="bg-white/5 border border-white/15 rounded-lg px-3 py-2 text-white/70 focus:outline-none focus:border-white/30 text-sm sm:text-base">
@@ -94,9 +112,9 @@ export function GenrePage() {
                     platforms={game.platforms ?? []}
                     developer=""
                     year={game.releaseDate ? new Date(game.releaseDate).getFullYear() : 0}
-                    genre={(game.genres ?? []).join(", ")}
+                    genres={game.genres ?? []}
                     scores={{ gameplay: game.gameplayAvg, content: game.contentAvg, narrative: game.narrativeAvg, aesthetics: game.aestheticsAvg, polish: game.polishAvg }}
-                    igdbRating={game.igdbRating}
+                    igdbRating={game.igdbRating ?? 0}
                   />
                 ))}
               </div>
