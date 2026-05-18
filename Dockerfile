@@ -1,14 +1,13 @@
 # Stage 1 — build the Vite app
 FROM node:22-slim AS builder
 
-RUN corepack enable && corepack prepare pnpm@latest --activate
-
 WORKDIR /app
 
-COPY package.json pnpm-lock.yaml* .npmrc* ./
+# Use npm for the Docker build to avoid pnpm build script restrictions
+COPY package.json ./
 
-# Allow build scripts for esbuild and tailwindcss
-RUN pnpm install --no-frozen-lockfile
+# Install dependencies with npm (no lockfile restrictions)
+RUN npm install --legacy-peer-deps
 
 ARG VITE_API_URL
 ARG VITE_GOOGLE_CLIENT_ID
@@ -16,7 +15,7 @@ ENV VITE_API_URL=$VITE_API_URL
 ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
 
 COPY . .
-RUN pnpm run build
+RUN npm run build
 
 # Stage 2 — serve with nginx
 FROM nginx:alpine
