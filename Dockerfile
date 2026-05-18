@@ -6,8 +6,11 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 
 WORKDIR /app
 
-# Install dependencies using pnpm lockfile
-COPY package.json pnpm-lock.yaml ./
+# Copy package files
+COPY package.json pnpm-lock.yaml* ./
+COPY .npmrc* ./
+
+# Install with build scripts allowed
 RUN pnpm install --no-frozen-lockfile
 
 # Inject Vite env vars at build time via Railway build variables
