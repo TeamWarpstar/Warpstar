@@ -194,7 +194,7 @@ export function SettingsPage() {
           </button>
           <button onClick={handleSave} disabled={!hasChanges || saving}
             className="px-6 py-3 bg-white text-zinc-900 font-semibold rounded-lg hover:shadow-lg hover:shadow-white/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
-            {saving ? "Savingâ€¦" : "Save Changes"}
+            {saving ? "Saving..." : "Save Changes"}
           </button>
         </div>
       </div>

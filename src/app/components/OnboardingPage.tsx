@@ -183,7 +183,7 @@ export function OnboardingPage() {
 
       <div className="w-full max-w-lg bg-white/5 border border-white/10 rounded-3xl p-8 shadow-2xl shadow-black/40 backdrop-blur-sm">
 
-        {/* Step 1 â€” Identity */}
+        {/* Step 1 - Identity */}
         {step === 1 && (
           <div>
             <h2 className="text-2xl font-bold text-white mb-1">Create your identity</h2>
@@ -211,7 +211,7 @@ export function OnboardingPage() {
           </div>
         )}
 
-        {/* Step 2 â€” Avatar */}
+        {/* Step 2 - Avatar */}
         {step === 2 && (
           <div>
             <h2 className="text-2xl font-bold text-white mb-1">Pick your avatar</h2>
@@ -249,7 +249,7 @@ export function OnboardingPage() {
           </div>
         )}
 
-        {/* Step 3 â€” Genres */}
+        {/* Step 3 - Genres */}
         {step === 3 && (
           <div>
             <h2 className="text-2xl font-bold text-white mb-1">What do you love playing?</h2>

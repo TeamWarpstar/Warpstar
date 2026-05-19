@@ -71,7 +71,7 @@ export function StarPolarDiagram({ scores, size = 200, showTotal = true, showLab
   const pathData = createStarPath(points);
   const gridLevels = [2, 4, 6, 8, 10];
 
-  // Each segment: center â†’ point[i] â†’ point[i+1] (straight triangle)
+  // Each segment: center, point[i], point[i+1] (straight triangle)
   const segments = factors.map((f, i) => {
     const p1 = points[i];
     const p2 = points[(i + 1) % points.length];
@@ -160,7 +160,7 @@ export function StarPolarDiagram({ scores, size = 200, showTotal = true, showLab
         ))}
       </svg>
 
-      {/* Labels â€” anchored outward based on angle so they never overlap the diagram */}
+      {/* Labels anchored outward based on angle so they never overlap the diagram */}
       {showLabels && factors.map(f => {
         const labelPoint = getPoint(f.angle, 12);
         const score = scores[f.key as keyof typeof scores];
