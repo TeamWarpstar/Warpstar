@@ -45,6 +45,11 @@ interface ReviewCardProps {
   dislikes: number;
   comments: number;
   isPinned?: boolean;
+  game?: {
+    id: string;
+    name: string;
+    coverUrl?: string;
+  };
 }
 
 export function ReviewCard({
@@ -57,6 +62,7 @@ export function ReviewCard({
   dislikes,
   comments,
   isPinned = false,
+  game,
 }: ReviewCardProps) {
   const [liked, setLiked] = useState(false);
   const [disliked, setDisliked] = useState(false);
@@ -80,6 +86,25 @@ export function ReviewCard({
       )}
 
       <div className="p-5 sm:p-6">
+        {/* Game info - shown on profile pages */}
+        {game && (
+          <Link to={`/game/${game.id}`} className="block mb-4 pb-4 border-b border-white/10 group">
+            <div className="flex gap-3 items-start">
+              {game.coverUrl && (
+                <div className="flex-shrink-0 w-12 h-16 rounded overflow-hidden bg-white/5">
+                  <img src={game.coverUrl} alt={game.name} className="w-full h-full object-cover" />
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <h4 className="font-semibold text-white group-hover:text-white/80 transition-colors truncate">
+                  {game.name}
+                </h4>
+                <p className="text-xs text-white/40 mt-1">View Game</p>
+              </div>
+            </div>
+          </Link>
+        )}
+
         {/* Header */}
         <div className="flex items-center justify-between gap-4 mb-5">
           <Link to={`/profile/${reviewer.username}`} className="flex items-center gap-3 group">

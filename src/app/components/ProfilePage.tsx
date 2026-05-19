@@ -2,15 +2,18 @@
 import { User, Calendar, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { ImageWithFallback } from "./ImageWithFallback";
+import { ReviewCard } from "./ReviewCard";
 import { useAuth } from "../context/AuthContext";
 import { getUserByUsername, followUser, BackendUser } from "../../api/users";
 import { apiFetch } from "../../api/client";
+import { getGame } from "../../api/games";
 
 export function ProfilePage() {
   const { username }               = useParams<{ username: string }>();
   const { user: me, refreshUser }  = useAuth();
   const [profile,       setProfile]       = useState<BackendUser | null>(null);
   const [reviews,       setReviews]       = useState<any[]>([]);
+  const [games,         setGames]         = useState<Record<string, any>>({});
   const [loading,       setLoading]       = useState(true);
   const [activeTab,     setActiveTab]     = useState<"reviews" | "activity">("reviews");
   const [following,     setFollowing]     = useState(false);
@@ -31,7 +34,22 @@ export function ProfilePage() {
         // Fetch this user's reviews using their MongoDB ID
         try {
           const res = await apiFetch<any>(`/api/users/${p.id}/reviews`);
-          setReviews(res.results ?? res ?? []);
+          const reviewList = res.results ?? res ?? [];
+          setReviews(reviewList);
+
+          // Fetch game data for each review
+          const gameMap: Record<string, any> = {};
+          for (const review of reviewList) {
+            if (review.gameId && !gameMap[review.gameId]) {
+              try {
+                const game = await getGame(review.gameId);
+                gameMap[review.gameId] = game;
+              } catch (e) {
+                // Game not found, will skip
+              }
+            }
+          }
+          setGames(gameMap);
         } catch {
           setReviews([]);
         }
@@ -128,39 +146,34 @@ export function ProfilePage() {
       {activeTab === "reviews" && (
         reviews.length === 0
           ? <p className="text-white/40 text-center py-20">No reviews yet.</p>
-          : <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
+          : <div className="space-y-4">
               {reviews.map((review, i) => {
-                const totalScore = (
-                  (review.gameplay ?? 0) + (review.content ?? 0) + (review.narrative ?? 0) +
-                  (review.aesthetics ?? 0) + (review.polish ?? 0)
-                ) / 5;
+                const game = review.gameId ? games[review.gameId] : null;
                 return (
-                  <Link key={review.id ?? i} to={`/game/${review.gameId}`}
-                    className="group bg-white/5 border border-white/10 rounded-xl overflow-hidden hover:border-white/25 hover:scale-105 transition-all">
-                    <div className="p-4 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-bold text-white truncate">{review.title}</h3>
-                        <span className="px-2 py-0.5 bg-white text-zinc-900 rounded-full font-bold text-sm flex-shrink-0 ml-2">
-                          {totalScore.toFixed(1)}
-                        </span>
-                      </div>
-                      <div className="grid grid-cols-5 gap-2 text-center">
-                        {["gameplay","content","narrative","aesthetics","polish"].map(key => (
-                          <div key={key}>
-                            <div className="text-xs text-white/40 capitalize truncate">{key.slice(0,3)}</div>
-                            <div className="text-sm font-bold text-white">{review[key] ?? 0}</div>
-                          </div>
-                        ))}
-                      </div>
-                      {review.body && (
-                        <p className="text-white/60 text-sm line-clamp-2">{review.body}</p>
-                      )}
-                      <div className="flex items-center gap-2 text-xs text-white/40">
-                        <Calendar className="w-3 h-3" />
-                        <span>{new Date(review.createdAt).toLocaleDateString()}</span>
-                      </div>
-                    </div>
-                  </Link>
+                  <ReviewCard
+                    key={review.id ?? i}
+                    reviewer={{
+                      username: profile?.username ?? "unknown",
+                      avatar: profile?.preferences?.profilePicture as string | undefined,
+                    }}
+                    scores={{
+                      gameplay: review.gameplay ?? 0,
+                      content: review.content ?? 0,
+                      narrative: review.narrative ?? 0,
+                      aesthetics: review.aesthetics ?? 0,
+                      polish: review.polish ?? 0,
+                    }}
+                    title={review.title}
+                    review={review.body ?? ""}
+                    likes={review.likes ?? 0}
+                    dislikes={0}
+                    comments={review.commentsCount ?? 0}
+                    game={game ? {
+                      id: game.id,
+                      name: game.name,
+                      coverUrl: game.coverUrl,
+                    } : undefined}
+                  />
                 );
               })}
             </div>
