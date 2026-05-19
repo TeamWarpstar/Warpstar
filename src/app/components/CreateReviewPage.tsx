@@ -2,6 +2,7 @@
 import { useParams, useNavigate } from "react-router";
 import { InteractiveStarDiagram } from "./InteractiveStarDiagram";
 import { ImageWithFallback } from "./ImageWithFallback";
+import { scoreStyle } from "./scoreStyle";
 import { Loader2 } from "lucide-react";
 import { getGame, Game } from "../../api/games";
 import { createReview } from "../../api/reviews";
@@ -61,7 +62,7 @@ export function CreateReviewPage() {
   );
 
   const handleScoreChange = (key: keyof ReviewScores, value: number) => {
-    setScores(prev => ({ ...prev, [key]: Math.min(10, Math.max(1, Math.round(value))) }));
+    setScores(prev => ({ ...prev, [key]: Math.min(10, Math.max(0, Math.round(value))) }));
   };
 
   const handlePost = async () => {
@@ -132,14 +133,14 @@ export function CreateReviewPage() {
                   <div className="flex items-center gap-1 flex-shrink-0">
                     <button type="button" onClick={() => handleScoreChange(cat.key, scores[cat.key]-1)}
                       className="w-8 h-8 rounded-lg bg-white/8 border border-white/15 text-white/60 hover:text-white hover:border-white/30 transition-colors flex items-center justify-center text-lg select-none">-</button>
-                    <input type="number" min={1} max={10} value={scores[cat.key]}
+                    <input type="number" min={0} max={10} value={scores[cat.key]}
                       onChange={e => { const v = parseInt(e.target.value,10); if (!isNaN(v)) handleScoreChange(cat.key,v); }}
                       className="w-12 h-8 text-center bg-white/5 border border-white/15 rounded-lg text-white font-bold focus:outline-none focus:border-white/40 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
                     <button type="button" onClick={() => handleScoreChange(cat.key, scores[cat.key]+1)}
                       className="w-8 h-8 rounded-lg bg-white/8 border border-white/15 text-white/60 hover:text-white hover:border-white/30 transition-colors flex items-center justify-center text-lg select-none">+</button>
                   </div>
                 </div>
-                <input type="range" min="1" max="10" step="1" value={scores[cat.key]}
+                <input type="range" min="0" max="10" step="1" value={scores[cat.key]}
                   onChange={e => handleScoreChange(cat.key, parseInt(e.target.value,10))}
                   className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer slider-mono mb-3" />
                 <textarea
@@ -183,7 +184,7 @@ export function CreateReviewPage() {
           <div className="bg-white/5 border border-white/10 rounded-xl p-6">
             <h3 className="text-xl font-bold text-white mb-4">Your Rating</h3>
             <div className="text-center mb-6">
-              <div className="text-6xl font-bold text-white">{totalScore.toFixed(1)}</div>
+              <div className={`text-6xl font-bold ${scoreStyle(totalScore).text} ${scoreStyle(totalScore).bg} px-6 py-4 rounded-lg inline-block`}>{totalScore.toFixed(1)}</div>
               <div className="text-white/50">Overall Score</div>
             </div>
             <div className="flex justify-center mb-6">
@@ -193,7 +194,7 @@ export function CreateReviewPage() {
             </div>
             <div className="text-sm text-white/50 text-center bg-white/5 rounded-lg p-3 border border-white/10">
               <span className="block mb-1">Interactive Controls</span>
-              <span className="text-xs">Drag star points, use sliders, or type a score (1–10)</span>
+              <span className="text-xs">Drag star points, use sliders, or type a score (0–10)</span>
             </div>
           </div>
         </div>

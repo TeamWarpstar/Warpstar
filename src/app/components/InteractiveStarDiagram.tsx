@@ -50,13 +50,13 @@ export function InteractiveStarDiagram({ scores, onScoreChange, size = 400 }: In
     return { x: centerX + radius * Math.cos(rad), y: centerY + radius * Math.sin(rad) };
   };
 
-  // Snap to nearest integer (1â€“10) â€” no decimals
+  // Snap to nearest integer (0–10) – no decimals
   const getValueFromPoint = (x: number, y: number) => {
     const dx = x - centerX;
     const dy = y - centerY;
     const distance = Math.sqrt(dx * dx + dy * dy);
     const raw = (distance / maxRadius) * 10;
-    return Math.min(10, Math.max(1, Math.round(raw)));
+    return Math.min(10, Math.max(0, Math.round(raw)));
   };
 
   const createStarPath = (pts: { x: number; y: number }[]) => {
