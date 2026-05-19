@@ -14,6 +14,14 @@ interface InteractiveStarDiagramProps {
   size?: number;
 }
 
+const FACTOR_COLORS: Record<string, string> = {
+  gameplay:   '#818cf8',
+  content:    '#a78bfa',
+  narrative:  '#f472b6',
+  aesthetics: '#fb923c',
+  polish:     '#34d399',
+};
+
 export function InteractiveStarDiagram({ scores, onScoreChange, size = 400 }: InteractiveStarDiagramProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
@@ -104,6 +112,16 @@ export function InteractiveStarDiagram({ scores, onScoreChange, size = 400 }: In
   const pathData  = createStarPath(points);
   const gridLevels = [2, 4, 6, 8, 10];
 
+  // Per-factor colored segments
+  const segments = factors.map((f, i) => {
+    const p1 = points[i];
+    const p2 = points[(i + 1) % points.length];
+    return {
+      color: FACTOR_COLORS[f.key],
+      path: `M ${centerX},${centerY} L ${p1.x},${p1.y} L ${p2.x},${p2.y} Z`,
+    };
+  });
+
   return (
     // Fills whatever square container is given; no internal aspect-ratio imposed.
     <div className="relative w-full h-full select-none">
@@ -115,13 +133,12 @@ export function InteractiveStarDiagram({ scores, onScoreChange, size = 400 }: In
         className="block w-full h-full cursor-pointer"
       >
         <defs>
-          <linearGradient id="star-grad-iv" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%"   stopColor="#ec4899" stopOpacity="0.6" />
-            <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0.6" />
-          </linearGradient>
           <filter id="glow-iv">
-            <feGaussianBlur stdDeviation="3" result="blur" />
-            <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+            <feGaussianBlur stdDeviation="2.5" result="coloredBlur" />
+            <feMerge>
+              <feMergeNode in="coloredBlur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
           </filter>
         </defs>
 
@@ -130,31 +147,41 @@ export function InteractiveStarDiagram({ scores, onScoreChange, size = 400 }: In
           <path
             key={`grid-${lv}`}
             d={createStarPath(factors.map(f => getPoint(f.angle, lv)))}
-            fill="none" stroke="#8b5cf6" strokeWidth="1" opacity={0.2}
+            fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="1" opacity={0.8}
             pointerEvents="none"
           />
         ))}
 
-        {/* Axis spokes */}
+        {/* Axis lines per color */}
         {factors.map(f => {
           const end = getPoint(f.angle, 10);
           return (
             <line
               key={`spoke-${f.key}`}
               x1={centerX} y1={centerY} x2={end.x} y2={end.y}
-              stroke="#8b5cf6" strokeWidth="1" opacity={0.3}
+              stroke={FACTOR_COLORS[f.key]} strokeWidth="1" opacity={0.35}
               pointerEvents="none"
             />
           );
         })}
 
-        {/* Filled star polygon */}
+        {/* Per-factor colored segments */}
+        {segments.map((seg, i) => (
+          <path
+            key={`seg-${i}`}
+            d={seg.path}
+            fill={seg.color}
+            fillOpacity={0.25}
+            stroke="none"
+          />
+        ))}
+
+        {/* Star outline */}
         <path
           d={pathData}
-          fill="url(#star-grad-iv)"
-          stroke="#ec4899"
-          strokeWidth="2"
-          filter="url(#glow-iv)"
+          fill="none"
+          stroke="rgba(255,255,255,0.5)"
+          strokeWidth="1.5"
           pointerEvents="none"
         />
 
@@ -166,7 +193,7 @@ export function InteractiveStarDiagram({ scores, onScoreChange, size = 400 }: In
               <circle
                 cx={pt.x} cy={pt.y}
                 r={draggingIndex === i ? 12 : active ? 10 : 8}
-                fill="#fbbf24" stroke="#fff" strokeWidth="3"
+                fill={FACTOR_COLORS[factors[i].key]} stroke="#fff" strokeWidth="3" filter="url(#glow-iv)"
                 style={{ cursor: draggingIndex === i ? 'grabbing' : 'grab' }}
                 onMouseDown={() => handleDragStart(i)}
                 onTouchStart={() => handleDragStart(i)}
@@ -176,7 +203,7 @@ export function InteractiveStarDiagram({ scores, onScoreChange, size = 400 }: In
               {active && (
                 <circle
                   cx={pt.x} cy={pt.y} r={18}
-                  fill="none" stroke="#fbbf24" strokeWidth="2" opacity={0.4}
+                  fill="none" stroke={FACTOR_COLORS[factors[i].key]} strokeWidth="2" opacity={0.4}
                   pointerEvents="none"
                 />
               )}
@@ -193,7 +220,7 @@ export function InteractiveStarDiagram({ scores, onScoreChange, size = 400 }: In
               <text
                 x={lp.x} y={lp.y - 10}
                 textAnchor="middle" dominantBaseline="middle"
-                fill="#c4b5fd" fontSize={Math.round(size * 0.034)}
+                fill="rgba(255,255,255,0.8)" fontSize={Math.round(size * 0.034)}
                 fontWeight="600" fontFamily="inherit"
               >
                 {f.label}
@@ -201,7 +228,7 @@ export function InteractiveStarDiagram({ scores, onScoreChange, size = 400 }: In
               <text
                 x={lp.x} y={lp.y + 11}
                 textAnchor="middle" dominantBaseline="middle"
-                fill="#ec4899" fontSize={Math.round(size * 0.036)}
+                fill={FACTOR_COLORS[f.key]} fontSize={Math.round(size * 0.036)}
                 fontWeight="bold" fontFamily="inherit"
               >
                 {score}
@@ -214,11 +241,11 @@ export function InteractiveStarDiagram({ scores, onScoreChange, size = 400 }: In
       {/* Total score overlay â€” centred over the SVG via absolute flex */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
         <div className="text-center">
-          <div className="font-bold bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent"
+          <div className="font-bold text-white"
                style={{ fontSize: Math.round(size * 0.12) }}>
             {totalScore.toFixed(1)}
           </div>
-          <div className="text-purple-300" style={{ fontSize: Math.round(size * 0.032) }}>Total</div>
+          <div className="text-white/50" style={{ fontSize: Math.round(size * 0.032) }}>Total</div>
         </div>
       </div>
     </div>
