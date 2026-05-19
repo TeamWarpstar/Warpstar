@@ -127,8 +127,9 @@ export function OnboardingPage() {
     setSaving(true);
     setError("");
     try {
-      // Save to backend
+      // Save to backend — username is saved as a top-level field
       await updateMe({
+        username: username.trim(),
         preferences: {
           ...user?.preferences,
           displayName:    displayName.trim(),
