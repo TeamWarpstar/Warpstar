@@ -183,7 +183,7 @@ export function OnboardingPage() {
 
       <div className="w-full max-w-lg bg-white/5 border border-white/10 rounded-3xl p-8 shadow-2xl shadow-black/40 backdrop-blur-sm">
 
-        {/* Step 1 â€” Identity */}
+        {/* Step 1 - Identity */}
         {step === 1 && (
           <div>
             <h2 className="text-2xl font-bold text-white mb-1">Create your identity</h2>
@@ -211,7 +211,7 @@ export function OnboardingPage() {
           </div>
         )}
 
-        {/* Step 2 â€” Avatar */}
+        {/* Step 2 - Avatar */}
         {step === 2 && (
           <div>
             <h2 className="text-2xl font-bold text-white mb-1">Pick your avatar</h2>
@@ -291,7 +291,7 @@ export function OnboardingPage() {
               </button>
             : <button onClick={handleFinish} disabled={!step3Valid || saving}
                 className="flex items-center gap-2 px-6 py-2.5 bg-white rounded-xl text-zinc-900 font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-lg hover:scale-105 active:scale-100 transition-all">
-                {saving ? "Savingâ€¦" : <><Check className="w-4 h-4" /> Launch Warpstar</>}
+                {saving ? "Saving..." : <><Check className="w-4 h-4" /> Launch Warpstar</>}
               </button>
           }
         </div>
