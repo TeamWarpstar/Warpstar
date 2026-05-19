@@ -18,9 +18,11 @@ export interface Game {
   themeIds:     string[];
   similarTo:    string[];
   // Resolved name arrays (returned by backend alongside IDs)
-  genres:       string[];
-  themes:       string[];
-  platforms:    string[];
+  genres:          string[];
+  themes:          string[];
+  platforms:       string[];
+  keywords:        string[];
+  igdbRatingCount: number;
 }
 
 export interface GamesResponse {

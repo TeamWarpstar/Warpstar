@@ -45,8 +45,9 @@ export function SplashPage() {
     setIsSigningIn(true);
     setError("");
     try {
-      await signInWithGoogle(credentialResponse.credential);
-      navigate("/onboarding");
+      const { isNewUser } = await signInWithGoogle(credentialResponse.credential);
+      // New users go through onboarding, returning users go straight to the app
+      navigate(isNewUser ? "/onboarding" : "/");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Sign-in failed. Please try again.");
       setIsSigningIn(false);
@@ -91,36 +92,35 @@ export function SplashPage() {
 
           {/* Google sign-in */}
           <div className="flex flex-col items-center gap-4">
-              {isSigningIn ? (
-                <div className="flex items-center gap-3 text-white/60">
-                  <svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
-                  </svg>
-                  Signing in…
-                </div>
-              ) : (
-                <div className="scale-125 origin-top">
-                  <GoogleLogin
-                    onSuccess={handleGoogleSuccess}
-                    onError={handleGoogleError}
-                    text="signin_with"
-                    size="large"
-                  />
-                </div>
-              )}
-              {error && (
-                <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-2">
-                  {error}
-                </p>
-              )}
-              {/* Guest access */}
-              <button
-                onClick={() => navigate("/")}
-                className="text-white/35 text-sm hover:text-white/60 transition-colors underline underline-offset-4"
-              >
-                Browse as guest
-              </button>
+            {isSigningIn ? (
+              <div className="flex items-center gap-3 text-white/60">
+                <svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                </svg>
+                Signing in…
+              </div>
+            ) : (
+              <div className="scale-125 origin-top">
+                <GoogleLogin
+                  onSuccess={handleGoogleSuccess}
+                  onError={handleGoogleError}
+                  text="signin_with"
+                  size="large"
+                />
+              </div>
+            )}
+            {error && (
+              <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-2">
+                {error}
+              </p>
+            )}
+            <button
+              onClick={() => navigate("/")}
+              className="text-white/35 text-sm hover:text-white/60 transition-colors underline underline-offset-4"
+            >
+              Browse as guest
+            </button>
           </div>
         </main>
 
