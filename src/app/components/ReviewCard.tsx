@@ -39,6 +39,7 @@ interface ReviewCardProps {
     aesthetics?: string;
     polish?: string;
   };
+  title?: string;
   review: string;
   likes: number;
   dislikes: number;
@@ -50,6 +51,7 @@ export function ReviewCard({
   reviewer,
   scores,
   categoryText,
+  title,
   review,
   likes,
   dislikes,
@@ -97,6 +99,13 @@ export function ReviewCard({
             {totalScore.toFixed(1)}
           </div>
         </div>
+
+        {/* Review title */}
+        {title && (
+          <h3 className="text-lg font-semibold text-white mb-4">
+            {title}
+          </h3>
+        )}
 
         {/* Score breakdown + diagram */}
         <div className="flex flex-col sm:flex-row gap-5 mb-5">
