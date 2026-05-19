@@ -6,18 +6,18 @@ import { Check, ChevronRight, ChevronLeft, User, Image, Gamepad2, Upload } from 
 import warpstarWhiteLogo from "../../imports/warpstarwhite.png";
 
 const GENRES = [
-  { name: "Action",     emoji: "âš”ï¸",  color: "from-white/10 to-white/5", border: "border-white/20" },
-  { name: "RPG",        emoji: "ðŸŽ­",  color: "from-white/10 to-white/5", border: "border-white/20" },
-  { name: "Strategy",   emoji: "ðŸŽ¯",  color: "from-white/10 to-white/5", border: "border-white/20" },
-  { name: "Indie",      emoji: "ðŸŽ¨",  color: "from-white/10 to-white/5", border: "border-white/20" },
-  { name: "Adventure",  emoji: "ðŸ—ºï¸", color: "from-white/10 to-white/5", border: "border-white/20" },
-  { name: "Horror",     emoji: "ðŸ‘»",  color: "from-white/10 to-white/5", border: "border-white/20" },
-  { name: "Puzzle",     emoji: "ðŸ§©",  color: "from-white/10 to-white/5", border: "border-white/20" },
-  { name: "Sports",     emoji: "ðŸ†",  color: "from-white/10 to-white/5", border: "border-white/20" },
-  { name: "Simulation", emoji: "ðŸŒ",  color: "from-white/10 to-white/5", border: "border-white/20" },
-  { name: "Fighting",   emoji: "ðŸ¥Š",  color: "from-white/10 to-white/5", border: "border-white/20" },
-  { name: "Platformer", emoji: "ðŸŽ®",  color: "from-white/10 to-white/5", border: "border-white/20" },
-  { name: "Racing",     emoji: "ðŸŽï¸", color: "from-white/10 to-white/5", border: "border-white/20" },
+  { name: "Action",   color: "from-white/10 to-white/5", border: "border-white/20" },
+  { name: "RPG",  color: "from-white/10 to-white/5", border: "border-white/20" },
+  { name: "Strategy",   color: "from-white/10 to-white/5", border: "border-white/20" },
+  { name: "Indie",      color: "from-white/10 to-white/5", border: "border-white/20" },
+  { name: "Adventure",  color: "from-white/10 to-white/5", border: "border-white/20" },
+  { name: "Horror",     color: "from-white/10 to-white/5", border: "border-white/20" },
+  { name: "Puzzle",     color: "from-white/10 to-white/5", border: "border-white/20" },
+  { name: "Sports",     color: "from-white/10 to-white/5", border: "border-white/20" },
+  { name: "Simulation", color: "from-white/10 to-white/5", border: "border-white/20" },
+  { name: "Fighting",   color: "from-white/10 to-white/5", border: "border-white/20" },
+  { name: "Platformer", color: "from-white/10 to-white/5", border: "border-white/20" },
+  { name: "Racing",     color: "from-white/10 to-white/5", border: "border-white/20" },
 ];
 
 // Pixel avatar presets (kept exactly as designer made them)
@@ -190,9 +190,9 @@ export function OnboardingPage() {
             <p className="text-white/45 text-sm mb-8">How should the Warpstar community know you?</p>
             <div className="mb-5">
               <label className="block text-sm font-medium text-white/70 mb-2">Display Name</label>
-              <input type="text" value={displayName} onChange={e => setDisplayName(e.target.value)} placeholder="e.g. Alex Nova"
+              <input type="text" value={displayName} onChange={e => setDisplayName(e.target.value)} placeholder="Example Username"
                 className="w-full bg-white/5 border border-white/15 rounded-xl px-4 py-3 text-white placeholder:text-white/25 focus:outline-none focus:border-white/40 transition-colors" />
-              <p className="mt-1.5 text-xs text-white/35">Your public name â€” can include spaces and capitals.</p>
+              <p className="mt-1.5 text-xs text-white/35">Your public name can include spaces and capitals.</p>
             </div>
             <div className="mb-8">
               <label className="block text-sm font-medium text-white/70 mb-2">Username</label>
@@ -205,7 +205,7 @@ export function OnboardingPage() {
               </div>
               {usernameError
                 ? <p className="mt-1.5 text-xs text-red-400">{usernameError}</p>
-                : <p className="mt-1.5 text-xs text-white/35">3â€“20 chars, lowercase, numbers and underscores only.</p>
+                : <p className="mt-1.5 text-xs text-white/35">3-20 characters, lowercase, numbers and underscores only.</p>
               }
             </div>
           </div>
@@ -215,7 +215,7 @@ export function OnboardingPage() {
         {step === 2 && (
           <div>
             <h2 className="text-2xl font-bold text-white mb-1">Pick your avatar</h2>
-            <p className="text-white/45 text-sm mb-6">Choose a pixel-art preset or upload your own image.</p>
+            <p className="text-white/45 text-sm mb-6">Choose a preset profile picture or upload your own image.</p>
             <div className="flex justify-center mb-6">
               <div className="relative">
                 {profilePicture
@@ -243,7 +243,7 @@ export function OnboardingPage() {
               <button type="button" onClick={() => fileInputRef.current?.click()}
                 className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border transition-all ${uploadedImage ? "bg-white/10 border-white/40 text-white/80" : "bg-white/5 border-white/15 text-white/50 hover:border-white/30 hover:text-white/70"}`}>
                 <Upload className="w-4 h-4" />
-                {uploadedImage ? "Image uploaded â€” click to change" : "Choose a fileâ€¦"}
+                {uploadedImage ? "Image uploaded” click to change" : "Choose a file"}
               </button>
             </div>
           </div>
@@ -253,7 +253,7 @@ export function OnboardingPage() {
         {step === 3 && (
           <div>
             <h2 className="text-2xl font-bold text-white mb-1">What do you love playing?</h2>
-            <p className="text-white/45 text-sm mb-2">Pick 1â€“3 genres that best describe your taste.</p>
+            <p className="text-white/45 text-sm mb-2">Pick 1-3 genres that best describe your taste.</p>
             <p className="text-xs text-white/30 mb-7">{selectedGenres.length}/3 selected</p>
             <div className="grid grid-cols-3 gap-3 mb-2">
               {GENRES.map(genre => {
@@ -265,7 +265,6 @@ export function OnboardingPage() {
                       selected ? `bg-gradient-to-br ${genre.color} ${genre.border} scale-105 shadow-lg`
                       : maxed ? "bg-white/3 border-white/8 opacity-40 cursor-not-allowed"
                       : "bg-white/5 border-white/15 hover:border-white/30 hover:bg-white/8 hover:scale-105"}`}>
-                    <span className="text-2xl">{genre.emoji}</span>
                     <span className={`text-xs font-semibold ${selected ? "text-white" : "text-white/60"}`}>{genre.name}</span>
                     {selected && <div className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-white flex items-center justify-center"><Check className="w-2.5 h-2.5 text-zinc-900" /></div>}
                   </button>
