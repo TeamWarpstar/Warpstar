@@ -1,6 +1,6 @@
 ﻿import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router";
-import { InteractiveStarDiagram } from "./InteractiveStarDiagram";
+import { StarPolarDiagram } from "./StarPolarDiagram";
 import { ImageWithFallback } from "./ImageWithFallback";
 import { Loader2 } from "lucide-react";
 import { getGame, Game } from "../../api/games";
@@ -20,7 +20,7 @@ interface CategoryText {
 const CATEGORIES: Array<{ key: keyof ReviewScores; label: string; description: string }> = [
   { key: "gameplay",   label: "Gameplay",   description: "How well do the mechanics, controls, and core gameplay loop serve the overall experience?" },
   { key: "content",    label: "Content",    description: "How much content is there, and how engaging is it? This encapsulates the quantity, depth, and replayability of content in the game." },
-  { key: "narrative",  label: "Narrative",  description: "How good is this game at telling a story? For single-player experiences, this can mean the quality of the plot and characters. For multiplayer games, this can be quality of the stories you create within that game." },
+  { key: "narrative",  label: "Narrative",  description: "How good is this game at telling a story? Consider the quality of the plot and characters, and/or the quality of the stories you can create within that game." },
   { key: "aesthetics", label: "Aesthetics", description: "How appealing is this game's graphical and audio design?" },
   { key: "polish",     label: "Polish",     description: "How refined is the overall presentation and execution of the game? This includes the game's performance, stability, and overall feel." },
 ];
@@ -187,9 +187,7 @@ export function CreateReviewPage() {
               <div className="text-white/50">Overall Score</div>
             </div>
             <div className="flex justify-center mb-6">
-              <div className="w-full max-w-[min(400px,100%)] aspect-square">
-                <InteractiveStarDiagram scores={scores} onScoreChange={handleScoreChange} size={400} />
-              </div>
+              <StarPolarDiagram scores={scores} size={300} showTotal={false} />
             </div>
             <div className="text-sm text-white/50 text-center bg-white/5 rounded-lg p-3 border border-white/10">
               <span className="block mb-1">Interactive Controls</span>
