@@ -383,7 +383,7 @@ export function GamePage() {
                   : "bg-white/5 text-white/60 border border-white/10 hover:border-white/25"
               }`}
             >
-              🔥 Hottest Take
+              Hottest Take
             </button>
           </div>
         </div>

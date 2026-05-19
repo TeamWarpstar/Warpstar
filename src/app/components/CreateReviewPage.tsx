@@ -2,6 +2,7 @@
 import { useParams, useNavigate } from "react-router";
 import { InteractiveStarDiagram } from "./InteractiveStarDiagram";
 import { ImageWithFallback } from "./ImageWithFallback";
+import { scoreStyle } from "./scoreStyle";
 import { Loader2 } from "lucide-react";
 import { getGame, Game } from "../../api/games";
 import { createReview } from "../../api/reviews";
@@ -18,11 +19,11 @@ interface CategoryText {
 }
 
 const CATEGORIES: Array<{ key: keyof ReviewScores; label: string; description: string }> = [
-  { key: "gameplay",   label: "Gameplay",   description: "Mechanics, controls, and core gameplay loop" },
-  { key: "content",    label: "Content",    description: "Amount and variety of content" },
-  { key: "narrative",  label: "Narrative",  description: "Story, characters, and world-building" },
-  { key: "aesthetics", label: "Aesthetics", description: "Art direction, visuals, and audio" },
-  { key: "polish",     label: "Polish",     description: "Technical quality and refinement" },
+  { key: "gameplay",   label: "Gameplay",   description: "How well do the mechanics, controls, and core gameplay loop serve the overall experience?" },
+  { key: "content",    label: "Content",    description: "How much content is there, and how engaging is it? This encapsulates the quantity, depth, and replayability of content in the game." },
+  { key: "narrative",  label: "Narrative",  description: "How good is this game at telling a story? Consider the quality of the plot and characters, and/or the quality of the stories you can create within that game." },
+  { key: "aesthetics", label: "Aesthetics", description: "How appealing is this game's graphical and audio design?" },
+  { key: "polish",     label: "Polish",     description: "How refined is the overall presentation and execution of the game? This includes the game's performance, stability, and overall feel." },
 ];
 
 export function CreateReviewPage() {
@@ -61,7 +62,7 @@ export function CreateReviewPage() {
   );
 
   const handleScoreChange = (key: keyof ReviewScores, value: number) => {
-    setScores(prev => ({ ...prev, [key]: Math.min(10, Math.max(1, Math.round(value))) }));
+    setScores(prev => ({ ...prev, [key]: Math.min(10, Math.max(0, Math.round(value))) }));
   };
 
   const handlePost = async () => {
@@ -115,7 +116,7 @@ export function CreateReviewPage() {
           <div className="bg-white/5 border border-white/10 rounded-xl p-6">
             <h3 className="text-xl font-bold text-white mb-4">Review Title</h3>
             <input type="text" value={title} onChange={e => setTitle(e.target.value)}
-              placeholder="Summarise your experience in one lineâ€¦" maxLength={200}
+              placeholder="Summarise your experience in one line" maxLength={200}
               className="w-full bg-white/5 border border-white/15 rounded-lg px-4 py-3 text-white placeholder:text-white/25 focus:outline-none focus:border-white/40 transition-colors" />
           </div>
 
@@ -131,15 +132,15 @@ export function CreateReviewPage() {
                   </div>
                   <div className="flex items-center gap-1 flex-shrink-0">
                     <button type="button" onClick={() => handleScoreChange(cat.key, scores[cat.key]-1)}
-                      className="w-8 h-8 rounded-lg bg-white/8 border border-white/15 text-white/60 hover:text-white hover:border-white/30 transition-colors flex items-center justify-center text-lg select-none">âˆ’</button>
-                    <input type="number" min={1} max={10} value={scores[cat.key]}
+                      className="w-8 h-8 rounded-lg bg-white/8 border border-white/15 text-white/60 hover:text-white hover:border-white/30 transition-colors flex items-center justify-center text-lg select-none">-</button>
+                    <input type="number" min={0} max={10} value={scores[cat.key]}
                       onChange={e => { const v = parseInt(e.target.value,10); if (!isNaN(v)) handleScoreChange(cat.key,v); }}
                       className="w-12 h-8 text-center bg-white/5 border border-white/15 rounded-lg text-white font-bold focus:outline-none focus:border-white/40 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
                     <button type="button" onClick={() => handleScoreChange(cat.key, scores[cat.key]+1)}
                       className="w-8 h-8 rounded-lg bg-white/8 border border-white/15 text-white/60 hover:text-white hover:border-white/30 transition-colors flex items-center justify-center text-lg select-none">+</button>
                   </div>
                 </div>
-                <input type="range" min="1" max="10" step="1" value={scores[cat.key]}
+                <input type="range" min="0" max="10" step="1" value={scores[cat.key]}
                   onChange={e => handleScoreChange(cat.key, parseInt(e.target.value,10))}
                   className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer slider-mono mb-3" />
                 <textarea
@@ -155,7 +156,7 @@ export function CreateReviewPage() {
           {/* Overall review */}
           <div className="bg-white/5 border border-white/10 rounded-xl p-6">
             <h3 className="text-xl font-bold text-white mb-4">Overall Review</h3>
-            <textarea placeholder="Write your overall thoughts about the gameâ€¦" value={summary}
+            <textarea placeholder="Write your overall thoughts about the game" value={summary}
               onChange={e => setSummary(e.target.value)} rows={6}
               className="w-full bg-white/5 border border-white/15 rounded-lg px-4 py-3 text-white placeholder:text-white/25 focus:outline-none focus:border-white/40 transition-colors resize-none" />
             <label className="flex items-center gap-3 mt-3 cursor-pointer">
@@ -173,7 +174,7 @@ export function CreateReviewPage() {
             </button>
             <button onClick={handlePost} disabled={posting}
               className="flex-1 px-6 py-4 bg-white text-zinc-900 font-bold text-lg rounded-lg hover:shadow-lg hover:shadow-white/10 transition-all disabled:opacity-60">
-              {posting ? "Postingâ€¦" : "Post Review"}
+              {posting ? "Posting" : "Post Review"}
             </button>
           </div>
         </div>
@@ -183,7 +184,7 @@ export function CreateReviewPage() {
           <div className="bg-white/5 border border-white/10 rounded-xl p-6">
             <h3 className="text-xl font-bold text-white mb-4">Your Rating</h3>
             <div className="text-center mb-6">
-              <div className="text-6xl font-bold text-white">{totalScore.toFixed(1)}</div>
+              <div className={`text-6xl font-bold ${scoreStyle(totalScore).text} ${scoreStyle(totalScore).bg} px-6 py-4 rounded-lg inline-block`}>{totalScore.toFixed(1)}</div>
               <div className="text-white/50">Overall Score</div>
             </div>
             <div className="flex justify-center mb-6">
@@ -192,8 +193,8 @@ export function CreateReviewPage() {
               </div>
             </div>
             <div className="text-sm text-white/50 text-center bg-white/5 rounded-lg p-3 border border-white/10">
-              <span className="block mb-1">ðŸ’¡ Interactive Controls</span>
-              <span className="text-xs">Drag star points, use sliders, or type a score (1â€“10)</span>
+              <span className="block mb-1">Interactive Controls</span>
+              <span className="text-xs">Drag star points, use sliders, or type a score (0–10)</span>
             </div>
           </div>
         </div>

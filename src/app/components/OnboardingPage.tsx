@@ -291,7 +291,7 @@ export function OnboardingPage() {
               </button>
             : <button onClick={handleFinish} disabled={!step3Valid || saving}
                 className="flex items-center gap-2 px-6 py-2.5 bg-white rounded-xl text-zinc-900 font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-lg hover:scale-105 active:scale-100 transition-all">
-                {saving ? "Savingâ€¦" : <><Check className="w-4 h-4" /> Launch Warpstar</>}
+                {saving ? "Saving..." : <><Check className="w-4 h-4" /> Launch Warpstar</>}
               </button>
           }
         </div>
