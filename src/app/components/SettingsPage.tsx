@@ -156,9 +156,8 @@ export function SettingsPage() {
               </div>
               <div>
                 <div className="text-white/80 font-semibold">{isDark ? "Dark Mode" : "Light Mode"}</div>
-                <div className="text-sm text-white/40">{isDark ? "Near-black monochrome â€” the default Warpstar look" : "Bright light â€” easier on the eyes in daylight"}</div>
-              </div>
             </div>
+          </div>
             <button onClick={toggleTheme} aria-label="Toggle theme"
               className={`relative w-14 h-8 rounded-full transition-colors duration-300 ${isDark ? "bg-zinc-600" : "bg-gradient-to-r from-yellow-400 to-orange-400"}`}>
               <div className={`absolute top-1 left-1 w-6 h-6 bg-white rounded-full shadow-md transition-transform duration-300 flex items-center justify-center ${isDark ? "translate-x-6" : "translate-x-0"}`}>
