@@ -1,5 +1,5 @@
 ﻿import { useState } from "react";
-import { ThumbsUp, ThumbsDown, MessageCircle, User, Pin, ChevronDown, ChevronUp } from "lucide-react";
+import { ThumbsUp, ThumbsDown, MessageCircle, User, Pin, Trash2 } from "lucide-react";
 import { Link } from "react-router";
 import { StarPolarDiagram } from "./StarPolarDiagram";
 import { scoreStyle } from "./scoreStyle";
@@ -21,6 +21,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 interface ReviewCardProps {
+  id?: string;
   reviewer: {
     username: string;
     avatar?: string;
@@ -45,14 +46,12 @@ interface ReviewCardProps {
   dislikes: number;
   comments: number;
   isPinned?: boolean;
-  game?: {
-    id: string;
-    name: string;
-    coverUrl?: string;
-  };
+  isOwnReview?: boolean;
+  onDelete?: (id: string) => void;
 }
 
 export function ReviewCard({
+  id,
   reviewer,
   scores,
   categoryText,
@@ -62,19 +61,17 @@ export function ReviewCard({
   dislikes,
   comments,
   isPinned = false,
-  game,
+  isOwnReview = false,
+  onDelete,
 }: ReviewCardProps) {
-  const [liked, setLiked] = useState(false);
+  const [liked,    setLiked]    = useState(false);
   const [disliked, setDisliked] = useState(false);
-  const [expanded, setExpanded] = useState(false);
 
   const totalScore = (
     scores.gameplay + scores.content + scores.narrative + scores.aesthetics + scores.polish
   ) / 5;
 
   const { bg: totalBg, text: totalText } = scoreStyle(totalScore);
-
-  const hasBlurbs = categoryText && Object.values(categoryText).some(t => t && t.trim().length > 0);
 
   return (
     <div className={`bg-white/5 border rounded-xl overflow-hidden ${isPinned ? 'border-white/25 shadow-lg shadow-white/5' : 'border-white/10'}`}>
@@ -86,67 +83,53 @@ export function ReviewCard({
       )}
 
       <div className="p-5 sm:p-6">
-        {/* Game info - shown on profile pages */}
-        {game && (
-          <Link to={`/game/${game.id}`} className="block mb-4 pb-4 border-b border-white/10 group">
-            <div className="flex gap-3 items-start">
-              {game.coverUrl && (
-                <div className="flex-shrink-0 w-12 h-16 rounded overflow-hidden bg-white/5">
-                  <img src={game.coverUrl} alt={game.name} className="w-full h-full object-cover" />
-                </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <h4 className="font-semibold text-white group-hover:text-white/80 transition-colors truncate">
-                  {game.name}
-                </h4>
-                <p className="text-xs text-white/40 mt-1">View Game</p>
-              </div>
-            </div>
-          </Link>
-        )}
-
         {/* Header */}
-        <div className="flex items-center justify-between gap-4 mb-5">
+        <div className="flex items-center justify-between gap-4 mb-4">
           <Link to={`/profile/${reviewer.username}`} className="flex items-center gap-3 group">
             <div className="w-10 h-10 rounded-full bg-zinc-700 flex items-center justify-center overflow-hidden ring-2 ring-white/10 flex-shrink-0">
-              {reviewer.avatar ? (
-                <img src={reviewer.avatar} alt={reviewer.username} className="w-full h-full object-cover" />
-              ) : (
-                <User className="w-5 h-5 text-[#ffffff]" />
-              )}
+              {reviewer.avatar
+                ? <img src={reviewer.avatar} alt={reviewer.username} className="w-full h-full object-cover" />
+                : <User className="w-5 h-5 text-white" />
+              }
             </div>
-            <span className="font-semibold text-[#ffffff] group-hover:opacity-70 transition-opacity">
+            <span className="font-semibold text-white group-hover:opacity-70 transition-opacity">
               @{reviewer.username}
             </span>
           </Link>
 
-          <div className={`px-3 py-1 rounded-lg text-sm font-bold flex-shrink-0 ${totalBg} ${totalText}`}>
-            {totalScore.toFixed(1)}
+          <div className="flex items-center gap-2">
+            <div className={`px-3 py-1 rounded-lg text-sm font-bold flex-shrink-0 ${totalBg} ${totalText}`}>
+              {totalScore.toFixed(1)}
+            </div>
+            {/* Delete button — only shown to the review author */}
+            {isOwnReview && id && onDelete && (
+              <button
+                onClick={() => onDelete(id)}
+                title="Delete your review"
+                className="p-2 rounded-lg text-red-400/60 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
 
         {/* Review title */}
         {title && (
-          <h3 className="text-lg font-semibold text-white mb-4">
-            {title}
-          </h3>
+          <h4 className="text-white font-bold text-base mb-3">{title}</h4>
         )}
 
         {/* Score breakdown + diagram */}
         <div className="flex flex-col sm:flex-row gap-5 mb-5">
-          {/* Scores with optional blurbs */}
           <div className="flex-1 space-y-2.5">
             {Object.entries(scores).map(([key, value]) => {
               const { bg } = scoreStyle(value as number);
-              const color = FACTOR_COLORS[key];
-              const blurb = categoryText?.[key as keyof typeof categoryText];
+              const color  = FACTOR_COLORS[key];
+              const blurb  = categoryText?.[key as keyof typeof categoryText];
               return (
                 <div key={key}>
                   <div className="flex items-center gap-2.5">
-                    <div
-                      className="w-2 h-2 rounded-full flex-shrink-0"
-                      style={{ background: color }}
-                    />
+                    <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: color }} />
                     <span className="text-xs capitalize flex-1" style={{ color: 'rgba(255,255,255,0.55)' }}>
                       {CATEGORY_LABELS[key]}
                     </span>
@@ -163,39 +146,32 @@ export function ReviewCard({
               );
             })}
           </div>
-
-          {/* Polar diagram */}
           <div className="flex-shrink-0 flex items-center justify-center">
             <StarPolarDiagram scores={scores} size={160} showTotal={false} showLabels={true} />
           </div>
         </div>
 
-        {/* Overall review */}
-        <div className="mb-4">
-          <p
-            className="text-sm leading-relaxed"
-            style={{ color: 'rgba(255,255,255,0.75)' }}
-          >
-            {review}
-          </p>
-        </div>
+        {/* Overall review text */}
+        {review && (
+          <div className="mb-4">
+            <p className="text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.75)' }}>
+              {review}
+            </p>
+          </div>
+        )}
 
         {/* Footer */}
         <div className="flex items-center gap-1 pt-4 border-t border-white/8">
           <button
             onClick={() => { setLiked(l => !l); if (disliked) setDisliked(false); }}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${
-              liked ? 'bg-white/10 text-[#ffffff]' : 'text-white/40 hover:text-white/70 hover:bg-white/5'
-            }`}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${liked ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/70 hover:bg-white/5'}`}
           >
             <ThumbsUp className="w-3.5 h-3.5" />
             <span>{liked ? likes + 1 : likes}</span>
           </button>
           <button
             onClick={() => { setDisliked(d => !d); if (liked) setLiked(false); }}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${
-              disliked ? 'bg-white/10 text-[#ffffff]' : 'text-white/40 hover:text-white/70 hover:bg-white/5'
-            }`}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${disliked ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/70 hover:bg-white/5'}`}
           >
             <ThumbsDown className="w-3.5 h-3.5" />
             <span>{disliked ? dislikes + 1 : dislikes}</span>

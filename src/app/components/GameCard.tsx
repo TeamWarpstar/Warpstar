@@ -25,83 +25,67 @@ interface GameCardProps {
 
 export function GameCard({ id, title, coverArt, platforms, developer, year, genres, scores, igdbRating }: GameCardProps) {
   const [showPlatforms, setShowPlatforms] = useState(false);
-  const [showDiagram, setShowDiagram] = useState(false);
-  const cardRef = useRef<HTMLDivElement>(null);
+  const [showDiagram,   setShowDiagram]   = useState(false);
+  const cardRef      = useRef<HTMLDivElement>(null);
   const [popoverStyle, setPopoverStyle] = useState<React.CSSProperties>({});
 
-  const DIAGRAM_SIZE = 240;
+  const DIAGRAM_SIZE  = 240;
   const POPOVER_WIDTH = 320;
 
   useEffect(() => {
     if (!showDiagram || !cardRef.current) return;
 
-    const rect = cardRef.current.getBoundingClientRect();
+    const rect          = cardRef.current.getBoundingClientRect();
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
-    const popoverHeight = DIAGRAM_SIZE + 120;
+    const popoverHeight  = DIAGRAM_SIZE + 120;
 
-    // Prefer positioning to the right, fall back to left
     let left = rect.right + 10;
-    if (left + POPOVER_WIDTH > viewportWidth - 8) {
-      left = rect.left - POPOVER_WIDTH - 10;
-    }
+    if (left + POPOVER_WIDTH > viewportWidth - 8) left = rect.left - POPOVER_WIDTH - 10;
     left = Math.max(8, Math.min(left, viewportWidth - POPOVER_WIDTH - 8));
 
-    // Vertically center on the card, clamp to viewport
     let top = rect.top + rect.height / 2 - popoverHeight / 2;
-    const minTop = 8;
-    const maxTop = viewportHeight - popoverHeight - 8;
-    top = Math.max(minTop, Math.min(maxTop, top));
+    top = Math.max(8, Math.min(top, viewportHeight - popoverHeight - 8));
 
     setPopoverStyle({ left, top, width: POPOVER_WIDTH });
   }, [showDiagram]);
 
   const totalScore = (
-    scores.gameplay +
-    scores.content +
-    scores.narrative +
-    scores.aesthetics +
-    scores.polish
+    scores.gameplay + scores.content + scores.narrative +
+    scores.aesthetics + scores.polish
   ) / 5;
 
-  const scoreColor = scoreStyle(totalScore);
+  // Use Warpstar average if reviews exist, otherwise fall back to IGDB rating
+  const hasWarpstarReviews = totalScore > 0;
+  const displayScore       = hasWarpstarReviews ? totalScore : (igdbRating ?? 0);
+  const scoreColor         = scoreStyle(displayScore);
+
+  // Label shown in the popover to clarify which rating source is shown
+  const ratingLabel = hasWarpstarReviews ? "Warpstar" : "IGDB";
 
   return (
     <>
       <Link
         to={`/game/${id}`}
         className="group relative block"
-        onMouseEnter={() => {
-          setShowDiagram(true);
-          setShowPlatforms(true);
-        }}
-        onMouseLeave={() => {
-          setShowDiagram(false);
-          setShowPlatforms(false);
-        }}
+        onMouseEnter={() => { setShowDiagram(true);  setShowPlatforms(true);  }}
+        onMouseLeave={() => { setShowDiagram(false); setShowPlatforms(false); }}
       >
         <div ref={cardRef} className="relative overflow-hidden rounded-xl bg-purple-950/30 border border-purple-500/20 transition-all duration-300 hover:border-pink-500/50 hover:scale-105 hover:shadow-2xl hover:shadow-pink-500/20">
           <div className="aspect-[3/4] relative">
-            <ImageWithFallback
-              src={coverArt}
-              alt={title}
-              className="w-full h-full object-cover"
-            />
+            <ImageWithFallback src={coverArt} alt={title} className="w-full h-full object-cover" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
             <div className={`absolute top-3 right-3 px-3 py-1 ${scoreColor.bg} rounded-full text-white font-bold text-sm shadow-lg`}>
-              {igdbRating?.toFixed(1) ?? totalScore.toFixed(1)}
+              {displayScore.toFixed(1)}
             </div>
 
             <div className="absolute bottom-3 left-3 right-3">
               <h3 className="text-white font-bold text-lg mb-2 line-clamp-2">{title}</h3>
               {showPlatforms && (
                 <div className="flex flex-wrap gap-1">
-                  {platforms.map(platform => (
-                    <span
-                      key={platform}
-                      className="px-2 py-1 bg-purple-900/80 text-purple-200 text-xs rounded-md border border-purple-500/30"
-                    >
+                  {platforms.slice(0, 3).map(platform => (
+                    <span key={platform} className="px-2 py-1 bg-purple-900/80 text-purple-200 text-xs rounded-md border border-purple-500/30">
                       {platform}
                     </span>
                   ))}
@@ -113,42 +97,47 @@ export function GameCard({ id, title, coverArt, platforms, developer, year, genr
       </Link>
 
       {showDiagram && createPortal(
-        <div
-          className="fixed z-50 pointer-events-none animate-in fade-in duration-150"
-          style={popoverStyle}
-        >
+        <div className="fixed z-50 pointer-events-none animate-in fade-in duration-150" style={popoverStyle}>
           <div className="w-full bg-[#0d0a1a]/95 backdrop-blur-sm border border-purple-500/40 rounded-2xl shadow-2xl shadow-purple-900/60 overflow-hidden">
             {/* Header */}
             <div className="px-5 pt-5 pb-4 border-b border-purple-500/20">
               <div className="flex items-start justify-between gap-3">
                 <h3 className="text-white font-bold text-lg leading-tight">{title}</h3>
-                <div className={`shrink-0 px-3 py-1 ${scoreColor.bg} rounded-full text-white font-bold text-sm shadow-lg`}>
-                  {(igdbRating ?? totalScore).toFixed(1)}
+                <div className="flex flex-col items-end gap-0.5">
+                  <div className={`shrink-0 px-3 py-1 ${scoreColor.bg} rounded-full text-white font-bold text-sm shadow-lg`}>
+                    {displayScore.toFixed(1)}
+                  </div>
+                  <span className="text-xs text-white/35">{ratingLabel}</span>
                 </div>
               </div>
               <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-purple-300">
-                <span>{developer}</span>
-                <span className="text-purple-600">-</span>
-                <span>{year}</span>
-                <span className="text-purple-600">-</span>
-                <span className="text-pink-400">{genres?.join(", ") ?? "Game"}</span>
+                {developer && <span>{developer}</span>}
+                {developer && year ? <span className="text-purple-600">·</span> : null}
+                {year > 0 && <span>{year}</span>}
+                {genres?.length > 0 && <><span className="text-purple-600">·</span><span className="text-pink-400">{genres.slice(0, 2).join(", ")}</span></>}
               </div>
-              <div className="mt-2 flex flex-wrap gap-1">
-                {platforms.map(platform => (
-                  <span
-                    key={platform}
-                    className="px-2 py-0.5 bg-purple-900/60 text-purple-200 text-xs rounded border border-purple-500/30"
-                  >
-                    {platform}
-                  </span>
-                ))}
-              </div>
+              {platforms.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {platforms.slice(0, 4).map(platform => (
+                    <span key={platform} className="px-2 py-0.5 bg-purple-900/60 text-purple-200 text-xs rounded border border-purple-500/30">
+                      {platform}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
 
-            {/* Diagram */}
+            {/* Star diagram */}
             <div className="flex items-center justify-center py-4">
               <StarPolarDiagram scores={scores} size={DIAGRAM_SIZE} showTotal={false} />
             </div>
+
+            {/* If showing IGDB rating, note it */}
+            {!hasWarpstarReviews && igdbRating > 0 && (
+              <div className="px-5 pb-4 text-center text-xs text-white/30">
+                No Warpstar reviews yet — showing IGDB rating
+              </div>
+            )}
           </div>
         </div>,
         document.body

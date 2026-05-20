@@ -8,87 +8,62 @@ import { ImageWithFallback } from "./ImageWithFallback";
 import { Edit3, Heart, Loader2, Tag, Monitor } from "lucide-react";
 import { getGame, getGameReviews, getSimilarGames, Game } from "../../api/games";
 import { toggleFavoriteGame } from "../../api/users";
+import { deleteReview } from "../../api/reviews";
 import { useAuth } from "../context/AuthContext";
 
 // ---------------------------------------------------------------------------
-// Review distribution chart — built from real review data
+// Review distribution chart
 // ---------------------------------------------------------------------------
 
 function buildDistributionData(reviews: any[]) {
   const buckets = ["0-2", "2-4", "4-6", "6-8", "8-10"];
   const dims    = ["gameplay", "content", "narrative", "aesthetics", "polish"];
-
-  const data = buckets.map(range => {
+  return buckets.map(range => {
     const [lo, hi] = range.split("-").map(Number);
     const row: any = { range };
     dims.forEach(dim => {
-      row[dim] = reviews.filter(r => {
-        const v = r[dim] ?? 0;
-        return v >= lo && v < hi;
-      }).length;
+      row[dim] = reviews.filter(r => { const v = r[dim] ?? 0; return v >= lo && v < hi; }).length;
     });
     return row;
   });
-
-  return data;
 }
 
 function DistributionChart({ reviews }: { reviews: any[] }) {
-  const data = buildDistributionData(reviews);
   return (
     <ResponsiveContainer width="100%" height={300}>
-      <BarChart data={data} key="distribution-bar-chart">
-        <CartesianGrid key="grid" strokeDasharray="3 3" stroke="#a1a1aa" opacity={0.3} />
-        <XAxis key="x" dataKey="range" stroke="#71717a" />
-        <YAxis key="y" stroke="#71717a" />
-        <Tooltip
-          key="tooltip"
-          contentStyle={{
-            backgroundColor: "#111111",
-            border: "1px solid rgba(255,255,255,0.15)",
-            borderRadius: "8px",
-            color: "#ffffff",
-          }}
-        />
-        <Bar key="gameplay"   dataKey="gameplay"   name="Gameplay"   fill="#818cf8" isAnimationActive={false} />
-        <Bar key="content"    dataKey="content"    name="Content"    fill="#a78bfa" isAnimationActive={false} />
-        <Bar key="narrative"  dataKey="narrative"  name="Narrative"  fill="#f472b6" isAnimationActive={false} />
-        <Bar key="aesthetics" dataKey="aesthetics" name="Aesthetics" fill="#fb923c" isAnimationActive={false} />
-        <Bar key="polish"     dataKey="polish"     name="Polish"     fill="#34d399" isAnimationActive={false} />
+      <BarChart data={buildDistributionData(reviews)}>
+        <CartesianGrid strokeDasharray="3 3" stroke="#a1a1aa" opacity={0.3} />
+        <XAxis dataKey="range" stroke="#71717a" />
+        <YAxis stroke="#71717a" />
+        <Tooltip contentStyle={{ backgroundColor: "#111111", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "8px", color: "#ffffff" }} />
+        <Bar dataKey="gameplay"   name="Gameplay"   fill="#818cf8" isAnimationActive={false} />
+        <Bar dataKey="content"    name="Content"    fill="#a78bfa" isAnimationActive={false} />
+        <Bar dataKey="narrative"  name="Narrative"  fill="#f472b6" isAnimationActive={false} />
+        <Bar dataKey="aesthetics" name="Aesthetics" fill="#fb923c" isAnimationActive={false} />
+        <Bar dataKey="polish"     name="Polish"     fill="#34d399" isAnimationActive={false} />
       </BarChart>
     </ResponsiveContainer>
   );
 }
 
+// ---------------------------------------------------------------------------
+// Review mapper
+// ---------------------------------------------------------------------------
 
-// Map flat backend review doc to the shape ReviewCard expects
-function mapReview(r: any) {
+function mapReview(r: any, onDelete?: (id: string) => void, isOwn?: boolean) {
   return {
-    reviewer: {
-      username: r.username ?? r.userId ?? "unknown",
-      avatar:   r.avatar ?? undefined,
-    },
-    scores: {
-      gameplay:   r.gameplay   ?? 0,
-      content:    r.content    ?? 0,
-      narrative:  r.narrative  ?? 0,
-      aesthetics: r.aesthetics ?? 0,
-      polish:     r.polish     ?? 0,
-    },
-    categoryText: {
-      gameplay:   r.gp_body  ?? "",
-      content:    r.con_body ?? "",
-      narrative:  r.ntv_body ?? "",
-      aesthetics: r.aes_body ?? "",
-      polish:     r.pol_body ?? "",
-    },
-    title:    r.title ?? undefined,
-    review:   r.body ?? "",
-    likes:    r.likes         ?? 0,
-    dislikes: 0,
-    comments: r.commentsCount ?? 0,
-    isPinned: false,
-    id:       r.id,
+    reviewer:     { username: r.username ?? r.userId ?? "unknown", avatar: r.avatar ?? undefined },
+    scores:       { gameplay: r.gameplay ?? 0, content: r.content ?? 0, narrative: r.narrative ?? 0, aesthetics: r.aesthetics ?? 0, polish: r.polish ?? 0 },
+    categoryText: { gameplay: r.gp_body ?? "", content: r.con_body ?? "", narrative: r.ntv_body ?? "", aesthetics: r.aes_body ?? "", polish: r.pol_body ?? "" },
+    title:        r.title ?? undefined,
+    review:       r.body ?? "",
+    likes:        r.likes ?? 0,
+    dislikes:     0,
+    comments:     r.commentsCount ?? 0,
+    isPinned:     false,
+    id:           r.id,
+    isOwnReview:  isOwn ?? false,
+    onDelete:     onDelete,
   };
 }
 
@@ -97,14 +72,21 @@ function mapReview(r: any) {
 // ---------------------------------------------------------------------------
 
 export function GamePage() {
-  const { gameId }               = useParams<{ gameId: string }>();
-  const { user, refreshUser }    = useAuth();
+  const { gameId }            = useParams<{ gameId: string }>();
+  const { user, refreshUser } = useAuth();
   const [game,       setGame]       = useState<Game | null>(null);
   const [reviews,    setReviews]    = useState<any[]>([]);
   const [similar,    setSimilar]    = useState<Game[]>([]);
   const [loading,    setLoading]    = useState(true);
   const [sortBy,     setSortBy]     = useState<"top" | "hot">("top");
   const [favoriting, setFavoriting] = useState(false);
+  const [deleting,   setDeleting]   = useState<string | null>(null);
+
+  const loadReviews = async () => {
+    if (!gameId) return;
+    const r = await getGameReviews(gameId) as any;
+    setReviews(r.results ?? []);
+  };
 
   useEffect(() => {
     if (!gameId) return;
@@ -120,6 +102,8 @@ export function GamePage() {
     }).finally(() => setLoading(false));
   }, [gameId]);
 
+  // Find if the current user already has a review for this game
+  const myReview = user ? reviews.find(r => r.username === user.username) : null;
   const isFavorited = user?.favoriteGames?.includes(gameId ?? "");
 
   const handleFavorite = async () => {
@@ -129,14 +113,22 @@ export function GamePage() {
     finally { setFavoriting(false); }
   };
 
-  if (loading) return (
-    <div className="flex items-center justify-center h-64">
-      <Loader2 className="w-8 h-8 text-pink-400 animate-spin" />
-    </div>
-  );
-  if (!game) return (
-    <div className="text-center text-white/50 py-20">Game not found.</div>
-  );
+  const handleDeleteReview = async (reviewId: string) => {
+    if (!window.confirm("Delete your review? This cannot be undone.")) return;
+    setDeleting(reviewId);
+    try {
+      await deleteReview(reviewId);
+      await loadReviews();
+      // Refresh game scores since review total changed
+      const g = await getGame(gameId!);
+      setGame(g);
+    } finally {
+      setDeleting(null);
+    }
+  };
+
+  if (loading) return <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 text-pink-400 animate-spin" /></div>;
+  if (!game)   return <div className="text-center text-white/50 py-20">Game not found.</div>;
 
   const scores = {
     gameplay:   game.gameplayAvg,
@@ -145,18 +137,16 @@ export function GamePage() {
     aesthetics: game.aestheticsAvg,
     polish:     game.polishAvg,
   };
-
-  const totalScore = Object.values(scores).reduce((a, b) => a + b, 0) / 5;
-
+  const totalScore  = Object.values(scores).reduce((a, b) => a + b, 0) / 5;
   const releaseYear = game.releaseDate
     ? new Date(game.releaseDate).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })
     : null;
 
   const sortedReviews = sortBy === "hot"
     ? [...reviews].sort((a, b) => {
-        const controversyA = Math.min(a.likes ?? 0, a.dislikes ?? 0) / Math.max(a.likes ?? 0, a.dislikes ?? 0, 1);
-        const controversyB = Math.min(b.likes ?? 0, b.dislikes ?? 0) / Math.max(b.likes ?? 0, b.dislikes ?? 0, 1);
-        return controversyB - controversyA;
+        const cA = Math.min(a.likes ?? 0, a.dislikes ?? 0) / Math.max(a.likes ?? 0, a.dislikes ?? 0, 1);
+        const cB = Math.min(b.likes ?? 0, b.dislikes ?? 0) / Math.max(b.likes ?? 0, b.dislikes ?? 0, 1);
+        return cB - cA;
       })
     : [...reviews].sort((a, b) => (b.overallScore ?? 0) - (a.overallScore ?? 0));
 
@@ -164,18 +154,13 @@ export function GamePage() {
     <div className="max-w-7xl mx-auto px-4 py-6 sm:py-8">
       <div className="grid lg:grid-cols-3 gap-6 sm:gap-8 mb-10 sm:mb-12">
 
-        {/* Sidebar cover — desktop only */}
+        {/* Sidebar — desktop only */}
         <div className="hidden lg:block lg:col-span-1">
           <div className="sticky top-20 space-y-4">
             <div className="rounded-xl overflow-hidden border border-white/10 shadow-2xl">
-              <ImageWithFallback
-                src={game.coverUrl ?? ""}
-                alt={game.name}
-                className="w-full aspect-[3/4] object-cover"
-              />
+              <ImageWithFallback src={game.coverUrl ?? ""} alt={game.name} className="w-full aspect-[3/4] object-cover" />
             </div>
 
-            {/* Favorite button — logged in users only */}
             {user && (
               <button onClick={handleFavorite} disabled={favoriting}
                 className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border font-semibold transition-all text-sm ${isFavorited ? "bg-pink-500/20 border-pink-500/50 text-pink-400" : "bg-white/5 border-white/10 text-white/70 hover:border-white/25"}`}>
@@ -184,51 +169,31 @@ export function GamePage() {
               </button>
             )}
 
-            {/* Genres */}
             {(game.genres ?? []).length > 0 && (
               <div>
-                <div className="flex items-center gap-1.5 text-xs text-white/40 mb-2">
-                  <Tag className="w-3 h-3" /> Genres
-                </div>
+                <div className="flex items-center gap-1.5 text-xs text-white/40 mb-2"><Tag className="w-3 h-3" /> Genres</div>
                 <div className="flex flex-wrap gap-2">
                   {game.genres.map(g => (
-                    <Link key={g} to={`/genre/${g.toLowerCase()}`}
-                      className="px-2.5 py-1 bg-white/5 border border-white/10 rounded-full text-xs text-white/60 hover:border-white/30 hover:text-white transition-colors">
-                      {g}
-                    </Link>
+                    <Link key={g} to={`/genre/${g.toLowerCase()}`} className="px-2.5 py-1 bg-white/5 border border-white/10 rounded-full text-xs text-white/60 hover:border-white/30 hover:text-white transition-colors">{g}</Link>
                   ))}
                 </div>
               </div>
             )}
 
-            {/* Platforms */}
             {(game.platforms ?? []).length > 0 && (
               <div>
-                <div className="flex items-center gap-1.5 text-xs text-white/40 mb-2">
-                  <Monitor className="w-3 h-3" /> Platforms
-                </div>
+                <div className="flex items-center gap-1.5 text-xs text-white/40 mb-2"><Monitor className="w-3 h-3" /> Platforms</div>
                 <div className="flex flex-wrap gap-2">
-                  {game.platforms.map(p => (
-                    <span key={p} className="px-2.5 py-1 bg-white/5 border border-white/10 rounded-full text-xs text-white/60">
-                      {p}
-                    </span>
-                  ))}
+                  {game.platforms.map(p => <span key={p} className="px-2.5 py-1 bg-white/5 border border-white/10 rounded-full text-xs text-white/60">{p}</span>)}
                 </div>
               </div>
             )}
 
-            {/* Themes */}
             {(game.themes ?? []).length > 0 && (
               <div>
-                <div className="flex items-center gap-1.5 text-xs text-white/40 mb-2">
-                  <Tag className="w-3 h-3" /> Themes
-                </div>
+                <div className="flex items-center gap-1.5 text-xs text-white/40 mb-2"><Tag className="w-3 h-3" /> Themes</div>
                 <div className="flex flex-wrap gap-2">
-                  {game.themes.map(t => (
-                    <span key={t} className="px-2.5 py-1 bg-white/5 border border-white/10 rounded-full text-xs text-white/60">
-                      {t}
-                    </span>
-                  ))}
+                  {game.themes.map(t => <span key={t} className="px-2.5 py-1 bg-white/5 border border-white/10 rounded-full text-xs text-white/60">{t}</span>)}
                 </div>
               </div>
             )}
@@ -241,25 +206,30 @@ export function GamePage() {
           {/* Mobile: cover + title row */}
           <div className="flex gap-4 lg:block">
             <div className="lg:hidden flex-shrink-0 w-28 sm:w-36 rounded-xl overflow-hidden border border-white/10 shadow-2xl">
-              <ImageWithFallback
-                src={game.coverUrl ?? ""}
-                alt={game.name}
-                className="w-full aspect-[3/4] object-cover"
-              />
+              <ImageWithFallback src={game.coverUrl ?? ""} alt={game.name} className="w-full aspect-[3/4] object-cover" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-3 sm:mb-4">
-                <h1 className="text-2xl sm:text-4xl lg:text-5xl font-bold text-white leading-tight">
-                  {game.name}
-                </h1>
+                <h1 className="text-2xl sm:text-4xl lg:text-5xl font-bold text-white leading-tight">{game.name}</h1>
                 {user ? (
-                  <Link
-                    to={`/game/${gameId}/review`}
-                    className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-white text-zinc-900 font-semibold rounded-lg hover:shadow-lg hover:shadow-white/10 transition-all whitespace-nowrap text-sm sm:text-base"
-                  >
-                    <Edit3 className="w-4 h-4 sm:w-5 sm:h-5" />
-                    <span>Write Review</span>
-                  </Link>
+                  <div className="flex flex-col gap-2">
+                    <Link
+                      to={`/game/${gameId}/review`}
+                      className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-white text-zinc-900 font-semibold rounded-lg hover:shadow-lg hover:shadow-white/10 transition-all whitespace-nowrap text-sm sm:text-base"
+                    >
+                      <Edit3 className="w-4 h-4 sm:w-5 sm:h-5" />
+                      <span>{myReview ? "Edit Review" : "Write Review"}</span>
+                    </Link>
+                    {myReview && (
+                      <button
+                        onClick={() => handleDeleteReview(myReview.id)}
+                        disabled={deleting === myReview.id}
+                        className="flex items-center justify-center gap-2 px-4 py-2 bg-red-500/10 border border-red-500/30 text-red-400 font-semibold rounded-lg hover:bg-red-500/20 transition-all text-sm whitespace-nowrap"
+                      >
+                        {deleting === myReview.id ? "Deleting…" : "Delete Review"}
+                      </button>
+                    )}
+                  </div>
                 ) : (
                   <Link
                     to="/login"
@@ -271,21 +241,13 @@ export function GamePage() {
               </div>
 
               <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                {/* Mobile: platforms inline */}
                 {(game.platforms ?? []).slice(0, 3).map(p => (
-                  <span key={p} className="lg:hidden px-2 sm:px-3 py-1 bg-white/8 text-white/70 rounded-md border border-white/15 text-sm">
-                    {p}
-                  </span>
+                  <span key={p} className="lg:hidden px-2 sm:px-3 py-1 bg-white/8 text-white/70 rounded-md border border-white/15 text-sm">{p}</span>
                 ))}
-                {releaseYear && (
-                  <span className="text-white/50 text-sm">Released: {releaseYear}</span>
-                )}
-                {game.igdbRating && (
-                  <span className="text-white/40 text-sm">IGDB: {game.igdbRating.toFixed(1)}</span>
-                )}
+                {releaseYear && <span className="text-white/50 text-sm">Released: {releaseYear}</span>}
+                {game.igdbRating && <span className="text-white/40 text-sm">IGDB: {game.igdbRating.toFixed(1)}</span>}
               </div>
 
-              {/* Mobile favorite */}
               {user && (
                 <button onClick={handleFavorite} disabled={favoriting}
                   className={`lg:hidden mt-3 flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-medium transition-all ${isFavorited ? "bg-pink-500/20 border-pink-500/50 text-pink-400" : "bg-white/5 border-white/10 text-white/60 hover:border-white/25"}`}>
@@ -296,10 +258,7 @@ export function GamePage() {
             </div>
           </div>
 
-          {/* Summary */}
-          {game.summary && (
-            <p className="text-white/60 leading-relaxed">{game.summary}</p>
-          )}
+          {game.summary && <p className="text-white/60 leading-relaxed">{game.summary}</p>}
 
           {/* Scores */}
           <div className="bg-white/5 border border-white/10 rounded-xl p-4 sm:p-8">
@@ -312,9 +271,7 @@ export function GamePage() {
                   <div className={`inline-block px-4 sm:px-5 py-2 rounded-2xl mb-2 text-4xl sm:text-6xl font-bold ${scoreStyle(totalScore).bg} ${scoreStyle(totalScore).text}`}>
                     {totalScore.toFixed(1)}
                   </div>
-                  <div className="text-white/50 text-sm sm:text-base">
-                    Based on {game.reviewTotal.toLocaleString()} reviews
-                  </div>
+                  <div className="text-white/50 text-sm sm:text-base">Based on {game.reviewTotal.toLocaleString()} reviews</div>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
                   {Object.entries(scores).map(([key, value]) => {
@@ -331,7 +288,6 @@ export function GamePage() {
             </div>
           </div>
 
-          {/* Distribution chart — only shown when there are reviews */}
           {reviews.length > 0 && (
             <div className="bg-white/5 border border-white/10 rounded-xl p-6">
               <h3 className="text-xl font-bold text-white mb-4">Review Distribution</h3>
@@ -339,7 +295,6 @@ export function GamePage() {
             </div>
           )}
 
-          {/* Similar games */}
           {similar.length > 0 && (
             <div>
               <h3 className="text-xl font-bold text-white mb-4">Similar Games</h3>
@@ -349,9 +304,7 @@ export function GamePage() {
                     <div className="rounded-lg overflow-hidden border border-white/10 group-hover:border-white/30 transition-colors">
                       <ImageWithFallback src={s.coverUrl ?? ""} alt={s.name} className="w-full aspect-[3/4] object-cover" />
                     </div>
-                    <p className="text-xs text-white/50 mt-1.5 truncate group-hover:text-white/80 transition-colors">
-                      {s.name}
-                    </p>
+                    <p className="text-xs text-white/50 mt-1.5 truncate group-hover:text-white/80 transition-colors">{s.name}</p>
                   </Link>
                 ))}
               </div>
@@ -360,31 +313,17 @@ export function GamePage() {
         </div>
       </div>
 
-      {/* Reviews section */}
+      {/* Reviews */}
       <div className="space-y-6">
         <div className="flex items-center justify-between gap-4">
           <h2 className="text-xl sm:text-3xl font-bold text-white">Reviews</h2>
           <div className="flex gap-2">
-            <button
-              onClick={() => setSortBy("top")}
-              className={`px-3 sm:px-4 py-2 rounded-lg font-semibold transition-all text-sm sm:text-base ${
-                sortBy === "top"
-                  ? "bg-white text-zinc-900"
-                  : "bg-white/5 text-white/60 border border-white/10 hover:border-white/25"
-              }`}
-            >
-              Top Rated
-            </button>
-            <button
-              onClick={() => setSortBy("hot")}
-              className={`px-3 sm:px-4 py-2 rounded-lg font-semibold transition-all text-sm sm:text-base ${
-                sortBy === "hot"
-                  ? "bg-white text-zinc-900"
-                  : "bg-white/5 text-white/60 border border-white/10 hover:border-white/25"
-              }`}
-            >
-              Hottest Take
-            </button>
+            {(["top", "hot"] as const).map(s => (
+              <button key={s} onClick={() => setSortBy(s)}
+                className={`px-3 sm:px-4 py-2 rounded-lg font-semibold transition-all text-sm sm:text-base ${sortBy === s ? "bg-white text-zinc-900" : "bg-white/5 text-white/60 border border-white/10 hover:border-white/25"}`}>
+                {s === "top" ? "Top Rated" : "Hottest Take"}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -392,7 +331,14 @@ export function GamePage() {
           {sortedReviews.length === 0
             ? <p className="text-white/40 text-center py-12">No reviews yet. Be the first!</p>
             : sortedReviews.map((review, index) => (
-                <ReviewCard key={review.id ?? `review-${index}`} {...mapReview(review)} />
+                <ReviewCard
+                  key={review.id ?? `review-${index}`}
+                  {...mapReview(
+                    review,
+                    handleDeleteReview,
+                    user?.username === review.username,
+                  )}
+                />
               ))
           }
         </div>

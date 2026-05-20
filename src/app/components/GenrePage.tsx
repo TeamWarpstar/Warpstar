@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { GameCard } from "./GameCard";
-import { getGames, getGenres, Game } from "../../api/games";
+import { getGames, Game } from "../../api/games";
 
 const GENRE_INFO: Record<string, { description: string }> = {
   action:     { description: "Fast-paced games with intense combat and exciting gameplay" },
@@ -29,12 +29,12 @@ const SORT_OPTIONS = [
 const LIMIT = 20;
 
 export function GenrePage() {
-  const { genreName }  = useParams<{ genreName: string }>();
-  const [games,   setGames]   = useState<Game[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [total,   setTotal]   = useState(0);
-  const [skip,    setSkip]    = useState(0);
-  const [sort,    setSort]    = useState("reviewTotal");
+  const { genreName }              = useParams<{ genreName: string }>();
+  const [games,   setGames]        = useState<Game[]>([]);
+  const [loading, setLoading]      = useState(true);
+  const [total,   setTotal]        = useState(0);
+  const [skip,    setSkip]         = useState(0);
+  const [sort,    setSort]         = useState("reviewTotal");
 
   const genre = genreName?.toLowerCase() ?? "";
   const info  = GENRE_INFO[genre] ?? { description: "Browse games in this genre" };
@@ -45,36 +45,17 @@ export function GenrePage() {
     setLoading(true);
     setGames([]);
 
-    (async () => {
-      try {
-        console.log("[GenrePage] Fetching genres...");
-        const genres = await getGenres();
-        console.log("[GenrePage] Available genres:", genres.map(g => g.name));
-        
-        const matched = genres.find(g => g.name.toLowerCase() === genre);
-        console.log(`[GenrePage] Looking for genre "${genre}", matched:`, matched);
-        
-        if (!matched) {
-          console.warn(`[GenrePage] No genre found matching "${genre}"`);
-          setGames([]);
-          setTotal(0);
-          return;
-        }
-
-        console.log(`[GenrePage] Fetching games for genre ID "${matched.id}" with sort "${sort}"`);
-        const res = await getGames({ genre: matched.id, sort, limit: LIMIT, skip });
-        console.log(`[GenrePage] Games response:`, res);
-        
-        setGames(res.results || []);
-        setTotal(res.total || 0);
-      } catch (error) {
-        console.error("[GenrePage] Error fetching games:", error);
+    // Pass the genre name directly — the backend resolves it to the IGDB ID
+    getGames({ genre: genreName, sort, limit: LIMIT, skip })
+      .then(res => {
+        setGames(res.results ?? []);
+        setTotal(res.total ?? 0);
+      })
+      .catch(() => {
         setGames([]);
         setTotal(0);
-      } finally {
-        setLoading(false);
-      }
-    })();
+      })
+      .finally(() => setLoading(false));
   }, [genreName, sort, skip]);
 
   return (
@@ -90,10 +71,13 @@ export function GenrePage() {
       {/* Controls */}
       <div className="mb-6 flex items-center justify-between gap-4">
         <h2 className="text-xl sm:text-2xl font-bold text-white">
-          {loading ? "Loading" : `${total.toLocaleString()} Games`}
+          {loading ? "Loading…" : `${total.toLocaleString()} Games`}
         </h2>
-        <select value={sort} onChange={e => { setSort(e.target.value); setSkip(0); }}
-          className="bg-white/5 border border-white/15 rounded-lg px-3 py-2 text-white/70 focus:outline-none focus:border-white/30 text-sm sm:text-base">
+        <select
+          value={sort}
+          onChange={e => { setSort(e.target.value); setSkip(0); }}
+          className="bg-white/5 border border-white/15 rounded-lg px-3 py-2 text-white/70 focus:outline-none focus:border-white/30 text-sm sm:text-base"
+        >
           {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
       </div>
@@ -105,7 +89,8 @@ export function GenrePage() {
           : <>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
                 {games.map(game => (
-                  <GameCard key={game.id}
+                  <GameCard
+                    key={game.id}
                     id={game.id}
                     title={game.name}
                     coverArt={game.coverUrl ?? "https://images.unsplash.com/photo-1538481199705-c710c4e965fc?w=400&h=600&fit=crop"}
