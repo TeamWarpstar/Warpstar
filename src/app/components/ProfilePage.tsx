@@ -140,7 +140,7 @@ export function ProfilePage() {
             {tab}
           </button>
         ))}
-      </div>
+      </div> 
 
       {/* Reviews tab */}
       {activeTab === "reviews" && (
