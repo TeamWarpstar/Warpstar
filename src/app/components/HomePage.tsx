@@ -35,7 +35,7 @@ export function HomePage() {
 
   useEffect(() => {
     Promise.all([
-      getGames({ sort: "reviewTotal", limit: 20 }),
+      getGames({ sort: "reviewTotal", limit: 50 }),
       getGames({ sort: "topRated",    limit: 12 }),
       getGenres(),
     ]).then(([rec, trend, allGenres]) => {
