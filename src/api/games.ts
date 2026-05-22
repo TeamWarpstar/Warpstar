@@ -22,6 +22,8 @@ export interface Game {
   themes:          string[];
   platforms:       string[];
   keywords:        string[];
+  developers:      string[];
+  publishers:      string[];
   igdbRatingCount: number;
 }
 

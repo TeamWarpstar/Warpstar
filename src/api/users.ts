@@ -44,3 +44,7 @@ export async function getFeed(skip = 0, limit = 20) {
 export async function getMyActivity(skip = 0, limit = 20) {
   return apiFetch(`/api/feed/me?skip=${skip}&limit=${limit}`);
 }
+
+export async function searchUsers(q: string, limit = 10): Promise<BackendUser[]> {
+  return apiFetch<BackendUser[]>(`/api/users/search?q=${encodeURIComponent(q)}&limit=${limit}`);
+}

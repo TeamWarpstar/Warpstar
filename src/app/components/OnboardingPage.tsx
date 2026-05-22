@@ -1,26 +1,46 @@
-﻿import { useState, useRef } from "react";
+﻿import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { useAuth } from "../context/AuthContext";
 import { updateMe } from "../../api/users";
-import { Check, ChevronRight, ChevronLeft, User, Image, Gamepad2, Upload } from "lucide-react";
+import { getGenres, getPlatforms, Genre } from "../../api/games";
+import { Check, ChevronRight, ChevronLeft, User, Image, Gamepad2, Monitor, Upload, Loader2 } from "lucide-react";
 import warpstarWhiteLogo from "../../imports/warpstarwhite.png";
 
-const GENRES = [
-  { name: "Action",   color: "from-white/10 to-white/5", border: "border-white/20" },
-  { name: "RPG",  color: "from-white/10 to-white/5", border: "border-white/20" },
-  { name: "Strategy",   color: "from-white/10 to-white/5", border: "border-white/20" },
-  { name: "Indie",      color: "from-white/10 to-white/5", border: "border-white/20" },
-  { name: "Adventure",  color: "from-white/10 to-white/5", border: "border-white/20" },
-  { name: "Horror",     color: "from-white/10 to-white/5", border: "border-white/20" },
-  { name: "Puzzle",     color: "from-white/10 to-white/5", border: "border-white/20" },
-  { name: "Sports",     color: "from-white/10 to-white/5", border: "border-white/20" },
-  { name: "Simulation", color: "from-white/10 to-white/5", border: "border-white/20" },
-  { name: "Fighting",   color: "from-white/10 to-white/5", border: "border-white/20" },
-  { name: "Platformer", color: "from-white/10 to-white/5", border: "border-white/20" },
-  { name: "Racing",     color: "from-white/10 to-white/5", border: "border-white/20" },
+// ---------------------------------------------------------------------------
+// Platform presets — curated list of major platforms shown in onboarding.
+// Names must match exactly what's stored in the platforms collection.
+// ---------------------------------------------------------------------------
+
+const PLATFORM_PRESETS = [
+  // PC
+  { name: "PC (Microsoft Windows)", label: "PC / Windows", icon: "🖥️", group: "PC" },
+  { name: "Mac",                    label: "Mac",           icon: "🍎", group: "PC" },
+  { name: "Linux",                  label: "Linux",         icon: "🐧", group: "PC" },
+  // Current gen consoles
+  { name: "PlayStation 5",          label: "PS5",           icon: "🎮", group: "PlayStation" },
+  { name: "PlayStation 4",          label: "PS4",           icon: "🎮", group: "PlayStation" },
+  { name: "Xbox Series X|S",        label: "Xbox Series",   icon: "🟢", group: "Xbox" },
+  { name: "Xbox One",               label: "Xbox One",      icon: "🟢", group: "Xbox" },
+  { name: "Nintendo Switch",        label: "Switch",        icon: "🔴", group: "Nintendo" },
+  // Handheld
+  { name: "Nintendo Switch 2",      label: "Switch 2",      icon: "🔴", group: "Nintendo" },
+  { name: "PlayStation Portable",   label: "PSP",           icon: "🎮", group: "PlayStation" },
+  { name: "Nintendo 3DS",           label: "3DS",           icon: "🔴", group: "Nintendo" },
+  // Mobile
+  { name: "Android",                label: "Android",       icon: "📱", group: "Mobile" },
+  { name: "iOS",                    label: "iOS",            icon: "📱", group: "Mobile" },
+  // Prev gen
+  { name: "PlayStation 3",          label: "PS3",           icon: "🎮", group: "PlayStation" },
+  { name: "Xbox 360",               label: "Xbox 360",      icon: "🟢", group: "Xbox" },
+  { name: "Wii U",                  label: "Wii U",         icon: "🔴", group: "Nintendo" },
 ];
 
-// Pixel avatar presets (kept exactly as designer made them)
+const PLATFORM_GROUPS = ["PC", "PlayStation", "Xbox", "Nintendo", "Mobile"];
+
+// ---------------------------------------------------------------------------
+// Pixel avatars (unchanged from designer)
+// ---------------------------------------------------------------------------
+
 const PAL: Record<string, string> = {
   k:"#0f172a",w:"#f8fafc",u:"#fcd9b7",e:"#0f172a",b:"#3b82f6",B:"#1d4ed8",
   v:"#93c5fd",p:"#a855f7",G:"#6b7280",g:"#9ca3af",n:"#4ade80",N:"#16a34a",
@@ -54,33 +74,72 @@ const PIXEL_AVATAR_PRESETS = PIXEL_AVATAR_CONFIGS.map(c => ({
   id: c.id, label: c.label, url: toDataUrl(buildSVG(c.rows, c.bg)),
 }));
 
+// ---------------------------------------------------------------------------
+// Steps
+// ---------------------------------------------------------------------------
+
 const STEPS = [
-  { id: 1, label: "Identity", icon: User },
-  { id: 2, label: "Avatar",   icon: Image },
-  { id: 3, label: "Genres",   icon: Gamepad2 },
+  { id: 1, label: "Identity",  icon: User     },
+  { id: 2, label: "Avatar",    icon: Image    },
+  { id: 3, label: "Platforms", icon: Monitor  },
+  { id: 4, label: "Genres",    icon: Gamepad2 },
 ];
 
-export function OnboardingPage() {
-  const { user, updateProfile, refreshUser } = useAuth();
-  const navigate = useNavigate();
-  const [step, setStep] = useState(1);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
 
+export function OnboardingPage() {
+  const { user, refreshUser } = useAuth();
+  const navigate = useNavigate();
+  const [step,   setStep]   = useState(1);
+  const [saving, setSaving] = useState(false);
+  const [error,  setError]  = useState("");
+
+  // Step 1
   const [username,      setUsername]      = useState("");
   const [displayName,   setDisplayName]   = useState(user?.googleName ?? "");
   const [usernameError, setUsernameError] = useState("");
 
+  // Step 2
   const [selectedAvatarId, setSelectedAvatarId] = useState<string | null>(null);
   const [uploadedImage,    setUploadedImage]     = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Step 3
+  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
+
+  // Step 4
+  const [genres,         setGenres]         = useState<Genre[]>([]);
+  const [genresLoading,  setGenresLoading]  = useState(false);
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
 
   const profilePicture =
     uploadedImage ??
     PIXEL_AVATAR_PRESETS.find(a => a.id === selectedAvatarId)?.url ??
     "";
+
+  // Fetch real genres when reaching step 4
+  useEffect(() => {
+    if (step !== 4 || genres.length > 0) return;
+    setGenresLoading(true);
+    getGenres()
+      .then(all => {
+        // Prioritise common genres, then fill with the rest
+        const priority = [
+          "Action","RPG","Strategy","Indie","Adventure","Horror",
+          "Puzzle","Sports","Simulation","Fighting","Platformer","Racing",
+          "Shooter","Arcade","Tactical","Point-and-click","Visual Novel",
+        ];
+        const ordered = priority
+          .map(n => all.find(g => g.name === n))
+          .filter(Boolean) as Genre[];
+        const names   = new Set(ordered.map(g => g.name));
+        const rest    = all.filter(g => !names.has(g.name));
+        setGenres([...ordered, ...rest].slice(0, 24));
+      })
+      .finally(() => setGenresLoading(false));
+  }, [step]);
 
   const validateUsername = (val: string) => {
     if (!val)            return "Username is required.";
@@ -92,14 +151,15 @@ export function OnboardingPage() {
 
   const step1Valid = !validateUsername(username) && displayName.trim().length >= 2;
   const step2Valid = !!profilePicture;
-  const step3Valid = selectedGenres.length >= 1 && selectedGenres.length <= 3;
+  const step3Valid = true; // platforms optional — user may not want recommendations filtered
+  const step4Valid = selectedGenres.length >= 1 && selectedGenres.length <= 3;
 
   const handleNext = () => {
     if (step === 1) {
       const err = validateUsername(username);
       if (err) { setUsernameError(err); return; }
     }
-    if (step < 3) setStep(s => s + 1);
+    if (step < 4) setStep(s => s + 1);
   };
 
   const handleBack = () => { if (step > 1) setStep(s => s - 1); };
@@ -108,11 +168,17 @@ export function OnboardingPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (ev) => {
+    reader.onload = ev => {
       setUploadedImage(ev.target?.result as string);
       setSelectedAvatarId(null);
     };
     reader.readAsDataURL(file);
+  };
+
+  const togglePlatform = (name: string) => {
+    setSelectedPlatforms(prev =>
+      prev.includes(name) ? prev.filter(p => p !== name) : [...prev, name]
+    );
   };
 
   const toggleGenre = (name: string) => {
@@ -127,16 +193,16 @@ export function OnboardingPage() {
     setSaving(true);
     setError("");
     try {
-      // Save to backend — username is saved as a top-level field
       await updateMe({
         username: username.trim(),
         preferences: {
           ...user?.preferences,
-          displayName:    displayName.trim(),
+          displayName:       displayName.trim(),
           profilePicture,
-          topGenres:      selectedGenres,
-          googleName:     user?.googleName,
-          googleAvatar:   user?.googleAvatar,
+          topGenres:         selectedGenres,
+          platforms:         selectedPlatforms,
+          googleName:        user?.googleName,
+          googleAvatar:      user?.googleAvatar,
         },
       });
       await refreshUser();
@@ -147,6 +213,8 @@ export function OnboardingPage() {
     }
   };
 
+  const isStepValid = [step1Valid, step2Valid, step3Valid, step4Valid][step - 1];
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0a0a0a] via-[#111111] to-[#0a0a0a] flex flex-col items-center justify-center px-4 py-12">
       <div className="flex items-center gap-2 mb-6 -mt-4">
@@ -156,7 +224,7 @@ export function OnboardingPage() {
       {/* Step indicator */}
       <div className="flex items-center gap-0 mb-10">
         {STEPS.map((s, i) => {
-          const Icon = s.icon;
+          const Icon      = s.icon;
           const isComplete = step > s.id;
           const isCurrent  = step === s.id;
           return (
@@ -175,7 +243,7 @@ export function OnboardingPage() {
                 </span>
               </div>
               {i < STEPS.length - 1 && (
-                <div className={`w-16 h-0.5 mx-2 mb-5 rounded transition-all duration-300 ${step > s.id ? "bg-white" : "bg-white/15"}`} />
+                <div className={`w-12 h-0.5 mx-2 mb-5 rounded transition-all duration-300 ${step > s.id ? "bg-white" : "bg-white/15"}`} />
               )}
             </div>
           );
@@ -184,39 +252,48 @@ export function OnboardingPage() {
 
       <div className="w-full max-w-lg bg-white/5 border border-white/10 rounded-3xl p-8 shadow-2xl shadow-black/40 backdrop-blur-sm">
 
-        {/* Step 1 - Identity */}
+        {/* ── Step 1: Identity ── */}
         {step === 1 && (
           <div>
             <h2 className="text-2xl font-bold text-white mb-1">Create your identity</h2>
             <p className="text-white/45 text-sm mb-8">How should the Warpstar community know you?</p>
             <div className="mb-5">
               <label className="block text-sm font-medium text-white/70 mb-2">Display Name</label>
-              <input type="text" value={displayName} onChange={e => setDisplayName(e.target.value)} placeholder="Example Username"
-                className="w-full bg-white/5 border border-white/15 rounded-xl px-4 py-3 text-white placeholder:text-white/25 focus:outline-none focus:border-white/40 transition-colors" />
-              <p className="mt-1.5 text-xs text-white/35">Your public name can include spaces and capitals.</p>
+              <input
+                type="text"
+                value={displayName}
+                onChange={e => setDisplayName(e.target.value)}
+                placeholder="Example Username"
+                className="w-full bg-white/5 border border-white/15 rounded-xl px-4 py-3 text-white placeholder:text-white/25 focus:outline-none focus:border-white/40 transition-colors"
+              />
+              <p className="mt-1.5 text-xs text-white/35">Your public name — can include spaces and capitals.</p>
             </div>
             <div className="mb-8">
               <label className="block text-sm font-medium text-white/70 mb-2">Username</label>
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/35">@</span>
-                <input type="text" value={username}
-                  onChange={e => { const v = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g,""); setUsername(v); setUsernameError(""); }}
-                  placeholder="your_handle" maxLength={20}
-                  className={`w-full bg-white/5 border rounded-xl pl-8 pr-4 py-3 text-white placeholder:text-white/25 focus:outline-none transition-colors ${usernameError ? "border-red-500/60" : "border-white/15 focus:border-white/40"}`} />
+                <input
+                  type="text"
+                  value={username}
+                  onChange={e => { const v = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""); setUsername(v); setUsernameError(""); }}
+                  placeholder="your_handle"
+                  maxLength={20}
+                  className={`w-full bg-white/5 border rounded-xl pl-8 pr-4 py-3 text-white placeholder:text-white/25 focus:outline-none transition-colors ${usernameError ? "border-red-500/60" : "border-white/15 focus:border-white/40"}`}
+                />
               </div>
               {usernameError
                 ? <p className="mt-1.5 text-xs text-red-400">{usernameError}</p>
-                : <p className="mt-1.5 text-xs text-white/35">3-20 characters, lowercase, numbers and underscores only.</p>
+                : <p className="mt-1.5 text-xs text-white/35">3–20 chars, lowercase, numbers and underscores only.</p>
               }
             </div>
           </div>
         )}
 
-        {/* Step 2 - Avatar */}
+        {/* ── Step 2: Avatar ── */}
         {step === 2 && (
           <div>
             <h2 className="text-2xl font-bold text-white mb-1">Pick your avatar</h2>
-            <p className="text-white/45 text-sm mb-6">Choose a preset profile picture or upload your own image.</p>
+            <p className="text-white/45 text-sm mb-6">Choose a pixel-art preset or upload your own image.</p>
             <div className="flex justify-center mb-6">
               <div className="relative">
                 {profilePicture
@@ -228,11 +305,15 @@ export function OnboardingPage() {
             </div>
             <div className="grid grid-cols-6 gap-3 mb-6">
               {PIXEL_AVATAR_PRESETS.map(avatar => (
-                <button key={avatar.id} onClick={() => { setSelectedAvatarId(avatar.id); setUploadedImage(null); }} title={avatar.label}
-                  className={`relative rounded-xl overflow-hidden aspect-square border-2 transition-all hover:scale-110 ${selectedAvatarId===avatar.id && !uploadedImage ? "border-white shadow-lg" : "border-white/15 hover:border-white/40"}`}
-                  style={{ imageRendering: "pixelated" }}>
+                <button
+                  key={avatar.id}
+                  onClick={() => { setSelectedAvatarId(avatar.id); setUploadedImage(null); }}
+                  title={avatar.label}
+                  className={`relative rounded-xl overflow-hidden aspect-square border-2 transition-all hover:scale-110 ${selectedAvatarId === avatar.id && !uploadedImage ? "border-white shadow-lg" : "border-white/15 hover:border-white/40"}`}
+                  style={{ imageRendering: "pixelated" }}
+                >
                   <img src={avatar.url} alt={avatar.label} className="w-full h-full" style={{ imageRendering: "pixelated" }} />
-                  {selectedAvatarId===avatar.id && !uploadedImage && (
+                  {selectedAvatarId === avatar.id && !uploadedImage && (
                     <div className="absolute inset-0 bg-white/10 flex items-center justify-center"><Check className="w-3.5 h-3.5 text-white drop-shadow" /></div>
                   )}
                 </button>
@@ -241,37 +322,101 @@ export function OnboardingPage() {
             <div>
               <p className="text-sm font-medium text-white/70 mb-2">Or upload your own image</p>
               <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
-              <button type="button" onClick={() => fileInputRef.current?.click()}
-                className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border transition-all ${uploadedImage ? "bg-white/10 border-white/40 text-white/80" : "bg-white/5 border-white/15 text-white/50 hover:border-white/30 hover:text-white/70"}`}>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border transition-all ${uploadedImage ? "bg-white/10 border-white/40 text-white/80" : "bg-white/5 border-white/15 text-white/50 hover:border-white/30 hover:text-white/70"}`}
+              >
                 <Upload className="w-4 h-4" />
-                {uploadedImage ? "Image uploaded” click to change" : "Choose a file"}
+                {uploadedImage ? "Image uploaded — click to change" : "Choose a file…"}
               </button>
             </div>
           </div>
         )}
 
-        {/* Step 3 - Genres */}
+        {/* ── Step 3: Platforms ── */}
         {step === 3 && (
           <div>
-            <h2 className="text-2xl font-bold text-white mb-1">What do you love playing?</h2>
-            <p className="text-white/45 text-sm mb-2">Pick 1-3 genres that best describe your taste.</p>
-            <p className="text-xs text-white/30 mb-7">{selectedGenres.length}/3 selected</p>
-            <div className="grid grid-cols-3 gap-3 mb-2">
-              {GENRES.map(genre => {
-                const selected = selectedGenres.includes(genre.name);
-                const maxed    = selectedGenres.length >= 3 && !selected;
+            <h2 className="text-2xl font-bold text-white mb-1">What do you play on?</h2>
+            <p className="text-white/45 text-sm mb-1">Select all platforms you have access to.</p>
+            <p className="text-xs text-white/30 mb-6">This helps us avoid recommending exclusives you can't play. You can skip this and update it later in settings.</p>
+
+            <div className="space-y-5 max-h-80 overflow-y-auto pr-1">
+              {PLATFORM_GROUPS.map(group => {
+                const platforms = PLATFORM_PRESETS.filter(p => p.group === group);
                 return (
-                  <button key={genre.name} onClick={() => toggleGenre(genre.name)} disabled={maxed}
-                    className={`relative group flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all ${
-                      selected ? `bg-gradient-to-br ${genre.color} ${genre.border} scale-105 shadow-lg`
-                      : maxed ? "bg-white/3 border-white/8 opacity-40 cursor-not-allowed"
-                      : "bg-white/5 border-white/15 hover:border-white/30 hover:bg-white/8 hover:scale-105"}`}>
-                    <span className={`text-xs font-semibold ${selected ? "text-white" : "text-white/60"}`}>{genre.name}</span>
-                    {selected && <div className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-white flex items-center justify-center"><Check className="w-2.5 h-2.5 text-zinc-900" /></div>}
-                  </button>
+                  <div key={group}>
+                    <p className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-2">{group}</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {platforms.map(platform => {
+                        const selected = selectedPlatforms.includes(platform.name);
+                        return (
+                          <button
+                            key={platform.name}
+                            onClick={() => togglePlatform(platform.name)}
+                            className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border text-left transition-all ${
+                              selected
+                                ? "bg-white/10 border-white/40 text-white"
+                                : "bg-white/5 border-white/10 text-white/50 hover:border-white/25 hover:text-white/70"
+                            }`}
+                          >
+                            <span className="text-lg leading-none">{platform.icon}</span>
+                            <span className="text-sm font-medium truncate">{platform.label}</span>
+                            {selected && <Check className="w-3.5 h-3.5 ml-auto flex-shrink-0 text-white" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 );
               })}
             </div>
+
+            {selectedPlatforms.length > 0 && (
+              <p className="mt-4 text-xs text-white/40 text-center">
+                {selectedPlatforms.length} platform{selectedPlatforms.length !== 1 ? "s" : ""} selected
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* ── Step 4: Genres ── */}
+        {step === 4 && (
+          <div>
+            <h2 className="text-2xl font-bold text-white mb-1">What do you love playing?</h2>
+            <p className="text-white/45 text-sm mb-2">Pick 1–3 genres that best describe your taste.</p>
+            <p className="text-xs text-white/30 mb-5">{selectedGenres.length}/3 selected</p>
+
+            {genresLoading
+              ? <div className="flex items-center justify-center py-12"><Loader2 className="w-6 h-6 text-white/40 animate-spin" /></div>
+              : <div className="grid grid-cols-3 gap-2 mb-2 max-h-80 overflow-y-auto pr-1">
+                  {genres.map(genre => {
+                    const selected = selectedGenres.includes(genre.name);
+                    const maxed    = selectedGenres.length >= 3 && !selected;
+                    return (
+                      <button
+                        key={genre.id}
+                        onClick={() => toggleGenre(genre.name)}
+                        disabled={maxed}
+                        className={`relative flex items-center justify-center px-3 py-3 rounded-2xl border text-center transition-all ${
+                          selected
+                            ? "bg-white/15 border-white/50 text-white scale-105 shadow-lg"
+                            : maxed
+                            ? "bg-white/3 border-white/8 text-white/25 cursor-not-allowed"
+                            : "bg-white/5 border-white/15 text-white/60 hover:border-white/30 hover:bg-white/8 hover:scale-105"
+                        }`}
+                      >
+                        <span className="text-xs font-semibold leading-tight">{genre.name}</span>
+                        {selected && (
+                          <div className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-white flex items-center justify-center">
+                            <Check className="w-2.5 h-2.5 text-zinc-900" />
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+            }
           </div>
         )}
 
@@ -285,14 +430,20 @@ export function OnboardingPage() {
               </button>
             : <div />
           }
-          {step < 3
-            ? <button onClick={handleNext} disabled={step===1 ? !step1Valid : !step2Valid}
-                className="flex items-center gap-1.5 px-6 py-2.5 bg-white rounded-xl text-zinc-900 font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-lg hover:scale-105 active:scale-100 transition-all">
-                Next <ChevronRight className="w-4 h-4" />
+          {step < 4
+            ? <button
+                onClick={handleNext}
+                disabled={!isStepValid}
+                className="flex items-center gap-1.5 px-6 py-2.5 bg-white rounded-xl text-zinc-900 font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-lg hover:scale-105 active:scale-100 transition-all"
+              >
+                {step === 3 && selectedPlatforms.length === 0 ? "Skip" : "Next"} <ChevronRight className="w-4 h-4" />
               </button>
-            : <button onClick={handleFinish} disabled={!step3Valid || saving}
-                className="flex items-center gap-2 px-6 py-2.5 bg-white rounded-xl text-zinc-900 font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-lg hover:scale-105 active:scale-100 transition-all">
-                {saving ? "Saving..." : <><Check className="w-4 h-4" /> Launch Warpstar</>}
+            : <button
+                onClick={handleFinish}
+                disabled={!step4Valid || saving}
+                className="flex items-center gap-2 px-6 py-2.5 bg-white rounded-xl text-zinc-900 font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-lg hover:scale-105 active:scale-100 transition-all"
+              >
+                {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</> : <><Check className="w-4 h-4" /> Launch Warpstar</>}
               </button>
           }
         </div>

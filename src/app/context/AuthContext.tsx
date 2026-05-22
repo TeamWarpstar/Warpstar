@@ -17,6 +17,7 @@ export interface WarpstarUser {
   profilePicture?: string;
   bannerImage?:    string;
   topGenres?:      string[];
+  platforms?:      string[];
   profileComplete: boolean;
   favoriteGames:   string[];
   followers:       string[];
@@ -53,7 +54,8 @@ function mapBackendUser(u: BackendUser): WarpstarUser {
     displayName:     (u.preferences?.displayName as string) ?? u.username,
     profilePicture:  u.preferences?.profilePicture as string | undefined,
     bannerImage:     u.preferences?.bannerImage as string | undefined,
-    topGenres:       u.preferences?.topGenres as string[] | undefined,
+    topGenres:       u.preferences?.topGenres  as string[] | undefined,
+    platforms:       u.preferences?.platforms  as string[] | undefined,
     googleName:      u.preferences?.googleName as string | undefined,
     googleAvatar:    u.preferences?.googleAvatar as string | undefined,
   };

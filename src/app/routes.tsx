@@ -6,14 +6,15 @@ import { ProfilePage } from "./components/ProfilePage";
 import { SettingsPage } from "./components/SettingsPage";
 import { GenrePage } from "./components/GenrePage";
 import { CreateReviewPage } from "./components/CreateReviewPage";
+import { DiscoverPage } from "./components/DiscoverPage";
+import { SearchPage } from "./components/SearchPage";
 import { SplashPage } from "./components/SplashPage";
 import { OnboardingPage } from "./components/OnboardingPage";
 import { AuthProvider } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
 
 // Root wrapper — puts both providers inside the React Router tree so every
-// route component (RootLayout, SplashPage, OnboardingPage, …) can call
-// useAuth() and useTheme() without "must be used within Provider" errors.
+// route component can call useAuth() and useTheme() without Provider errors.
 function ProvidersWrapper() {
   return (
     <ThemeProvider>
@@ -46,6 +47,8 @@ export const router = createBrowserRouter([
           { path: "profile/:username", Component: ProfilePage },
           { path: "settings", Component: SettingsPage },
           { path: "genre/:genreName", Component: GenrePage },
+          //{ path: "discover", Component: DiscoverPage },
+          { path: "search", Component: SearchPage },
         ],
       },
     ],

@@ -5,7 +5,7 @@ import { ReviewCard } from "./ReviewCard";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { useState, useEffect } from "react";
 import { ImageWithFallback } from "./ImageWithFallback";
-import { Edit3, Heart, Loader2, Tag, Monitor } from "lucide-react";
+import { Edit3, Heart, Loader2, Tag, Monitor, Building2 } from "lucide-react";
 import { getGame, getGameReviews, getSimilarGames, Game } from "../../api/games";
 import { toggleFavoriteGame } from "../../api/users";
 import { deleteReview } from "../../api/reviews";
@@ -194,6 +194,24 @@ export function GamePage() {
                 <div className="flex items-center gap-1.5 text-xs text-white/40 mb-2"><Tag className="w-3 h-3" /> Themes</div>
                 <div className="flex flex-wrap gap-2">
                   {game.themes.map(t => <span key={t} className="px-2.5 py-1 bg-white/5 border border-white/10 rounded-full text-xs text-white/60">{t}</span>)}
+                </div>
+              </div>
+            )}
+
+            {(game.developers ?? []).length > 0 && (
+              <div>
+                <div className="flex items-center gap-1.5 text-xs text-white/40 mb-2"><Building2 className="w-3 h-3" /> Developer</div>
+                <div className="flex flex-wrap gap-2">
+                  {game.developers.map(c => <span key={c} className="px-2.5 py-1 bg-white/5 border border-white/10 rounded-full text-xs text-white/60">{c}</span>)}
+                </div>
+              </div>
+            )}
+
+            {(game.publishers ?? []).length > 0 && (
+              <div>
+                <div className="flex items-center gap-1.5 text-xs text-white/40 mb-2"><Building2 className="w-3 h-3" /> Publisher</div>
+                <div className="flex flex-wrap gap-2">
+                  {game.publishers.map(c => <span key={c} className="px-2.5 py-1 bg-white/5 border border-white/10 rounded-full text-xs text-white/60">{c}</span>)}
                 </div>
               </div>
             )}
