@@ -327,7 +327,7 @@ export function Header() {
         {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-6 ml-auto">
           <Link to="/" className="text-white/70 hover:text-white transition-colors">Home</Link>
-          <Link to="/discover" className="text-white/70 hover:text-white transition-colors">Discover</Link>
+          {/* <Link to="/discover" className="text-white/70 hover:text-white transition-colors">Discover</Link> */}
           {user && <Link to={profileUrl} className="text-white/70 hover:text-white transition-colors">Profile</Link>}
           <Link to="/settings" className="text-white/70 hover:text-white transition-colors">
             <Settings className="w-5 h-5" />
@@ -409,7 +409,7 @@ export function Header() {
           <SearchBox onNavigate={closeMobile} />
           <nav className="flex flex-col gap-1">
             <Link to="/" onClick={closeMobile} className="px-4 py-3 text-white/70 hover:text-white hover:bg-white/5 rounded-xl transition-colors">Home</Link>
-            <Link to="/discover" onClick={closeMobile} className="px-4 py-3 text-white/70 hover:text-white hover:bg-white/5 rounded-xl transition-colors">Discover</Link>
+            {/* <Link to="/discover" onClick={closeMobile} className="px-4 py-3 text-white/70 hover:text-white hover:bg-white/5 rounded-xl transition-colors">Discover</Link> */}
             {user ? (
               <>
                 <Link to={profileUrl} onClick={closeMobile} className="px-4 py-3 text-white/70 hover:text-white hover:bg-white/5 rounded-xl transition-colors">Profile</Link>
