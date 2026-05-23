@@ -2,7 +2,6 @@
 import { scoreStyle } from "./scoreStyle";
 import { StarPolarDiagram } from "./StarPolarDiagram";
 import { ReviewCard } from "./ReviewCard";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { useState, useEffect } from "react";
 import { ImageWithFallback } from "./ImageWithFallback";
 import { Edit3, Heart, Loader2, Tag, Monitor, Building2 } from "lucide-react";
@@ -11,44 +10,14 @@ import { toggleFavoriteGame } from "../../api/users";
 import { deleteReview } from "../../api/reviews";
 import { useAuth } from "../context/AuthContext";
 
-// ---------------------------------------------------------------------------
-// Review distribution chart
-// ---------------------------------------------------------------------------
-
-function buildDistributionData(reviews: any[]) {
-  const buckets = ["0-2", "2-4", "4-6", "6-8", "8-10"];
-  const dims    = ["gameplay", "content", "narrative", "aesthetics", "polish"];
-  return buckets.map(range => {
-    const [lo, hi] = range.split("-").map(Number);
-    const row: any = { range };
-    dims.forEach(dim => {
-      row[dim] = reviews.filter(r => { const v = r[dim] ?? 0; return v >= lo && v < hi; }).length;
-    });
-    return row;
-  });
-}
-
-function DistributionChart({ reviews }: { reviews: any[] }) {
-  return (
-    <ResponsiveContainer width="100%" height={300}>
-      <BarChart data={buildDistributionData(reviews)}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#a1a1aa" opacity={0.3} />
-        <XAxis dataKey="range" stroke="#71717a" />
-        <YAxis stroke="#71717a" />
-        <Tooltip contentStyle={{ backgroundColor: "#111111", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "8px", color: "#ffffff" }} />
-        <Bar dataKey="gameplay"   name="Gameplay"   fill="#818cf8" isAnimationActive={false} />
-        <Bar dataKey="content"    name="Content"    fill="#a78bfa" isAnimationActive={false} />
-        <Bar dataKey="narrative"  name="Narrative"  fill="#f472b6" isAnimationActive={false} />
-        <Bar dataKey="aesthetics" name="Aesthetics" fill="#fb923c" isAnimationActive={false} />
-        <Bar dataKey="polish"     name="Polish"     fill="#34d399" isAnimationActive={false} />
-      </BarChart>
-    </ResponsiveContainer>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Review mapper
-// ---------------------------------------------------------------------------
+// Clockwise from top — matches star arm order
+const SCORE_FACTORS = [
+  { key: "gameplay"   as const, label: "Gameplay",   color: "#6373ff" },
+  { key: "aesthetics" as const, label: "Aesthetics", color: "#ff9a48" },
+  { key: "content"    as const, label: "Content",    color: "#a95eff" },
+  { key: "polish"     as const, label: "Polish",     color: "#61bb74" },
+  { key: "narrative"  as const, label: "Narrative",  color: "#f55f5f" },
+];
 
 function mapReview(r: any, onDelete?: (id: string) => void, isOwn?: boolean) {
   return {
@@ -259,11 +228,11 @@ export function GamePage() {
               </div>
 
               <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                {(game.platforms ?? []).slice(0, 3).map(p => (
+                {(game.platforms ?? []).slice(0, 3).map(p => (  
                   <span key={p} className="lg:hidden px-2 sm:px-3 py-1 bg-white/8 text-white/70 rounded-md border border-white/15 text-sm">{p}</span>
                 ))}
-                {releaseYear && <span className="text-white/50 text-sm">Released: {releaseYear}</span>}
-                {game.igdbRating && <span className="text-white/40 text-sm">IGDB: {game.igdbRating.toFixed(1)}</span>}
+                {releaseYear && <span className="text-white/50 text-md">Released: {releaseYear}</span>}
+                {game.igdbRating && <span className="text-white/40 text-md">IGDB: {game.igdbRating.toFixed(1)}</span>}
               </div>
 
               {user && (
@@ -274,45 +243,49 @@ export function GamePage() {
                 </button>
               )}
             </div>
+            {game.summary && (
+              <p className="text-white/100 mt-3 leading-relaxed">{game.summary}</p>
+            )}
           </div>
 
-          {game.summary && <p className="text-white/60 leading-relaxed">{game.summary}</p>}
+          {/* Scores — star + bar rows side by side */}
+          <div className="bg-white/5 border border-white/10 rounded-xl p-5 sm:p-6">
+            <div className="flex flex-col sm:flex-row items-center gap-6">
 
-          {/* Scores */}
-          <div className="bg-white/5 border border-white/10 rounded-xl p-4 sm:p-8">
-            <div className="flex flex-col lg:flex-row items-center gap-6 sm:gap-8">
+              {/* Star */}
               <div className="flex-shrink-0">
-                <StarPolarDiagram scores={scores} size={220} showTotal={true} />
+                <StarPolarDiagram scores={scores} size={320} showTotal={true} showLabels={false} />
               </div>
-              <div className="flex-1 w-full space-y-4">
-                <div className="text-center lg:text-left">
-                  <div className={`inline-block px-4 sm:px-5 py-2 rounded-2xl mb-2 text-4xl sm:text-6xl font-bold ${scoreStyle(totalScore).bg} ${scoreStyle(totalScore).text}`}>
-                    {totalScore.toFixed(1)}
-                  </div>
-                  <div className="text-white/50 text-sm sm:text-base">Based on {game.reviewTotal.toLocaleString()} reviews</div>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
-                  {Object.entries(scores).map(([key, value]) => {
-                    const { bg, text } = scoreStyle(value as number);
-                    return (
-                      <div key={key} className={`rounded-lg p-3 ${bg}`}>
-                        <div className="text-sm capitalize mb-1" style={{ color: "rgba(255,255,255,0.7)" }}>{key}</div>
-                        <div className={`text-2xl font-bold ${text}`}>{(value as number).toFixed(1)}</div>
+
+              {/* Bar rows — clockwise order matches star arms */}
+              <div className="flex-1 w-full space-y-3">
+                {SCORE_FACTORS.map(f => {
+                  const val = scores[f.key];
+                  const pct = (val / 10) * 100;
+                  return (
+                    <div key={f.key}>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span style={{ fontSize: 12, fontWeight: 600, color: f.color, letterSpacing: "0.05em", textTransform: "uppercase" }}>
+                          {f.label}
+                        </span>
+                        <span style={{ fontSize: 15, fontWeight: 700, color: f.color }}>
+                          {val.toFixed(1)}
+                        </span>
                       </div>
-                    );
-                  })}
-                </div>
+                      <div style={{ height: 7, borderRadius: 99, background: "rgba(255,255,255,0.07)", overflow: "hidden" }}>
+                        <div style={{ height: "100%", width: `${pct}%`, background: f.color, borderRadius: 99, opacity: 0.85, transition: "width 0.6s ease" }} />
+                      </div>
+                    </div>
+                  );
+                })}
+                <p className="text-white/25 text-xs pt-1">
+                  Based on {game.reviewTotal.toLocaleString()} {game.reviewTotal === 1 ? "review" : "reviews"}
+                </p>
               </div>
             </div>
           </div>
 
-          {reviews.length > 0 && (
-            <div className="bg-white/5 border border-white/10 rounded-xl p-6">
-              <h3 className="text-xl font-bold text-white mb-4">Review Distribution</h3>
-              <DistributionChart reviews={reviews} />
-            </div>
-          )}
-
+          {/* Similar games */}
           {similar.length > 0 && (
             <div>
               <h3 className="text-xl font-bold text-white mb-4">Similar Games</h3>
