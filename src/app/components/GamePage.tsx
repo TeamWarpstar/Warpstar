@@ -50,6 +50,7 @@ export function GamePage() {
   const [sortBy,     setSortBy]     = useState<"top" | "hot">("top");
   const [favoriting, setFavoriting] = useState(false);
   const [deleting,   setDeleting]   = useState<string | null>(null);
+  const [diagramSize, setDiagramSize] = useState(320);
 
   const loadReviews = async () => {
     if (!gameId) return;
@@ -70,6 +71,22 @@ export function GamePage() {
       setSimilar(s);
     }).finally(() => setLoading(false));
   }, [gameId]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      const width = window.innerWidth;
+      if (width < 640) {
+        setDiagramSize(160);
+      } else if (width < 1024) {
+        setDiagramSize(200);
+      } else {
+        setDiagramSize(320);
+      }
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   // Find if the current user already has a review for this game
   const myReview = user ? reviews.find(r => r.username === user.username) : null;
@@ -191,70 +208,72 @@ export function GamePage() {
         <div className="lg:col-span-2 space-y-6 sm:space-y-8">
 
           {/* Mobile: cover + title row */}
-          <div className="flex gap-4 lg:block">
-            <div className="lg:hidden flex-shrink-0 w-28 sm:w-36 rounded-xl overflow-hidden border border-white/10 shadow-2xl">
+          <div className="lg:hidden space-y-4 mb-6">
+            <div className="flex-shrink-0 w-48 sm:w-48 rounded-xl overflow-hidden border border-white/10 shadow-2xl">
               <ImageWithFallback src={game.coverUrl ?? ""} alt={game.name} className="w-full aspect-[3/4] object-cover" />
             </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-3 sm:mb-4">
-                <h1 className="text-2xl sm:text-4xl lg:text-5xl font-bold text-white leading-tight">{game.name}</h1>
-                {user ? (
-                  <div className="flex flex-col gap-2">
-                    <Link
-                      to={`/game/${gameId}/review`}
-                      className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-white text-zinc-900 font-semibold rounded-lg hover:shadow-lg hover:shadow-white/10 transition-all whitespace-nowrap text-sm sm:text-base"
-                    >
-                      <Edit3 className="w-4 h-4 sm:w-5 sm:h-5" />
-                      <span>{myReview ? "Edit Review" : "Write Review"}</span>
-                    </Link>
-                    {myReview && (
-                      <button
-                        onClick={() => handleDeleteReview(myReview.id)}
-                        disabled={deleting === myReview.id}
-                        className="flex items-center justify-center gap-2 px-4 py-2 bg-red-500/10 border border-red-500/30 text-red-400 font-semibold rounded-lg hover:bg-red-500/20 transition-all text-sm whitespace-nowrap"
-                      >
-                        {deleting === myReview.id ? "Deleting…" : "Delete Review"}
-                      </button>
-                    )}
-                  </div>
-                ) : (
+          </div>
+
+          <div className="lg:block">
+            <div className="flex flex-col gap-3 mb-4">
+              <h1 className="text-2xl sm:text-4xl lg:text-5xl font-bold text-white leading-tight">{game.name}</h1>
+              {user ? (
+                <div className="flex flex-col gap-2 w-full sm:w-auto">
                   <Link
-                    to="/login"
-                    className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-white/10 border border-white/20 text-white/70 font-semibold rounded-lg hover:bg-white/15 transition-all whitespace-nowrap text-sm sm:text-base"
+                    to={`/game/${gameId}/review`}
+                    className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-white text-zinc-900 font-semibold rounded-lg hover:shadow-lg hover:shadow-white/10 transition-all whitespace-nowrap text-sm sm:text-base"
                   >
-                    Sign in to review
+                    <Edit3 className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <span>{myReview ? "Edit Review" : "Write Review"}</span>
                   </Link>
-                )}
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                {(game.platforms ?? []).slice(0, 3).map(p => (  
-                  <span key={p} className="lg:hidden px-2 sm:px-3 py-1 bg-white/8 text-white/70 rounded-md border border-white/15 text-sm">{p}</span>
-                ))}
-                {releaseYear && <span className="text-white/50 text-md">Released: {releaseYear}</span>}
-                {game.igdbRating && <span className="text-white/40 text-md">IGDB: {game.igdbRating.toFixed(1)}</span>}
-              </div>
-
-              {user && (
-                <button onClick={handleFavorite} disabled={favoriting}
-                  className={`lg:hidden mt-3 flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-medium transition-all ${isFavorited ? "bg-pink-500/20 border-pink-500/50 text-pink-400" : "bg-white/5 border-white/10 text-white/60 hover:border-white/25"}`}>
-                  <Heart className={`w-3.5 h-3.5 ${isFavorited ? "fill-pink-400" : ""}`} />
-                  {isFavorited ? "Favorited" : "Favorite"}
-                </button>
+                  {myReview && (
+                    <button
+                      onClick={() => handleDeleteReview(myReview.id)}
+                      disabled={deleting === myReview.id}
+                      className="flex items-center justify-center gap-2 px-4 py-2 bg-red-500/10 border border-red-500/30 text-red-400 font-semibold rounded-lg hover:bg-red-500/20 transition-all text-sm whitespace-nowrap"
+                    >
+                      {deleting === myReview.id ? "Deleting…" : "Delete Review"}
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <Link
+                  to="/login"
+                  className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-white/10 border border-white/20 text-white/70 font-semibold rounded-lg hover:bg-white/15 transition-all whitespace-nowrap text-sm sm:text-base w-full sm:w-auto"
+                >
+                  Sign in to review
+                </Link>
               )}
             </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-4">
+              {(game.platforms ?? []).slice(0, 3).map(p => (  
+                <span key={p} className="px-2 sm:px-3 py-1 bg-white/8 text-white/70 rounded-md border border-white/15 text-sm">{p}</span>
+              ))}
+              {releaseYear && <span className="text-white/50 text-sm">{releaseYear}</span>}
+              {game.igdbRating && <span className="text-white/40 text-sm">IGDB: {game.igdbRating.toFixed(1)}</span>}
+            </div>
+
+            {user && (
+              <button onClick={handleFavorite} disabled={favoriting}
+                className={`w-full sm:w-auto flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-medium transition-all mb-4 ${isFavorited ? "bg-pink-500/20 border-pink-500/50 text-pink-400" : "bg-white/5 border-white/10 text-white/60 hover:border-white/25"}`}>
+                <Heart className={`w-3.5 h-3.5 ${isFavorited ? "fill-pink-400" : ""}`} />
+                {isFavorited ? "Favorited" : "Favorite"}
+              </button>
+            )}
+
             {game.summary && (
-              <p className="text-white/100 mt-3 leading-relaxed">{game.summary}</p>
+              <p className="text-white/90 leading-relaxed text-sm sm:text-base">{game.summary}</p>
             )}
           </div>
 
           {/* Scores — star + bar rows side by side */}
-          <div className="bg-white/5 border border-white/10 rounded-xl p-5 sm:p-6">
-            <div className="flex flex-col sm:flex-row items-center gap-6">
+          <div className="bg-white/5 border border-white/10 rounded-xl p-4 sm:p-6">
+            <div className="flex flex-col lg:flex-row items-center gap-6">
 
               {/* Star */}
               <div className="flex-shrink-0">
-                <StarPolarDiagram scores={scores} size={320} showTotal={true} showLabels={false} />
+                <StarPolarDiagram scores={scores} size={diagramSize} showTotal={true} showLabels={false} />
               </div>
 
               {/* Bar rows — clockwise order matches star arms */}
@@ -301,37 +320,37 @@ export function GamePage() {
               </div>
             </div>
           )}
-        </div>
-      </div>
 
-      {/* Reviews */}
-      <div className="space-y-6">
-        <div className="flex items-center justify-between gap-4">
-          <h2 className="text-xl sm:text-3xl font-bold text-white">Reviews</h2>
-          <div className="flex gap-2">
-            {(["top", "hot"] as const).map(s => (
-              <button key={s} onClick={() => setSortBy(s)}
-                className={`px-3 sm:px-4 py-2 rounded-lg font-semibold transition-all text-sm sm:text-base ${sortBy === s ? "bg-white text-zinc-900" : "bg-white/5 text-white/60 border border-white/10 hover:border-white/25"}`}>
-                {s === "top" ? "Top Rated" : "Hottest Take"}
-              </button>
-            ))}
+          {/* Reviews */}
+          <div className="space-y-6">
+            <div className="flex items-center justify-between gap-4">
+              <h2 className="text-xl sm:text-3xl font-bold text-white">Reviews</h2>
+              <div className="flex gap-2">
+                {(["top", "hot"] as const).map(s => (
+                  <button key={s} onClick={() => setSortBy(s)}
+                    className={`px-3 sm:px-4 py-2 rounded-lg font-semibold transition-all text-sm sm:text-base ${sortBy === s ? "bg-white text-zinc-900" : "bg-white/5 text-white/60 border border-white/10 hover:border-white/25"}`}>
+                    {s === "top" ? "Top Rated" : "Hottest Take"}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              {sortedReviews.length === 0
+                ? <p className="text-white/40 text-center py-12">No reviews yet. Be the first!</p>
+                : sortedReviews.map((review, index) => (
+                    <ReviewCard
+                      key={review.id ?? `review-${index}`}
+                      {...mapReview(
+                        review,
+                        handleDeleteReview,
+                        user?.username === review.username,
+                      )}
+                    />
+                  ))
+              }
+            </div>
           </div>
-        </div>
-
-        <div className="space-y-4">
-          {sortedReviews.length === 0
-            ? <p className="text-white/40 text-center py-12">No reviews yet. Be the first!</p>
-            : sortedReviews.map((review, index) => (
-                <ReviewCard
-                  key={review.id ?? `review-${index}`}
-                  {...mapReview(
-                    review,
-                    handleDeleteReview,
-                    user?.username === review.username,
-                  )}
-                />
-              ))
-          }
         </div>
       </div>
     </div>

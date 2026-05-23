@@ -8,10 +8,10 @@ import { PageJumper } from "./PageJumper";
 
 type SearchType = "games" | "genres" | "users";
 
-const SEARCH_TYPES: { value: SearchType; label: string; icon: string }[] = [
-  { value: "games",  label: "Games",  icon: "🎮" },
-  { value: "genres", label: "Genres", icon: "📚" },
-  { value: "users",  label: "Users",  icon: "👤" },
+const SEARCH_TYPES: { value: SearchType; label: string;}[] = [
+  { value: "games",  label: "Games",  },
+  { value: "genres", label: "Genres",},
+  { value: "users",  label: "Users", },
 ];
 
 const SORT_OPTIONS = [

@@ -48,9 +48,15 @@ export function ReviewCard({
 
   // Score badge colour based on value
   const badgeBg =
-    totalScore >= 8 ? "#16a34a" :
-    totalScore >= 6 ? "#2563eb" :
-    totalScore >= 4 ? "#d97706" : "#dc2626";
+    totalScore >= 9.5 ? "#2563eb" :
+    totalScore >= 8.5 ? "#008000" :
+    totalScore >= 7   ? "#32cd32" :
+    totalScore >= 6   ? "#00ff00" :
+    totalScore >= 5 ? "#adff2f" :
+    totalScore >= 4 ? "#ffff00" :
+    totalScore >= 3 ? "#ff8c00" :
+    totalScore >= 1 ? "#dc2626" :
+    "#7f1d1d";
 
   return (
     <div className={`bg-white/5 border rounded-xl overflow-hidden ${isPinned ? "border-white/25 shadow-lg shadow-white/5" : "border-white/10"}`}>

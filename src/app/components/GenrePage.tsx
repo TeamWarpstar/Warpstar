@@ -5,21 +5,6 @@ import { GameCard } from "./GameCard";
 import { PageJumper } from "./PageJumper";
 import { getGames, Game } from "../../api/games";
 
-const GENRE_INFO: Record<string, { description: string }> = {
-  action:     { description: "Fast-paced games with intense combat and exciting gameplay" },
-  rpg:        { description: "Immersive role-playing games with deep stories and character development" },
-  strategy:   { description: "Tactical games that require planning and strategic thinking" },
-  indie:      { description: "Creative independent games with unique mechanics and art styles" },
-  adventure:  { description: "Exploration-focused games with rich worlds to discover" },
-  horror:     { description: "Terrifying experiences that will keep you on the edge of your seat" },
-  puzzle:     { description: "Brain-teasing challenges and logic games" },
-  sports:     { description: "Competitive sports and athletic simulations" },
-  simulation: { description: "Build, manage, and explore lifelike systems" },
-  fighting:   { description: "Head-to-head combat with deep mechanics" },
-  platformer: { description: "Jump and run through exciting levels" },
-  racing:     { description: "High-speed racing across thrilling tracks" },
-};
-
 const SORT_OPTIONS = [
   { value: "reviewTotal", label: "Most Reviews"  },
   { value: "igdbRating",  label: "Highest Rated" },
@@ -40,7 +25,7 @@ export function GenrePage() {
   const [loadingMore, setLoadingMore] = useState(false);
 
   const genre = genreName?.toLowerCase() ?? "";
-  const info  = GENRE_INFO[genre] ?? { description: "Browse games in this genre" };
+  const info  = { description: "Browse games in this genre" };
   const label = genreName ? genreName.charAt(0).toUpperCase() + genreName.slice(1) : "";
 
   const totalPages  = Math.ceil(total / PAGE_SIZE);

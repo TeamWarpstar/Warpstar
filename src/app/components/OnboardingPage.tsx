@@ -13,26 +13,26 @@ import warpstarWhiteLogo from "../../imports/warpstarwhite.png";
 
 const PLATFORM_PRESETS = [
   // PC
-  { name: "PC (Microsoft Windows)", label: "PC / Windows", icon: "🖥️", group: "PC" },
-  { name: "Mac",                    label: "Mac",           icon: "🍎", group: "PC" },
-  { name: "Linux",                  label: "Linux",         icon: "🐧", group: "PC" },
+  { name: "PC (Microsoft Windows)", label: "PC / Windows", icon: "", group: "PC" },
+  { name: "Mac",                    label: "Mac",           icon: "", group: "PC" },
+  { name: "Linux",                  label: "Linux",         icon: "", group: "PC" },
   // Current gen consoles
-  { name: "PlayStation 5",          label: "PS5",           icon: "🎮", group: "PlayStation" },
-  { name: "PlayStation 4",          label: "PS4",           icon: "🎮", group: "PlayStation" },
-  { name: "Xbox Series X|S",        label: "Xbox Series",   icon: "🟢", group: "Xbox" },
-  { name: "Xbox One",               label: "Xbox One",      icon: "🟢", group: "Xbox" },
-  { name: "Nintendo Switch",        label: "Switch",        icon: "🔴", group: "Nintendo" },
+  { name: "PlayStation 5",          label: "PS5",           icon: "", group: "PlayStation" },
+  { name: "PlayStation 4",          label: "PS4",           icon: "", group: "PlayStation" },
+  { name: "Xbox Series X|S",        label: "Xbox Series",   icon: "", group: "Xbox" },
+  { name: "Xbox One",               label: "Xbox One",      icon: "", group: "Xbox" },
+  { name: "Nintendo Switch",        label: "Switch",        icon: "", group: "Nintendo" },
   // Handheld
-  { name: "Nintendo Switch 2",      label: "Switch 2",      icon: "🔴", group: "Nintendo" },
-  { name: "PlayStation Portable",   label: "PSP",           icon: "🎮", group: "PlayStation" },
-  { name: "Nintendo 3DS",           label: "3DS",           icon: "🔴", group: "Nintendo" },
+  { name: "Nintendo Switch 2",      label: "Switch 2",      icon: "", group: "Nintendo" },
+  { name: "PlayStation Portable",   label: "PSP",           icon: "", group: "PlayStation" },
+  { name: "Nintendo 3DS",           label: "3DS",           icon: "", group: "Nintendo" },
   // Mobile
-  { name: "Android",                label: "Android",       icon: "📱", group: "Mobile" },
-  { name: "iOS",                    label: "iOS",            icon: "📱", group: "Mobile" },
+  { name: "Android",                label: "Android",       icon: "", group: "Mobile" },
+  { name: "iOS",                    label: "iOS",            icon: "", group: "Mobile" },
   // Prev gen
-  { name: "PlayStation 3",          label: "PS3",           icon: "🎮", group: "PlayStation" },
-  { name: "Xbox 360",               label: "Xbox 360",      icon: "🟢", group: "Xbox" },
-  { name: "Wii U",                  label: "Wii U",         icon: "🔴", group: "Nintendo" },
+  { name: "PlayStation 3",          label: "PS3",           icon: "", group: "PlayStation" },
+  { name: "Xbox 360",               label: "Xbox 360",      icon: "", group: "Xbox" },
+  { name: "Wii U",                  label: "Wii U",         icon: "", group: "Nintendo" },
 ];
 
 const PLATFORM_GROUPS = ["PC", "PlayStation", "Xbox", "Nintendo", "Mobile"];
