@@ -57,3 +57,39 @@ export async function addReviewComment(reviewId: string, content: string) {
     method: "POST",
   });
 }
+
+export async function getUserReviews(
+  userId: string,
+  skip   = 0,
+  limit  = 20,
+): Promise<{ total: number; skip: number; limit: number; results: Review[] }> {
+  return apiFetch(`/api/reviews/user/${userId}?skip=${skip}&limit=${limit}`);
+}
+
+// ---------------------------------------------------------------------------
+// Comments
+// ---------------------------------------------------------------------------
+
+export interface Comment {
+  id:        string;
+  reviewId:  string;
+  username:  string;
+  avatar?:   string;
+  content:   string;
+  createdAt: string;
+}
+
+export async function getComments(reviewId: string): Promise<{ total: number; results: Comment[] }> {
+  return apiFetch(`/api/reviews/${reviewId}/comments`);
+}
+
+export async function postComment(reviewId: string, content: string): Promise<Comment> {
+  return apiFetch(`/api/reviews/${reviewId}/comments`, {
+    method: "POST",
+    body:   JSON.stringify({ content }),
+  });
+}
+
+export async function deleteComment(reviewId: string, commentId: string): Promise<void> {
+  return apiFetch(`/api/reviews/${reviewId}/comments/${commentId}`, { method: "DELETE" });
+}

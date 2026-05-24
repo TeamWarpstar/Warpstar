@@ -1,4 +1,6 @@
-﻿interface StarPolarDiagramProps {
+﻿import { useId } from "react";
+
+interface StarPolarDiagramProps {
   scores: {
     gameplay:   number;
     content:    number;
@@ -6,9 +8,10 @@
     aesthetics: number;
     polish:     number;
   };
-  size?:       number;
-  showTotal?:  boolean;
-  showLabels?: boolean;
+  size?:        number;
+  showTotal?:   boolean;
+  showLabels?:  boolean;
+  showNumbers?: boolean;
 }
 
 const FACTORS = [
@@ -95,13 +98,14 @@ function gridStarPath(level: number, rMin: number, rMax: number): string {
 
 export function StarPolarDiagram({
   scores,
-  size       = 280,
-  showTotal  = true,
-  showLabels = true,
+  size        = 280,
+  showTotal   = true,
+  showLabels  = true,
+  showNumbers = true,
 }: StarPolarDiagramProps) {
   const cx   = size / 2;
   const cy   = size / 2;
-  const rMax = size / 2 - (showLabels ? size * 0.22 : size * 0.06);
+  const rMax = size / 2 - ((showLabels || showNumbers) ? size * 0.18 : size * 0.04);
   const rMin = rMax * 0.5;
 
   const totalScore = (
@@ -109,6 +113,7 @@ export function StarPolarDiagram({
     scores.aesthetics + scores.polish
   ) / 5;
 
+  const instanceId = useId().replace(/:/g, "");
   const scoreMap = scores as unknown as Record<string, number>;
   const starPath = smoothStarPath(scoreMap, rMin, rMax);
 
@@ -116,9 +121,9 @@ export function StarPolarDiagram({
     [scores.gameplay, scores.aesthetics, scores.content, scores.polish, scores.narrative]
       .map(v => Math.round(v * 10)).join("-")
   }`;
-  const shadowId    = `center-shadow-${size}`;
-  const lightId     = (i: number) => `wedge-light-${size}-${i}`;
-  const darkId      = (i: number) => `wedge-dark-${size}-${i}`;
+  const shadowId    = `center-shadow-${instanceId}`;
+  const lightId     = (i: number) => `wedge-light-${instanceId}-${i}`;
+  const darkId      = (i: number) => `wedge-dark-${instanceId}-${i}`;
 
   return (
     <div
@@ -212,22 +217,38 @@ export function StarPolarDiagram({
         <path d={starPath} fill="none" stroke="rgba(0,0,0,0.55)" strokeWidth="3" />
         <path d={starPath} fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="1" />
 
-        {/* Score labels */}
-        {showLabels && FACTORS.map((f, i) => {
+        {/* Labels — name and/or score next to each tip */}
+        {(showLabels || showNumbers) && FACTORS.map((f, i) => {
           const score  = scoreMap[f.key];
           const a      = outerAngle(i);
-          const r      = rMin + (score / 10) * (rMax - rMin) + size * 0.055;
+          // Fixed anchor at max radius so labels don't move with score
+          const r      = rMax + size * 0.07;
           const lx     = r * Math.cos(a);
           const ly     = r * Math.sin(a);
           const cos    = Math.cos(a);
-          const anchor = cos > 0.3 ? "start" : cos < -0.3 ? "end" : "middle";
-          const fs     = Math.max(10, size * 0.048);
+          const sin    = Math.sin(a);
+          const anchor = cos > 0.25 ? "start" : cos < -0.25 ? "end" : "middle";
+          const fs     = Math.max(9, size * 0.044);
+          const both   = showLabels && showNumbers;
+          const nameY  = both ? (sin < -0.1 ? ly - fs * 0.7 : ly + fs * 0.7) : ly;
+          const scoreY = both ? (sin < -0.1 ? ly + fs * 0.7 : nameY + fs * 1.3) : ly;
           return (
-            <text key={f.key} x={lx.toFixed(1)} y={ly.toFixed(1)}
-              textAnchor={anchor} dominantBaseline="middle"
-              fill={f.color} fontSize={fs} fontWeight="600" fontFamily="sans-serif">
-              {score.toFixed(1)}
-            </text>
+            <g key={f.key}>
+              {showLabels && (
+                <text x={lx.toFixed(1)} y={nameY.toFixed(1)}
+                  textAnchor={anchor} dominantBaseline="middle"
+                  fill="rgba(255,255,255,0.85)" fontSize={fs} fontWeight="600" fontFamily="sans-serif">
+                  {f.label}
+                </text>
+              )}
+              {showNumbers && (
+                <text x={lx.toFixed(1)} y={scoreY.toFixed(1)}
+                  textAnchor={anchor} dominantBaseline="middle"
+                  fill={f.color} fontSize={fs} fontWeight="700" fontFamily="sans-serif">
+                  {score.toFixed(1)}
+                </text>
+              )}
+            </g>
           );
         })}
       </svg>

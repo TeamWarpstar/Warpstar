@@ -5,15 +5,13 @@ import { ImageWithFallback } from "./ImageWithFallback";
 import { ReviewCard } from "./ReviewCard";
 import { useAuth } from "../context/AuthContext";
 import { getUserByUsername, followUser, BackendUser } from "../../api/users";
-import { apiFetch } from "../../api/client";
-import { getGame } from "../../api/games";
+import { getUserReviews } from "../../api/reviews";
 
 export function ProfilePage() {
-  const { username }               = useParams<{ username: string }>();
-  const { user: me, refreshUser }  = useAuth();
+  const { username }              = useParams<{ username: string }>();
+  const { user: me, refreshUser } = useAuth();
   const [profile,       setProfile]       = useState<BackendUser | null>(null);
   const [reviews,       setReviews]       = useState<any[]>([]);
-  const [games,         setGames]         = useState<Record<string, any>>({});
   const [loading,       setLoading]       = useState(true);
   const [activeTab,     setActiveTab]     = useState<"reviews" | "activity">("reviews");
   const [following,     setFollowing]     = useState(false);
@@ -31,25 +29,9 @@ export function ProfilePage() {
         setFollowerCount(p.followers?.length ?? 0);
         setFollowing(me ? (p.followers ?? []).includes(me.id) : false);
 
-        // Fetch this user's reviews using their MongoDB ID
         try {
-          const res = await apiFetch<any>(`/api/users/${p.id}/reviews`);
-          const reviewList = res.results ?? res ?? [];
-          setReviews(reviewList);
-
-          // Fetch game data for each review
-          const gameMap: Record<string, any> = {};
-          for (const review of reviewList) {
-            if (review.gameId && !gameMap[review.gameId]) {
-              try {
-                const game = await getGame(review.gameId);
-                gameMap[review.gameId] = game;
-              } catch (e) {
-                // Game not found, will skip
-              }
-            }
-          }
-          setGames(gameMap);
+          const res = await getUserReviews(p.id);
+          setReviews(res.results ?? []);
         } catch {
           setReviews([]);
         }
@@ -67,7 +49,7 @@ export function ProfilePage() {
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
-      <Loader2 className="w-8 h-8 text-white/40 animate-spin"/>
+      <Loader2 className="w-8 h-8 text-white/40 animate-spin" />
     </div>
   );
   if (!profile) return (
@@ -140,42 +122,47 @@ export function ProfilePage() {
             {tab}
           </button>
         ))}
-      </div> 
+      </div>
 
       {/* Reviews tab */}
       {activeTab === "reviews" && (
         reviews.length === 0
           ? <p className="text-white/40 text-center py-20">No reviews yet.</p>
           : <div className="space-y-4">
-              {reviews.map((review, i) => {
-                const game = review.gameId ? games[review.gameId] : null;
-                return (
-                  <ReviewCard
-                    key={review.id ?? i}
-                    reviewer={{
-                      username: profile?.username ?? "unknown",
-                      avatar: profile?.preferences?.profilePicture as string | undefined,
-                    }}
-                    scores={{
-                      gameplay: review.gameplay ?? 0,
-                      content: review.content ?? 0,
-                      narrative: review.narrative ?? 0,
-                      aesthetics: review.aesthetics ?? 0,
-                      polish: review.polish ?? 0,
-                    }}
-                    title={review.title}
-                    review={review.body ?? ""}
-                    likes={review.likes ?? 0}
-                    dislikes={0}
-                    comments={review.commentsCount ?? 0}
-                    game={game ? {
-                      id: game.id,
-                      name: game.name,
-                      coverUrl: game.coverUrl,
-                    } : undefined}
-                  />
-                );
-              })}
+              {reviews.map((review, i) => (
+                <ReviewCard
+                  key={review.id ?? i}
+                  id={review.id}
+                  reviewer={{
+                    username: profile.username,
+                    avatar:   avatarSrc,
+                  }}
+                  scores={{
+                    gameplay:   review.gameplay   ?? 0,
+                    content:    review.content    ?? 0,
+                    narrative:  review.narrative  ?? 0,
+                    aesthetics: review.aesthetics ?? 0,
+                    polish:     review.polish     ?? 0,
+                  }}
+                  categoryText={{
+                    gameplay:   review.gp_body,
+                    content:    review.con_body,
+                    narrative:  review.ntv_body,
+                    aesthetics: review.aes_body,
+                    polish:     review.pol_body,
+                  }}
+                  title={review.title}
+                  review={review.body ?? ""}
+                  likes={review.likes ?? 0}
+                  dislikes={0}
+                  comments={review.commentsCount ?? 0}
+                  isOwnReview={isOwnProfile}
+                  showGame={true}
+                  gameId={review.gameId}
+                  gameName={review.gameName}
+                  gameCoverUrl={review.gameCoverUrl}
+                />
+              ))}
             </div>
       )}
 
