@@ -163,9 +163,6 @@ export function ReviewCard({
           </Link>
 
           <div className="flex items-center gap-2">
-            <div className="px-3 py-1 rounded-lg text-base font-bold text-white flex-shrink-0" style={{ background: badgeBg }}>
-              {totalScore.toFixed(1)}
-            </div>
             {isOwnReview && id && onDelete && (
               <button onClick={() => onDelete(id)} title="Delete your review"
                 className="p-2 rounded-lg text-red-400/60 hover:text-red-400 hover:bg-red-500/10 transition-colors">
