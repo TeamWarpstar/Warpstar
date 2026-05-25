@@ -6,6 +6,7 @@ import { ReviewCard } from "./ReviewCard";
 import { useAuth } from "../context/AuthContext";
 import { getUserByUsername, followUser, BackendUser } from "../../api/users";
 import { getUserReviews } from "../../api/reviews";
+import { getGame } from "../../api/games";
 
 export function ProfilePage() {
   const { username }              = useParams<{ username: string }>();
@@ -31,10 +32,47 @@ export function ProfilePage() {
 
         try {
           const res = await getUserReviews(p.id);
-          setReviews(res.results ?? []);
-        } catch {
+          console.log("Reviews API Response:", res);
+          
+          // Handle different possible response formats
+          let reviewsList = Array.isArray(res) ? res : (res?.results ?? res ?? []);
+          console.log("Reviews to display (raw):", reviewsList);
+          
+          // Ensure we have an array
+          if (!Array.isArray(reviewsList)) {
+            reviewsList = [];
+          }
+          
+          // Enrich reviews with game data if missing
+          const enrichedReviews = await Promise.all(
+            reviewsList.map(async (review: any) => {
+              if (!review.gameName && review.gameId) {
+                try {
+                  const game = await getGame(review.gameId);
+                  return {
+                    ...review,
+                    gameName: game.name,
+                    gameCoverUrl: game.coverUrl,
+                  };
+                } catch (err) {
+                  console.warn(`Could not fetch game data for ${review.gameId}:`, err);
+                  return review;
+                }
+              }
+              return review;
+            })
+          );
+          
+          console.log("Enriched reviews:", enrichedReviews);
+          setReviews(enrichedReviews);
+        } catch (err) {
+          console.error("Error fetching reviews:", err);
           setReviews([]);
         }
+      })
+      .catch(err => {
+        console.error("Error fetching user profile:", err);
+        setProfile(null);
       })
       .finally(() => setLoading(false));
   }, [username, me?.id]);

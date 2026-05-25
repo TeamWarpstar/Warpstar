@@ -24,6 +24,9 @@ export interface Review extends ReviewPayload {
   likes:        number;
   commentsCount:number;
   createdAt:    string;
+  // Game data (may be included by backend)
+  gameName?:    string;
+  gameCoverUrl?: string;
 }
 
 export async function createReview(gameId: string, payload: ReviewPayload): Promise<Review> {
@@ -63,7 +66,9 @@ export async function getUserReviews(
   skip   = 0,
   limit  = 20,
 ): Promise<{ total: number; skip: number; limit: number; results: Review[] }> {
-  return apiFetch(`/api/reviews/user/${userId}?skip=${skip}&limit=${limit}`);
+  return apiFetch<{ total: number; skip: number; limit: number; results: Review[] }>(
+    `/api/users/${userId}/reviews?skip=${skip}&limit=${limit}`
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -80,7 +85,9 @@ export interface Comment {
 }
 
 export async function getComments(reviewId: string): Promise<{ total: number; results: Comment[] }> {
-  return apiFetch(`/api/reviews/${reviewId}/comments`);
+  return apiFetch<{ total: number; results: Comment[] }>(
+    `/api/reviews/${reviewId}/comments`
+  );
 }
 
 export async function postComment(reviewId: string, content: string): Promise<Comment> {
