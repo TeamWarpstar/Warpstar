@@ -8,6 +8,18 @@ import { getUserByUsername, followUser, BackendUser } from "../../api/users";
 import { getUserReviews } from "../../api/reviews";
 import { getGame } from "../../api/games";
 
+const SORT_OPTIONS = [
+  { value: "newest", label: "Newest" },
+  { value: "oldest", label: "Oldest" },
+  { value: "highestOverall", label: "Highest Overall" },
+  { value: "lowestOverall", label: "Lowest Overall" },
+  { value: "highestGameplay", label: "Highest Gameplay" },
+  { value: "highestContent", label: "Highest Content" },
+  { value: "highestNarrative", label: "Highest Narrative" },
+  { value: "highestAesthetics", label: "Highest Aesthetics" },
+  { value: "highestPolish", label: "Highest Polish" },
+];
+
 export function ProfilePage() {
   const { username }              = useParams<{ username: string }>();
   const { user: me, refreshUser } = useAuth();
@@ -15,6 +27,7 @@ export function ProfilePage() {
   const [reviews,       setReviews]       = useState<any[]>([]);
   const [loading,       setLoading]       = useState(true);
   const [activeTab,     setActiveTab]     = useState<"reviews" | "activity">("reviews");
+  const [sortBy,        setSortBy]        = useState("newest");
   const [following,     setFollowing]     = useState(false);
   const [followerCount, setFollowerCount] = useState(0);
 
@@ -166,8 +179,45 @@ export function ProfilePage() {
       {activeTab === "reviews" && (
         reviews.length === 0
           ? <p className="text-white/40 text-center py-20">No reviews yet.</p>
-          : <div className="space-y-4">
-              {reviews.map((review, i) => (
+          : <>
+              <div className="mb-6 flex items-center justify-end">
+                <select
+                  value={sortBy}
+                  onChange={e => setSortBy(e.target.value)}
+                  className="profile-sort-select bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-white/40 text-sm"
+                >
+                  {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </div>
+              <div className="space-y-4">
+              {(() => {
+                const sorted = [...reviews].sort((a, b) => {
+                  const getOverall = (r: any) => (r.gameplay + r.content + r.narrative + r.aesthetics + r.polish) / 5;
+                  
+                  switch (sortBy) {
+                    case "newest":
+                      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+                    case "oldest":
+                      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+                    case "highestOverall":
+                      return getOverall(b) - getOverall(a);
+                    case "lowestOverall":
+                      return getOverall(a) - getOverall(b);
+                    case "highestGameplay":
+                      return (b.gameplay ?? 0) - (a.gameplay ?? 0);
+                    case "highestContent":
+                      return (b.content ?? 0) - (a.content ?? 0);
+                    case "highestNarrative":
+                      return (b.narrative ?? 0) - (a.narrative ?? 0);
+                    case "highestAesthetics":
+                      return (b.aesthetics ?? 0) - (a.aesthetics ?? 0);
+                    case "highestPolish":
+                      return (b.polish ?? 0) - (a.polish ?? 0);
+                    default:
+                      return 0;
+                  }
+                });
+                return sorted.map((review, i) => (
                 <ReviewCard
                   key={review.id ?? i}
                   id={review.id}
@@ -194,14 +244,17 @@ export function ProfilePage() {
                   likes={review.likes ?? 0}
                   dislikes={0}
                   comments={review.commentsCount ?? 0}
+                  createdAt={review.createdAt}
                   isOwnReview={isOwnProfile}
                   showGame={true}
                   gameId={review.gameId}
                   gameName={review.gameName}
                   gameCoverUrl={review.gameCoverUrl}
                 />
-              ))}
-            </div>
+              ));
+              })()}
+              </div>
+            </>
       )}
 
       {/* Activity tab */}
