@@ -43,6 +43,12 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 function mapBackendUser(u: BackendUser): WarpstarUser {
+  // Prioritize custom profilePicture over googleAvatar.
+  // Only use googleAvatar as fallback if profilePicture is explicitly not set.
+  const profilePictureValue = u.preferences?.profilePicture as string | undefined;
+  const googleAvatarValue = u.preferences?.googleAvatar as string | undefined;
+  const profilePicture = profilePictureValue !== undefined ? profilePictureValue : googleAvatarValue;
+  
   return {
     id:              u.id,
     username:        u.username,
@@ -52,12 +58,12 @@ function mapBackendUser(u: BackendUser): WarpstarUser {
     preferences:     u.preferences ?? {},
     profileComplete: !!u.username,
     displayName:     (u.preferences?.displayName as string) ?? u.username,
-    profilePicture:  u.preferences?.profilePicture as string | undefined,
+    profilePicture:  profilePicture,
     bannerImage:     u.preferences?.bannerImage as string | undefined,
     topGenres:       u.preferences?.topGenres  as string[] | undefined,
     platforms:       u.preferences?.platforms  as string[] | undefined,
     googleName:      u.preferences?.googleName as string | undefined,
-    googleAvatar:    u.preferences?.googleAvatar as string | undefined,
+    googleAvatar:    googleAvatarValue,
   };
 }
 

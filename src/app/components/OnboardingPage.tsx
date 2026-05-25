@@ -193,17 +193,23 @@ export function OnboardingPage() {
     setSaving(true);
     setError("");
     try {
+      const newPreferences: Record<string, unknown> = {
+        ...user?.preferences,
+        displayName:       displayName.trim(),
+        topGenres:         selectedGenres,
+        platforms:         selectedPlatforms,
+        googleName:        user?.googleName,
+        googleAvatar:      user?.googleAvatar,
+      };
+      
+      // Only update profilePicture if user explicitly set one during onboarding
+      if (uploadedImage || selectedAvatarId) {
+        newPreferences.profilePicture = profilePicture;
+      }
+      
       await updateMe({
         username: username.trim(),
-        preferences: {
-          ...user?.preferences,
-          displayName:       displayName.trim(),
-          profilePicture,
-          topGenres:         selectedGenres,
-          platforms:         selectedPlatforms,
-          googleName:        user?.googleName,
-          googleAvatar:      user?.googleAvatar,
-        },
+        preferences: newPreferences,
       });
       await refreshUser();
       navigate("/");
