@@ -307,6 +307,7 @@ html.light-mode .text-white\/50 { color: rgba(0, 0, 0, 0.60) !important; }
 html.light-mode .text-white\/60 { color: rgba(0, 0, 0, 0.70) !important; }
 html.light-mode .text-white\/70 { color: rgba(0, 0, 0, 0.78) !important; }
 html.light-mode .text-white\/80 { color: rgba(0, 0, 0, 0.88) !important; }
+html.light-mode .text-white\/100 { color: rgba(0, 0, 0, 1) !important; }
 
 /* --- Hover / focus text → dark --- */
 html.light-mode .hover\:text-white:hover { color: #111111 !important; }
