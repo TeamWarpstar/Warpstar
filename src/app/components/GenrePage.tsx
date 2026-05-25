@@ -16,6 +16,7 @@ const PAGE_SIZE = 20;
 
 export function GenrePage() {
   const { genreName } = useParams<{ genreName: string }>();
+  const decodedGenreName = genreName ? decodeURIComponent(genreName) : undefined;
 
   const [games,       setGames]       = useState<Game[]>([]);
   const [total,       setTotal]       = useState(0);
@@ -24,9 +25,9 @@ export function GenrePage() {
   const [loading,     setLoading]     = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
 
-  const genre = genreName?.toLowerCase() ?? "";
+  const genre = decodedGenreName?.toLowerCase() ?? "";
   const info  = { description: "Browse games in this genre" };
-  const label = genreName ? genreName.charAt(0).toUpperCase() + genreName.slice(1) : "";
+  const label = decodedGenreName ? decodedGenreName.charAt(0).toUpperCase() + decodedGenreName.slice(1) : "";
 
   const totalPages  = Math.ceil(total / PAGE_SIZE);
   const currentPage = Math.floor(skip / PAGE_SIZE);
@@ -34,19 +35,19 @@ export function GenrePage() {
 
   // Initial / sort / page-jump load — replaces the list
   useEffect(() => {
-    if (!genreName) return;
+    if (!decodedGenreName) return;
     setLoading(true);
     setGames([]);
     window.scrollTo({ top: 0, behavior: "smooth" });
 
-    getGames({ genre: genreName, sort, limit: PAGE_SIZE, skip })
+    getGames({ genre: decodedGenreName, sort, limit: PAGE_SIZE, skip })
       .then(res => {
         setGames(res.results ?? []);
         setTotal(res.total ?? 0);
       })
       .catch(() => { setGames([]); setTotal(0); })
       .finally(() => setLoading(false));
-  }, [genreName, sort, skip]);
+  }, [decodedGenreName, sort, skip]);
 
   // Infinite scroll — appends to the list
   const loadMore = useCallback(async () => {
@@ -54,7 +55,7 @@ export function GenrePage() {
     setLoadingMore(true);
     try {
       const nextSkip = games.length; // append from where we are
-      const res = await getGames({ genre: genreName!, sort, limit: PAGE_SIZE, skip: nextSkip });
+      const res = await getGames({ genre: decodedGenreName!, sort, limit: PAGE_SIZE, skip: nextSkip });
       setGames(prev => [...prev, ...(res.results ?? [])]);
       setTotal(res.total ?? 0);
       // Keep skip in sync so page jumper stays accurate
@@ -62,7 +63,7 @@ export function GenrePage() {
     } finally {
       setLoadingMore(false);
     }
-  }, [loadingMore, hasMore, games.length, genreName, sort]);
+  }, [loadingMore, hasMore, games.length, decodedGenreName, sort]);
 
 
   const handlePageChange = (page: number) => {

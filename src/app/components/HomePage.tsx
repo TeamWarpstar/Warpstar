@@ -93,7 +93,7 @@ export function HomePage() {
         <h2 className="text-3xl font-bold bg-clip-text text-white mb-6">Browse by Genre</h2>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           {genres.map(genre => (
-            <Link key={genre.id} to={`/genre/${genre.name.toLowerCase()}`}
+            <Link key={genre.id} to={`/genre/${encodeURIComponent(genre.name.toLowerCase())}`}
               className="group relative overflow-hidden rounded-xl p-6 aspect-square flex flex-col items-center justify-center gap-3 bg-purple-950/30 border border-purple-500/20 hover:border-pink-500/50 hover:scale-105 transition-all duration-300">
               <div className={`absolute inset-0 bg-gradient-to-br ${GENRE_COLORS[genre.name] ?? "from-purple-500 to-pink-500"} opacity-20 group-hover:opacity-30 transition-opacity`} />
               <span className="text-white font-semibold relative z-10">{genre.name}</span>
