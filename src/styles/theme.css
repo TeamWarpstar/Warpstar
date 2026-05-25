@@ -381,3 +381,8 @@ html.light-mode .mobile-drawer, html.light-mode .mobile-drawer * { color: #11111
 /* --- Profile sort select: dark grey background in dark mode, black text in light mode --- */
 .dark .profile-sort-select { background-color: #1a1a1a !important; }
 html.light-mode .profile-sort-select { color: #000000 !important; }
+
+/* --- Review cards: dark text and star labels in light mode --- */
+html.light-mode .bg-white\/5 h4.text-white { color: #000000 !important; }
+html.light-mode .bg-white\/5 p.text-white\/75 { color: rgba(0, 0, 0, 0.75) !important; }
+html.light-mode .bg-white\/5 svg text[fill="rgba(255,255,255,0.85)"] { fill: #000000 !important; }
