@@ -56,15 +56,23 @@ export function GamePage() {
   useEffect(() => {
     if (!gameId) return;
     setLoading(true);
+    setReviews([]);
+    setSimilar([]);
+
+    // Phase 1 — load game info immediately (fast single doc lookup)
+    getGame(gameId).then(g => {
+      setGame(g);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+
+    // Phase 2 — load reviews + similar in background (slower)
     Promise.all([
-      getGame(gameId),
       getGameReviews(gameId) as Promise<any>,
       getSimilarGames(gameId),
-    ]).then(([g, r, s]) => {
-      setGame(g);
+    ]).then(([r, s]) => {
       setReviews((r as any).results ?? []);
       setSimilar(s);
-    }).finally(() => setLoading(false));
+    });
   }, [gameId]);
 
   const myReview    = user ? reviews.find(r => r.username === user.username) : null;
@@ -100,6 +108,7 @@ export function GamePage() {
     aesthetics: game.aestheticsAvg,
     polish:     game.polishAvg,
   };
+  const totalScore  = Object.values(scores).reduce((a, b) => a + b, 0) / 5;
   const releaseYear = game.releaseDate
     ? new Date(game.releaseDate).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })
     : null;
@@ -116,7 +125,7 @@ export function GamePage() {
     <div className="max-w-7xl mx-auto px-4 py-6 sm:py-8">
       <div className="lg:flex lg:gap-8">
 
-        {/* ── Desktop sidebar (lg+) ── */}
+        {/* Sidebar — fixed on desktop */}
         <div className="hidden lg:block lg:w-72 xl:w-80 flex-shrink-0">
           <div className="sticky top-6 max-h-[calc(100vh-2rem)] overflow-y-auto space-y-4 pb-4 [&::-webkit-scrollbar]:hidden">
             <div className="rounded-xl overflow-hidden border border-white/10 shadow-2xl">
@@ -180,171 +189,61 @@ export function GamePage() {
           </div>
         </div>
 
-        {/* ── Main content ── */}
+        {/* Main content — scrolls */}
         <div className="flex-1 min-w-0 space-y-6 sm:space-y-8">
 
-          {/* ══════════════════════════════════════
-              MOBILE / TABLET HEADER  (hidden lg+)
-              ══════════════════════════════════════ */}
-          <div className="lg:hidden space-y-4">
-
-            {/* Row 1: Cover art + Title + action buttons */}
-            <div className="flex gap-4 items-start">
-              {/* Cover art */}
-              <div className="flex-shrink-0 w-28 sm:w-36 rounded-xl overflow-hidden border border-white/10 shadow-2xl">
-                <ImageWithFallback src={game.coverUrl ?? ""} alt={game.name} className="w-full aspect-[3/4] object-cover" />
-              </div>
-
-              {/* Title, meta, actions */}
-              <div className="flex-1 min-w-0 flex flex-col gap-2 pt-1">
-                <h1 className="text-xl sm:text-2xl font-bold text-white leading-tight">{game.name}</h1>
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs sm:text-sm">
-                  {releaseYear && <span className="text-white/50">{releaseYear}</span>}
-                  {game.igdbRating && <span className="text-white/40">IGDB: {game.igdbRating.toFixed(1)}</span>}
-                </div>
+          <div className="flex gap-4 lg:block">
+            <div className="lg:hidden flex-shrink-0 w-28 sm:w-36 rounded-xl overflow-hidden border border-white/10 shadow-2xl">
+              <ImageWithFallback src={game.coverUrl ?? ""} alt={game.name} className="w-full aspect-[3/4] object-cover" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-3 sm:mb-4">
+                <h1 className="text-2xl sm:text-4xl lg:text-5xl font-bold text-white leading-tight">{game.name}</h1>
                 {user ? (
-                  <div className="flex flex-col gap-2 mt-1">
+                  <div className="flex flex-col gap-2">
                     <Link to={`/game/${gameId}/review`}
-                      className="flex items-center justify-center gap-2 px-3 py-2 bg-white text-zinc-900 font-semibold rounded-lg hover:shadow-lg transition-all text-sm">
-                      <Edit3 className="w-3.5 h-3.5" />
-                      {myReview ? "Edit Review" : "Write Review"}
+                      className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-white text-zinc-900 font-semibold rounded-lg hover:shadow-lg hover:shadow-white/10 transition-all whitespace-nowrap text-sm sm:text-base">
+                      <Edit3 className="w-4 h-4 sm:w-5 sm:h-5" />
+                      <span>{myReview ? "Edit Review" : "Write Review"}</span>
                     </Link>
                     {myReview && (
                       <button onClick={() => handleDeleteReview(myReview.id)} disabled={deleting === myReview.id}
-                        className="flex items-center justify-center gap-2 px-3 py-1.5 bg-red-500/10 border border-red-500/30 text-red-400 font-semibold rounded-lg text-xs">
+                        className="flex items-center justify-center gap-2 px-4 py-2 bg-red-500/10 border border-red-500/30 text-red-400 font-semibold rounded-lg hover:bg-red-500/20 transition-all text-sm whitespace-nowrap">
                         {deleting === myReview.id ? "Deleting…" : "Delete Review"}
                       </button>
                     )}
-                    <button onClick={handleFavorite} disabled={favoriting}
-                      className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${isFavorited ? "bg-pink-500/20 border-pink-500/50 text-pink-400" : "bg-white/5 border-white/10 text-white/60 hover:border-white/25"}`}>
-                      <Heart className={`w-3 h-3 ${isFavorited ? "fill-pink-400" : ""}`} />
-                      {isFavorited ? "Favorited" : "Favorite"}
-                    </button>
                   </div>
                 ) : (
                   <Link to="/login"
-                    className="mt-1 flex items-center justify-center gap-2 px-3 py-2 bg-white/10 border border-white/20 text-white/70 font-semibold rounded-lg text-sm">
+                    className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-white/10 border border-white/20 text-white/70 font-semibold rounded-lg hover:bg-white/15 transition-all whitespace-nowrap text-sm sm:text-base">
                     Sign in to review
                   </Link>
                 )}
               </div>
-            </div>
 
-            {/* Row 2: Star diagram + score bars */}
-            <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-              <div className="flex items-center gap-3 sm:gap-4">
-                <div className="flex-shrink-0">
-                  <StarPolarDiagram scores={scores} size={150} showTotal={true} showLabels={false} showNumbers={false} />
-                </div>
-                <div className="flex-1 min-w-0 space-y-1.5">
-                  {SCORE_FACTORS.map(f => {
-                    const val = scores[f.key];
-                    const pct = (val / 10) * 100;
-                    return (
-                      <div key={f.key}>
-                        <div className="flex items-center justify-between mb-0.5">
-                          <span style={{ fontSize: 10, fontWeight: 600, color: f.color, textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                            {f.label}
-                          </span>
-                          <span style={{ fontSize: 11, fontWeight: 700, color: f.color }}>{val.toFixed(1)}</span>
-                        </div>
-                        <div style={{ position: "relative", height: 4, borderRadius: 99, background: "rgba(255,255,255,0.07)", overflow: "hidden" }}>
-                          <div style={{ height: "100%", width: `${pct}%`, background: f.color, opacity: 0.85 }} />
-                        </div>
-                      </div>
-                    );
-                  })}
-                  <p className="text-white/25 text-xs pt-0.5">
-                    {game.reviewTotal.toLocaleString()} {game.reviewTotal === 1 ? "review" : "reviews"}
-                  </p>
-                </div>
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                {(game.platforms ?? []).slice(0, 3).map(p => (
+                  <span key={p} className="lg:hidden px-2 sm:px-3 py-1 bg-white/8 text-white/70 rounded-md border border-white/15 text-sm">{p}</span>
+                ))}
+                {releaseYear && <span className="text-white/50 text-md">Released: {releaseYear}</span>}
+                {game.igdbRating && <span className="text-white/40 text-md">IGDB: {game.igdbRating.toFixed(1)}</span>}
               </div>
-            </div>
 
-            {/* Row 3: Summary */}
+              {user && (
+                <button onClick={handleFavorite} disabled={favoriting}
+                  className={`lg:hidden mt-3 flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-medium transition-all ${isFavorited ? "bg-pink-500/20 border-pink-500/50 text-pink-400" : "bg-white/5 border-white/10 text-white/60 hover:border-white/25"}`}>
+                  <Heart className={`w-3.5 h-3.5 ${isFavorited ? "fill-pink-400" : ""}`} />
+                  {isFavorited ? "Favorited" : "Favorite"}
+                </button>
+              )}
+            </div>
             {game.summary && (
-              <p className="text-white/80 leading-relaxed text-sm sm:text-base">{game.summary}</p>
-            )}
-
-            {/* Row 4: Platforms */}
-            {(game.platforms ?? []).length > 0 && (
-              <div>
-                <div className="flex items-center gap-1.5 text-xs text-white/40 mb-2">
-                  <Monitor className="w-3 h-3" /> Platforms
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {game.platforms.map(p => (
-                    <span key={p} className="px-2 py-1 bg-white/5 border border-white/10 rounded-full text-xs text-white/60">{p}</span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Row 5: Genres + Developer */}
-            <div className="flex flex-wrap gap-x-6 gap-y-3">
-              {(game.genres ?? []).length > 0 && (
-                <div>
-                  <div className="flex items-center gap-1 text-xs text-white/40 mb-1.5"><Tag className="w-3 h-3" /> Genres</div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {game.genres.map(g => (
-                      <Link key={g} to={`/genre/${g.toLowerCase()}`} className="px-2 py-0.5 bg-white/5 border border-white/10 rounded-full text-xs text-white/60 hover:border-white/30 hover:text-white transition-colors">{g}</Link>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {(game.developers ?? []).length > 0 && (
-                <div>
-                  <div className="flex items-center gap-1 text-xs text-white/40 mb-1.5"><Building2 className="w-3 h-3" /> Developer</div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {game.developers.map(c => (
-                      <span key={c} className="px-2 py-0.5 bg-white/5 border border-white/10 rounded-full text-xs text-white/60">{c}</span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* ══════════════════════════════════════
-              DESKTOP HEADER  (lg+)
-              ══════════════════════════════════════ */}
-          <div className="hidden lg:block">
-            <div className="flex items-start justify-between gap-3 mb-3">
-              <h1 className="text-4xl lg:text-5xl font-bold text-white leading-tight">{game.name}</h1>
-              {user ? (
-                <div className="flex flex-col gap-2 flex-shrink-0">
-                  <Link to={`/game/${gameId}/review`}
-                    className="flex items-center justify-center gap-2 px-6 py-3 bg-white text-zinc-900 font-semibold rounded-lg hover:shadow-lg hover:shadow-white/10 transition-all whitespace-nowrap">
-                    <Edit3 className="w-5 h-5" />
-                    {myReview ? "Edit Review" : "Write Review"}
-                  </Link>
-                  {myReview && (
-                    <button onClick={() => handleDeleteReview(myReview.id)} disabled={deleting === myReview.id}
-                      className="flex items-center justify-center gap-2 px-4 py-2 bg-red-500/10 border border-red-500/30 text-red-400 font-semibold rounded-lg hover:bg-red-500/20 transition-all text-sm whitespace-nowrap">
-                      {deleting === myReview.id ? "Deleting…" : "Delete Review"}
-                    </button>
-                  )}
-                </div>
-              ) : (
-                <Link to="/login"
-                  className="flex-shrink-0 flex items-center justify-center gap-2 px-6 py-3 bg-white/10 border border-white/20 text-white/70 font-semibold rounded-lg hover:bg-white/15 transition-all whitespace-nowrap">
-                  Sign in to review
-                </Link>
-              )}
-            </div>
-
-            <div className="flex flex-wrap items-center gap-3 mb-4">
-              {releaseYear && <span className="text-white/50 text-md">Released: {releaseYear}</span>}
-              {game.igdbRating && <span className="text-white/40 text-md">IGDB: {game.igdbRating.toFixed(1)}</span>}
-            </div>
-
-            {game.summary && (
-              <p className="text-white/100 leading-relaxed">{game.summary}</p>
+              <p className="text-white/100 mt-3 leading-relaxed">{game.summary}</p>
             )}
           </div>
 
-          {/* ── Scores panel (desktop only) ── */}
-          <div className="hidden lg:block bg-white/5 border border-white/10 rounded-xl p-5 sm:p-6">
+          {/* Scores */}
+          <div className="bg-white/5 border border-white/10 rounded-xl p-5 sm:p-6">
             <div className="flex flex-col sm:flex-row items-center gap-6">
               <div className="flex-shrink-0">
                 <StarPolarDiagram scores={scores} size={350} showTotal={true} showLabels={false} showNumbers={true} />
@@ -363,6 +262,7 @@ export function GamePage() {
                           {val.toFixed(1)}
                         </span>
                       </div>
+                      {/* Bar with tick marks dividing into 10 sections */}
                       <div style={{ position: "relative", height: 7, borderRadius: 99, background: "rgba(255,255,255,0.07)", overflow: "hidden" }}>
                         <div style={{ height: "100%", width: `${pct}%`, background: f.color, opacity: 0.85, transition: "width 0.6s ease" }} />
                         {Array.from({ length: 9 }).map((_, t) => {
@@ -390,7 +290,6 @@ export function GamePage() {
             </div>
           </div>
 
-          {/* ── Similar games ── */}
           {similar.length > 0 && (
             <div>
               <h3 className="text-xl font-bold text-white mb-4">Similar Games</h3>
@@ -407,7 +306,8 @@ export function GamePage() {
             </div>
           )}
 
-          {/* ── Reviews ── */}
+
+          {/* Reviews */}
           <div className="space-y-6">
             <div className="flex items-center justify-between gap-4">
               <h2 className="text-xl sm:text-3xl font-bold text-white">Reviews</h2>
@@ -433,7 +333,6 @@ export function GamePage() {
               }
             </div>
           </div>
-
         </div>
       </div>
     </div>

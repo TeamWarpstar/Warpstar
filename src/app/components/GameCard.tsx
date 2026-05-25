@@ -60,6 +60,9 @@ export function GameCard({ id, title, coverArt, platforms, developer, year, genr
   const scoreColor         = scoreStyle(displayScore);
   const ratingLabel        = hasWarpstarReviews ? "Warpstar" : "IGDB";
 
+  // Star size for the card thumbnail — small, no labels
+  const CARD_STAR_SIZE = 75;
+
   return (
     <>
       <Link
@@ -77,10 +80,27 @@ export function GameCard({ id, title, coverArt, platforms, developer, year, genr
 
             <div className={`absolute inset-0 transition-opacity duration-200 bg-gradient-to-t from-black/80 via-black/20 to-transparent ${hovered ? "opacity-60" : "opacity-100"}`} />
 
-            <div className={`absolute top-3 right-3 px-3 py-1 ${scoreColor.bg} rounded-full text-white font-bold text-sm shadow-lg score-badge transition-opacity duration-200 ${hovered ? "opacity-0" : "opacity-100"}`}>
-              {displayScore.toFixed(1)}
-            </div>
+            {/* Normal state: IGDB score badge top-right */}
+            {!hasWarpstarReviews && (
+              <div className={`absolute top-3 right-3 px-3 py-1 ${scoreColor.bg} rounded-full text-white font-bold text-sm shadow-lg transition-opacity duration-200 ${hovered ? "opacity-0" : "opacity-100"}`}>
+                {displayScore.toFixed(1)}
+              </div>
+            )}
 
+            {/* Hover state: star diagram replaces the score badge */}
+            {hasWarpstarReviews && (
+              <div className={`absolute top-2 right-2 transition-opacity duration-200 ${hovered ? "opacity-0" : "opacity-100"}`}>
+                <StarPolarDiagram
+                  scores={scores}
+                  size={CARD_STAR_SIZE}
+                  showTotal={true}
+                  showLabels={false}
+                  showNumbers={false}
+                />
+              </div>
+            )}
+
+            {/* Title — hidden on hover */}
             <div className={`absolute bottom-3 left-3 right-3 transition-opacity duration-200 ${hovered ? "opacity-0" : "opacity-100"}`}>
               <h3 className="text-white font-bold text-base leading-tight line-clamp-2 drop-shadow">{title}</h3>
             </div>
@@ -88,6 +108,7 @@ export function GameCard({ id, title, coverArt, platforms, developer, year, genr
         </div>
       </Link>
 
+      {/* Popover */}
       {showDiagram && createPortal(
         <div className="fixed z-[9999] pointer-events-none animate-in fade-in duration-150" style={popoverStyle}>
           <div className="w-full bg-[#0f0f0f]/97 backdrop-blur-sm border border-white/12 rounded-2xl shadow-2xl shadow-black/80 overflow-hidden game-card-popover">
@@ -96,12 +117,16 @@ export function GameCard({ id, title, coverArt, platforms, developer, year, genr
             <div className="px-5 pt-5 pb-4 border-b border-white/8">
               <div className="flex items-start justify-between gap-3">
                 <h3 className="text-white font-bold text-lg leading-tight">{title}</h3>
-                <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
-                  <div className={`px-3 py-1 ${scoreColor.bg} rounded-full text-white font-bold text-sm shadow-lg score-badge`}>
-                    {displayScore.toFixed(1)}
+
+                {/* Only show score badge if no Warpstar reviews — star handles it otherwise */}
+                {!hasWarpstarReviews && igdbRating > 0 && (
+                  <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
+                    <div className={`px-3 py-1 ${scoreColor.bg} rounded-full text-white font-bold text-sm shadow-lg`}>
+                      {displayScore.toFixed(1)}
+                    </div>
+                    <span className="text-xs text-white/30">{ratingLabel}</span>
                   </div>
-                  <span className="text-xs text-white/30">{ratingLabel}</span>
-                </div>
+                )}
               </div>
 
               <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-white/50">
@@ -130,15 +155,13 @@ export function GameCard({ id, title, coverArt, platforms, developer, year, genr
               )}
             </div>
 
-            {/* Star diagram with labels */}
-            <div className="flex items-center justify-center pt-4 pb-2">
-              <StarPolarDiagram scores={scores} size={DIAGRAM_SIZE} showTotal={true} showLabels={true} showNumbers={true} />
-            </div>
-
-
-
-            {!hasWarpstarReviews && igdbRating > 0 && (
-              <div className="px-5 pb-4 text-center text-xs text-white/25">
+            {/* Star diagram — full size with labels and numbers */}
+            {hasWarpstarReviews ? (
+              <div className="flex items-center justify-center pt-4 pb-2">
+                <StarPolarDiagram scores={scores} size={DIAGRAM_SIZE} showTotal={true} showLabels={true} showNumbers={true} />
+              </div>
+            ) : (
+              <div className="px-5 py-6 text-center text-sm text-white/30">
                 No Warpstar reviews yet — showing IGDB rating
               </div>
             )}

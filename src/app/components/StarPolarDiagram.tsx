@@ -105,19 +105,31 @@ export function StarPolarDiagram({
 }: StarPolarDiagramProps) {
   const cx   = size / 2;
   const cy   = size / 2;
-  const rMax = size / 2 - ((showLabels || showNumbers) ? size * 0.18 : size * 0.04);
-  const rMin = rMax * 0.5;
 
   const totalScore = (
     scores.gameplay + scores.content + scores.narrative +
     scores.aesthetics + scores.polish
   ) / 5;
 
+  const isGold = totalScore >= 9;
+  const GOLD   = "#f5c542";
+
+  // rMax is the fixed outer boundary — used for grid, labels, and the ghost outline
+  // rMaxScaled is the actual star size, which shrinks with lower scores
+  const rMax       = size / 2 - ((showLabels || showNumbers) ? size * 0.18 : size * 0.04);
+  const scoreScale = 0.4 + (totalScore / 10) * 0.6;
+  const rMaxScaled = rMax * scoreScale;
+  const rMin       = rMaxScaled * 0.5;
+
   const instanceId = useId().replace(/:/g, "");
   const scoreMap = scores as unknown as Record<string, number>;
-  const starPath = smoothStarPath(scoreMap, rMin, rMax);
+  const starPath     = smoothStarPath(scoreMap, rMin, rMaxScaled);
+  const ghostStarPath = smoothStarPath(
+    { gameplay: 10, aesthetics: 10, content: 10, polish: 10, narrative: 10 },
+    rMax * 0.5, rMax
+  );
 
-  const clipId      = `star-clip-${size}-${
+  const clipId      = `star-clip-sc${Math.round(scoreScale*100)}-${size}-${
     [scores.gameplay, scores.aesthetics, scores.content, scores.polish, scores.narrative]
       .map(v => Math.round(v * 10)).join("-")
   }`;
@@ -143,6 +155,15 @@ export function StarPolarDiagram({
             <path d={starPath} />
           </clipPath>
 
+          {/* Shimmer highlight for gold star — bright near top tip */}
+          {isGold && (
+            <radialGradient id={`gold-shimmer-${instanceId}`} cx="50%" cy="20%" r="60%">
+              <stop offset="0%"   stopColor="rgba(255,255,220,0.55)" />
+              <stop offset="50%"  stopColor="rgba(255,210,60,0.15)" />
+              <stop offset="100%" stopColor="rgba(255,180,0,0)" />
+            </radialGradient>
+          )}
+
           {/* Center radial shadow — dark at center, fades out */}
           <radialGradient id={shadowId} cx="50%" cy="50%" r="50%">
             <stop offset="0%"   stopColor="rgba(0,0,0,0.7)" />
@@ -156,7 +177,7 @@ export function StarPolarDiagram({
               <linearGradient id={lightId(i)}
                 x1={Math.cos(outerAngle(i)).toFixed(3)} y1={Math.sin(outerAngle(i)).toFixed(3)}
                 x2="0" y2="0" gradientUnits="userSpaceOnUse">
-                <stop offset="0%"   stopColor="rgba(255,255,255,0.18)" />
+                <stop offset="0%"   stopColor={isGold ? "rgba(255,250,180,0.5)" : "rgba(255,255,255,0.18)"} />
                 <stop offset="100%" stopColor="rgba(255,255,255,0)" />
               </linearGradient>
               <linearGradient id={darkId(i)}
@@ -165,12 +186,15 @@ export function StarPolarDiagram({
                 x2={Math.cos(outerAngle(i)).toFixed(3)}
                 y2={Math.sin(outerAngle(i)).toFixed(3)}
                 gradientUnits="userSpaceOnUse">
-                <stop offset="0%"   stopColor="rgba(0,0,0,0.30)" />
+                <stop offset="0%"   stopColor={isGold ? "rgba(160,90,0,0.45)" : "rgba(0,0,0,0.30)"} />
                 <stop offset="100%" stopColor="rgba(0,0,0,0)" />
               </linearGradient>
             </g>
           ))}
         </defs>
+
+        {/* Ghost star — full size outline at max, always visible */}
+        <path d={ghostStarPath} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
 
         {/* Grid rings */}
         {[2, 4, 6, 8, 10].map(lvl => (
@@ -181,31 +205,36 @@ export function StarPolarDiagram({
         {/* Base colored wedges */}
         <g clipPath={`url(#${clipId})`}>
           {FACTORS.map((f, i) => (
-            <path key={f.key} d={wedgePath(i, rMax)}
-              fill={f.color} fillOpacity="0.95" stroke="none" />
+            <path key={f.key} d={wedgePath(i, rMaxScaled)}
+              fill={isGold ? GOLD : f.color} fillOpacity="0.95" stroke="none" />
           ))}
 
           {/* Left-half darkening on each wedge (shadow side) */}
           {FACTORS.map((_, i) => (
-            <path key={`dark-${i}`} d={wedgeHalfPath(i, rMax, "left")}
+            <path key={`dark-${i}`} d={wedgeHalfPath(i, rMaxScaled, "left")}
               fill={`url(#${darkId(i)})`} stroke="none" />
           ))}
 
           {/* Right-half brightening on each wedge (highlight side) */}
           {FACTORS.map((_, i) => (
-            <path key={`light-${i}`} d={wedgeHalfPath(i, rMax, "right")}
+            <path key={`light-${i}`} d={wedgeHalfPath(i, rMaxScaled, "right")}
               fill={`url(#${lightId(i)})`} stroke="none" />
           ))}
 
           {/* Radial shadow from center — creates depth at the hub */}
-          <circle cx="0" cy="0" r={rMax * 1.5}
+          <circle cx="0" cy="0" r={rMaxScaled * 1.5}
             fill={`url(#${shadowId})`} />
+
+          {/* Gold shimmer overlay */}
+          {isGold && (
+            <circle cx="0" cy="0" r={rMaxScaled * 1.5}
+              fill={`url(#gold-shimmer-${instanceId})`} />
+          )}
         </g>
 
-        {/* Seam lines between wedges */}
-        {FACTORS.map((_, i) => {
+        {/* Seam lines between wedges — hidden for gold stars */}
+        {!isGold && FACTORS.map((_, i) => {
           const [ix, iy] = innerPt(i, rMin);
-          const [ox, oy] = outerPt(i, scoreMap[FACTORS[i].key], rMin, rMax);
           return (
             <line key={`seam-${i}`}
               x1="0" y1="0" x2={ix.toFixed(2)} y2={iy.toFixed(2)}
@@ -213,9 +242,15 @@ export function StarPolarDiagram({
           );
         })}
 
-        {/* Outer seam strokes — dark then subtle white */}
-        <path d={starPath} fill="none" stroke="rgba(0,0,0,0.55)" strokeWidth="3" />
-        <path d={starPath} fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="1" />
+        {/* Outer seam strokes — dark base, then gold glow for gold stars */}
+        <path d={starPath} fill="none" stroke="rgba(0,0,0,0.55)" strokeWidth={isGold ? 2 : 3} />
+        <path d={starPath} fill="none"
+          stroke={isGold ? "rgba(255,220,80,0.9)" : "rgba(255,255,255,0.18)"}
+          strokeWidth={isGold ? 2 : 1} />
+        {isGold && (
+          <path d={starPath} fill="none"
+            stroke="rgba(255,255,255,0.45)" strokeWidth="0.75" />
+        )}
 
         {/* Labels — name and/or score next to each tip */}
         {(showLabels || showNumbers) && FACTORS.map((f, i) => {
@@ -257,7 +292,7 @@ export function StarPolarDiagram({
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
         <div className="text-center">
           <div className="star-total" style={{
-            fontSize:   size * 0.12,
+            fontSize:   size * 0.17,
             fontWeight: 700,
             color:      "#ffffff",
             lineHeight: 1.1,

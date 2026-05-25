@@ -1,41 +1,303 @@
-﻿import { useState, useEffect } from "react";
+﻿import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router";
-import { InteractiveStarDiagram } from "./InteractiveStarDiagram";
 import { ImageWithFallback } from "./ImageWithFallback";
-import { scoreStyle } from "./scoreStyle";
 import { Loader2 } from "lucide-react";
 import { getGame, getGameReviews, Game } from "../../api/games";
 import { createReview, updateReview } from "../../api/reviews";
 import { useAuth } from "../context/AuthContext";
+import { useId } from "react";
 
 interface ReviewScores {
   gameplay: number; content: number; narrative: number;
   aesthetics: number; polish: number;
 }
-
 interface CategoryText {
   gameplay: string; content: string; narrative: string;
   aesthetics: string; polish: string;
 }
 
-const CATEGORIES: Array<{ key: keyof ReviewScores; label: string; description: string }> = [
-  { key: "gameplay",   label: "Gameplay",   description: "How well do the mechanics, controls, and core gameplay loop serve the overall experience?" },
-  { key: "content",    label: "Content",    description: "How much content is there, and how engaging is it? This encapsulates the quantity, depth, and replayability of content in the game." },
-  { key: "narrative",  label: "Narrative",  description: "How good is this game at telling a story? Consider the quality of the plot and characters, and/or the quality of the stories you can create within that game." },
-  { key: "aesthetics", label: "Aesthetics", description: "How appealing is this game's graphical and audio design?" },
-  { key: "polish",     label: "Polish",     description: "How refined is the overall presentation and execution of the game? This includes the game's performance, stability, and overall feel." },
+const SCORE_FACTORS = [
+  { key: "gameplay"   as const, label: "Gameplay",   color: "#6373ff",
+    description: "How well do the mechanics, controls, and core gameplay loop serve the overall experience?" },
+  { key: "aesthetics" as const, label: "Aesthetics", color: "#ff9a48",
+    description: "How appealing is this game's graphical and audio design?" },
+  { key: "content"    as const, label: "Content",    color: "#a95eff",
+    description: "How much content is there, and how engaging is it?" },
+  { key: "polish"     as const, label: "Polish",     color: "#61bb74",
+    description: "How refined is the overall presentation and execution?" },
+  { key: "narrative"  as const, label: "Narrative",  color: "#f55f5f",
+    description: "How good is this game at telling a story?" },
 ];
+
+const N = 5;
+function rad(deg: number) { return (deg * Math.PI) / 180; }
+function outerAngle(i: number) { return rad(-90 + i * 72); }
+function innerAngle(i: number) { return rad(-90 + 36 + i * 72); }
+
+function outerPt(i: number, score: number, rMin: number, rMax: number): [number, number] {
+  const r = rMin + (score / 10) * (rMax - rMin);
+  const a = outerAngle(i);
+  return [r * Math.cos(a), r * Math.sin(a)];
+}
+function innerPt(i: number, rMin: number): [number, number] {
+  const a = innerAngle(i);
+  return [rMin * Math.cos(a), rMin * Math.sin(a)];
+}
+function smoothStarPath(scoreMap: Record<string, number>, rMin: number, rMax: number): string {
+  const pts: [number, number][] = [];
+  for (let i = 0; i < N; i++) {
+    pts.push(outerPt(i, scoreMap[SCORE_FACTORS[i].key], rMin, rMax));
+    pts.push(innerPt(i, rMin));
+  }
+  const len = pts.length;
+  const T_O = 0.12, T_I = 0.05;
+  let d = `M ${pts[0][0].toFixed(2)},${pts[0][1].toFixed(2)}`;
+  for (let i = 0; i < len; i++) {
+    const prev = pts[(i - 1 + len) % len];
+    const cur  = pts[i];
+    const nxt  = pts[(i + 1) % len];
+    const nn   = pts[(i + 2) % len];
+    const t    = i % 2 === 0 ? T_O : T_I;
+    d += ` C ${(cur[0]+(nxt[0]-prev[0])*t).toFixed(2)},${(cur[1]+(nxt[1]-prev[1])*t).toFixed(2)} ${(nxt[0]-(nn[0]-cur[0])*t).toFixed(2)},${(nxt[1]-(nn[1]-cur[1])*t).toFixed(2)} ${nxt[0].toFixed(2)},${nxt[1].toFixed(2)}`;
+  }
+  return d + " Z";
+}
+function wedgePath(i: number, rMax: number): string {
+  const R = rMax * 1.5;
+  const aFrom = outerAngle(i) - rad(36);
+  const aTo   = outerAngle(i) + rad(36);
+  const pts: string[] = ["0,0"];
+  for (let s = 0; s <= 8; s++) {
+    const a = aFrom + (aTo - aFrom) * (s / 8);
+    pts.push(`${(R * Math.cos(a)).toFixed(2)},${(R * Math.sin(a)).toFixed(2)}`);
+  }
+  return `M ${pts.join(" L ")} Z`;
+}
+function wedgeHalfPath(i: number, rMax: number, side: "left" | "right"): string {
+  const R = rMax * 1.5;
+  const mid = outerAngle(i);
+  const from = side === "left" ? mid - rad(36) : mid;
+  const to   = side === "left" ? mid            : mid + rad(36);
+  const pts: string[] = ["0,0"];
+  for (let s = 0; s <= 4; s++) {
+    const a = from + (to - from) * (s / 4);
+    pts.push(`${(R * Math.cos(a)).toFixed(2)},${(R * Math.sin(a)).toFixed(2)}`);
+  }
+  return `M ${pts.join(" L ")} Z`;
+}
+function gridStarPath(level: number, rMin: number, rMax: number): string {
+  const pts: string[] = [];
+  for (let i = 0; i < N; i++) {
+    const r = rMin + (level / 10) * (rMax - rMin);
+    pts.push(`${(r * Math.cos(outerAngle(i))).toFixed(1)},${(r * Math.sin(outerAngle(i))).toFixed(1)}`);
+    pts.push(`${(rMin * Math.cos(innerAngle(i))).toFixed(1)},${(rMin * Math.sin(innerAngle(i))).toFixed(1)}`);
+  }
+  return `M ${pts.join(" L ")} Z`;
+}
+
+// ---------------------------------------------------------------------------
+// Interactive star diagram
+// ---------------------------------------------------------------------------
+
+function InteractiveStar({
+  scores,
+  onScoreChange,
+  size = 320,
+}: {
+  scores: ReviewScores;
+  onScoreChange: (key: keyof ReviewScores, value: number) => void;
+  size?: number;
+}) {
+  const uid     = useId().replace(/:/g, "");
+  const svgRef  = useRef<SVGSVGElement>(null);
+  const dragging = useRef<number | null>(null);
+
+  const cx   = size / 2;
+  const cy   = size / 2;
+  const totalScore = (scores.gameplay + scores.content + scores.narrative + scores.aesthetics + scores.polish) / 5;
+  const baseRMax   = size / 2 - size * 0.20;
+  const rMax       = baseRMax; // no score scaling on create page
+  const rMin       = rMax * 0.5;
+  const scoreMap   = scores as unknown as Record<string, number>;
+  const starPath   = smoothStarPath(scoreMap, rMin, rMax);
+  const ghostPath  = smoothStarPath({ gameplay:10, aesthetics:10, content:10, polish:10, narrative:10 }, baseRMax*0.5, baseRMax);
+
+  const clipId   = `ic-clip-${uid}`;
+  const shadowId = `ic-shadow-${uid}`;
+  const lightId  = (i: number) => `ic-light-${uid}-${i}`;
+  const darkId   = (i: number) => `ic-dark-${uid}-${i}`;
+
+  // Convert pointer event → SVG local coords → score for arm i
+  const pointerToScore = useCallback((e: PointerEvent | React.PointerEvent, armIdx: number): number => {
+    if (!svgRef.current) return 5;
+    const rect = svgRef.current.getBoundingClientRect();
+    const px = e.clientX - rect.left - cx;
+    const py = e.clientY - rect.top  - cy;
+    // Project pointer onto the arm axis
+    const a   = outerAngle(armIdx);
+    const dot = px * Math.cos(a) + py * Math.sin(a);
+    // dot = rMin + (score/10)*(baseRMax-rMin)  → solve for score
+    const raw = ((dot - baseRMax * 0.5) / (baseRMax - baseRMax * 0.5)) * 10;
+    return Math.min(10, Math.max(0, Math.round(raw * 2) / 2));
+  }, [cx, cy, baseRMax]);
+
+  const onPointerDown = (i: number) => (e: React.PointerEvent) => {
+    e.preventDefault();
+    dragging.current = i;
+    (e.target as Element).setPointerCapture(e.pointerId);
+    const score = pointerToScore(e, i);
+    onScoreChange(SCORE_FACTORS[i].key, score);
+  };
+
+  useEffect(() => {
+    const onMove = (e: PointerEvent) => {
+      if (dragging.current === null) return;
+      const score = pointerToScore(e, dragging.current);
+      onScoreChange(SCORE_FACTORS[dragging.current].key, score);
+    };
+    const onUp = () => { dragging.current = null; };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    return () => { window.removeEventListener("pointermove", onMove); window.removeEventListener("pointerup", onUp); };
+  }, [pointerToScore, onScoreChange]);
+
+  return (
+    <div className="relative flex items-center justify-center" style={{ width: size, height: size, overflow: "visible" }}>
+      <svg ref={svgRef} width={size} height={size}
+        viewBox={`${-cx} ${-cy} ${size} ${size}`}
+        overflow="visible" className="absolute inset-0" style={{ touchAction: "none" }}>
+        <defs>
+          <clipPath id={clipId}><path d={starPath} /></clipPath>
+          <radialGradient id={shadowId} cx="50%" cy="50%" r="50%">
+            <stop offset="0%"   stopColor="rgba(0,0,0,0.7)" />
+            <stop offset="40%"  stopColor="rgba(0,0,0,0.25)" />
+            <stop offset="100%" stopColor="rgba(0,0,0,0)" />
+          </radialGradient>
+          {SCORE_FACTORS.map((_, i) => (
+            <g key={i}>
+              <linearGradient id={lightId(i)}
+                x1={Math.cos(outerAngle(i)).toFixed(3)} y1={Math.sin(outerAngle(i)).toFixed(3)}
+                x2="0" y2="0" gradientUnits="userSpaceOnUse">
+                <stop offset="0%"   stopColor="rgba(255,255,255,0.18)" />
+                <stop offset="100%" stopColor="rgba(255,255,255,0)" />
+              </linearGradient>
+              <linearGradient id={darkId(i)}
+                x1={Math.cos(outerAngle(i) + rad(36)).toFixed(3)}
+                y1={Math.sin(outerAngle(i) + rad(36)).toFixed(3)}
+                x2={Math.cos(outerAngle(i)).toFixed(3)}
+                y2={Math.sin(outerAngle(i)).toFixed(3)}
+                gradientUnits="userSpaceOnUse">
+                <stop offset="0%"   stopColor="rgba(0,0,0,0.30)" />
+                <stop offset="100%" stopColor="rgba(0,0,0,0)" />
+              </linearGradient>
+            </g>
+          ))}
+        </defs>
+
+        {/* Ghost star */}
+        <path d={ghostPath} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
+
+        {/* Grid rings */}
+        {[2,4,6,8,10].map(lvl => (
+          <path key={lvl} d={gridStarPath(lvl, rMin, rMax)}
+            fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="1" />
+        ))}
+
+        {/* Colored wedges */}
+        <g clipPath={`url(#${clipId})`}>
+          {SCORE_FACTORS.map((f, i) => (
+            <path key={f.key} d={wedgePath(i, rMax)} fill={f.color} fillOpacity="0.95" stroke="none" />
+          ))}
+          {SCORE_FACTORS.map((_, i) => (
+            <path key={`d${i}`} d={wedgeHalfPath(i, rMax, "left")}  fill={`url(#${darkId(i)})`}  stroke="none" />
+          ))}
+          {SCORE_FACTORS.map((_, i) => (
+            <path key={`l${i}`} d={wedgeHalfPath(i, rMax, "right")} fill={`url(#${lightId(i)})`} stroke="none" />
+          ))}
+          <circle cx="0" cy="0" r={rMax * 1.5} fill={`url(#${shadowId})`} />
+        </g>
+
+        {/* Seams */}
+        {SCORE_FACTORS.map((_, i) => {
+          const [ix, iy] = innerPt(i, rMin);
+          return <line key={`s${i}`} x1="0" y1="0" x2={ix.toFixed(2)} y2={iy.toFixed(2)}
+            stroke="rgba(0,0,0,0.5)" strokeWidth="1.5" />;
+        })}
+
+        {/* Outline */}
+        <path d={starPath} fill="none" stroke="rgba(0,0,0,0.55)" strokeWidth="3" />
+        <path d={starPath} fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="1" />
+
+        {/* Draggable tip handles */}
+        {SCORE_FACTORS.map((f, i) => {
+          const [px, py] = outerPt(i, scoreMap[f.key], rMin, rMax);
+          return (
+            <circle key={f.key}
+              cx={px.toFixed(2)} cy={py.toFixed(2)} r={8}
+              fill={f.color} stroke="rgba(255,255,255,0.8)" strokeWidth="2"
+              style={{ cursor: "grab" }}
+              onPointerDown={onPointerDown(i)}
+            />
+          );
+        })}
+
+        {/* Labels fixed at baseRMax */}
+        {SCORE_FACTORS.map((f, i) => {
+          const a      = outerAngle(i);
+          const r      = baseRMax + size * 0.10;
+          const lx     = r * Math.cos(a);
+          const ly     = r * Math.sin(a);
+          const cos    = Math.cos(a);
+          const sin    = Math.sin(a);
+          const anchor = cos > 0.25 ? "start" : cos < -0.25 ? "end" : "middle";
+          const fs     = Math.max(9, size * 0.044);
+          const both   = true;
+          const nameY  = both ? (sin < -0.1 ? ly - fs * 0.7 : ly + fs * 0.7) : ly;
+          const scoreY = both ? (sin < -0.1 ? ly + fs * 0.7 : nameY + fs * 1.3) : ly;
+          return (
+            <g key={f.key}>
+              <text x={lx.toFixed(1)} y={nameY.toFixed(1)}
+                textAnchor={anchor} dominantBaseline="middle"
+                fill="rgba(255,255,255,0.85)" fontSize={fs} fontWeight="600" fontFamily="sans-serif">
+                {f.label}
+              </text>
+              <text x={lx.toFixed(1)} y={scoreY.toFixed(1)}
+                textAnchor={anchor} dominantBaseline="middle"
+                fill={f.color} fontSize={fs} fontWeight="700" fontFamily="sans-serif">
+                {scoreMap[f.key].toFixed(1)}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+
+      {/* Center total */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <div style={{
+          fontSize: size * 0.12, fontWeight: 700, color: "#ffffff", lineHeight: 1.1,
+          textShadow: "0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,1), 0 0 20px rgba(0,0,0,1)",
+        }}>
+          {totalScore.toFixed(1)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Main page
+// ---------------------------------------------------------------------------
 
 export function CreateReviewPage() {
   const { gameId } = useParams<{ gameId: string }>();
   const navigate   = useNavigate();
   const { user }   = useAuth();
 
-  const [game,         setGame]         = useState<Game | null>(null);
-  const [existingId,   setExistingId]   = useState<string | null>(null);
-  const [loading,      setLoading]      = useState(true);
-  const [posting,      setPosting]      = useState(false);
-  const [error,        setError]        = useState("");
+  const [game,       setGame]       = useState<Game | null>(null);
+  const [existingId, setExistingId] = useState<string | null>(null);
+  const [loading,    setLoading]    = useState(true);
+  const [posting,    setPosting]    = useState(false);
+  const [error,      setError]      = useState("");
 
   const [scores, setScores] = useState<ReviewScores>({
     gameplay: 5, content: 5, narrative: 5, aesthetics: 5, polish: 5,
@@ -51,20 +313,13 @@ export function CreateReviewPage() {
 
   useEffect(() => {
     if (!gameId || !user) return;
-
     Promise.all([
       getGame(gameId),
       getGameReviews(gameId) as Promise<any>,
     ]).then(([g, r]) => {
       setGame(g);
-
-      // Check if this user already has a review for this game
-      const existing = (r.results ?? []).find(
-        (rev: any) => rev.username === user.username
-      );
-
+      const existing = (r.results ?? []).find((rev: any) => rev.username === user.username);
       if (existing) {
-        // Pre-fill the form with existing review data
         setExistingId(existing.id);
         setTitle(existing.title ?? "");
         setSummary(existing.body ?? "");
@@ -94,7 +349,7 @@ export function CreateReviewPage() {
   );
 
   const handleScoreChange = (key: keyof ReviewScores, value: number) => {
-    setScores(prev => ({ ...prev, [key]: Math.min(10, Math.max(0, Math.round(value))) }));
+    setScores(prev => ({ ...prev, [key]: Math.min(10, Math.max(0, Math.round(value * 2) / 2)) }));
   };
 
   const handlePost = async () => {
@@ -103,7 +358,6 @@ export function CreateReviewPage() {
     if (!summary.trim()) { setError("Please write an overall review before posting."); return; }
     setError("");
     setPosting(true);
-
     const payload = {
       ...scores,
       title:            title.trim(),
@@ -115,13 +369,9 @@ export function CreateReviewPage() {
       pol_body:         categoryText.polish,
       containsSpoilers: spoilers,
     };
-
     try {
-      if (isEditing) {
-        await updateReview(existingId!, payload);
-      } else {
-        await createReview(gameId, payload);
-      }
+      if (isEditing) await updateReview(existingId!, payload);
+      else           await createReview(gameId, payload);
       navigate(`/game/${gameId}`);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to save review.");
@@ -139,88 +389,101 @@ export function CreateReviewPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
+      {/* Header */}
       <div className="mb-8">
-        <h1 className="text-4xl font-bold text-white mb-2">
+        <h1 className="text-4xl font-bold text-white mb-4">
           {isEditing ? "Edit Your Review" : "Write a Review"}
         </h1>
         {game && (
           <div className="flex items-center gap-4">
-            <div className="w-16 h-24 rounded-lg overflow-hidden border border-white/15">
+            <div className="w-16 h-24 rounded-lg overflow-hidden border border-white/15 flex-shrink-0">
               <ImageWithFallback src={game.coverUrl ?? ""} alt={game.name} className="w-full h-full object-cover" />
             </div>
             <div>
               <h2 className="text-2xl font-semibold text-white">{game.name}</h2>
-              <div className="text-white/50">
+              <p className="text-white/50">
                 {isEditing ? "Update your review" : "Share your thoughts with the community"}
-              </div>
+              </p>
             </div>
           </div>
         )}
       </div>
 
       <div className="grid lg:grid-cols-2 gap-8">
+        {/* Left column */}
         <div className="space-y-6">
 
-          {/* Review title */}
           <div className="bg-white/5 border border-white/10 rounded-xl p-6">
             <h3 className="text-xl font-bold text-white mb-4">Review Title</h3>
-            <input
-              type="text"
-              value={title}
-              onChange={e => setTitle(e.target.value)}
-              placeholder="Summarise your experience in one line"
-              maxLength={200}
-              className="w-full bg-white/5 border border-white/15 rounded-lg px-4 py-3 text-white placeholder:text-white/25 focus:outline-none focus:border-white/40 transition-colors"
-            />
+            <input type="text" value={title} onChange={e => setTitle(e.target.value)}
+              placeholder="Summarise your experience in one line" maxLength={200}
+              className="w-full bg-white/5 border border-white/15 rounded-lg px-4 py-3 text-white placeholder:text-white/25 focus:outline-none focus:border-white/40 transition-colors" />
           </div>
 
-          {/* Score sliders */}
           <div className="bg-white/5 border border-white/10 rounded-xl p-6">
             <h3 className="text-xl font-bold text-white mb-6">Rate the Game</h3>
-            {CATEGORIES.map(cat => (
-              <div key={cat.key} className="mb-6 last:mb-0">
-                <div className="flex items-start justify-between gap-4 mb-3">
-                  <div className="flex-1 min-w-0">
-                    <label className="text-white/80 font-semibold">{cat.label}</label>
-                    <p className="text-sm text-white/40">{cat.description}</p>
-                  </div>
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    <button type="button" onClick={() => handleScoreChange(cat.key, scores[cat.key] - 1)}
-                      className="w-8 h-8 rounded-lg bg-white/8 border border-white/15 text-white/60 hover:text-white hover:border-white/30 transition-colors flex items-center justify-center text-lg select-none">−</button>
-                    <input
-                      type="number" min={0} max={10} value={scores[cat.key]}
-                      onChange={e => { const v = parseInt(e.target.value, 10); if (!isNaN(v)) handleScoreChange(cat.key, v); }}
-                      className="w-12 h-8 text-center bg-white/5 border border-white/15 rounded-lg text-white font-bold focus:outline-none focus:border-white/40 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            <div className="space-y-8">
+              {SCORE_FACTORS.map(cat => {
+                const val = scores[cat.key];
+                const pct = (val / 10) * 100;
+                return (
+                  <div key={cat.key}>
+                    <div className="flex items-start justify-between gap-4 mb-2">
+                      <div className="flex-1 min-w-0">
+                        <label className="font-semibold" style={{ color: cat.color }}>{cat.label}</label>
+                        <p className="text-xs text-white/35 mt-0.5">{cat.description}</p>
+                      </div>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <button type="button" onClick={() => handleScoreChange(cat.key, val - 0.5)}
+                          className="w-8 h-8 rounded-lg bg-white/8 border border-white/15 text-white/60 hover:text-white hover:border-white/30 transition-colors flex items-center justify-center text-lg select-none">−</button>
+                        <input type="number" min={0} max={10} step={0.5} value={val}
+                          onChange={e => { const v = parseFloat(e.target.value); if (!isNaN(v)) handleScoreChange(cat.key, v); }}
+                          className="w-14 h-8 text-center bg-white/5 border border-white/15 rounded-lg font-bold focus:outline-none focus:border-white/40 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          style={{ color: cat.color }} />
+                        <button type="button" onClick={() => handleScoreChange(cat.key, val + 0.5)}
+                          className="w-8 h-8 rounded-lg bg-white/8 border border-white/15 text-white/60 hover:text-white hover:border-white/30 transition-colors flex items-center justify-center text-lg select-none">+</button>
+                      </div>
+                    </div>
+                    {/* Bar with ticks */}
+                    <div style={{ position: "relative", height: 6, borderRadius: 99, background: "rgba(255,255,255,0.07)", overflow: "hidden", marginBottom: 10 }}>
+                      <div style={{ height: "100%", width: `${pct}%`, background: cat.color, opacity: 0.85, transition: "width 0.1s ease" }} />
+                      {Array.from({ length: 9 }).map((_, t) => {
+                        const tp = (t + 1) * 10;
+                        return <div key={t} style={{ position: "absolute", top: 0, bottom: 0, left: `${tp}%`, width: 1.5,
+                          background: tp <= pct ? "rgba(0,0,0,0.35)" : "rgba(0,0,0,0.5)", transform: "translateX(-50%)" }} />;
+                      })}
+                    </div>
+                    {/* Auto-expanding textarea */}
+                    <textarea
+                      placeholder={`What did you think about the ${cat.label.toLowerCase()}?`}
+                      value={categoryText[cat.key]}
+                      onChange={e => {
+                        e.target.style.height = "auto";
+                        e.target.style.height = e.target.scrollHeight + "px";
+                        setCategoryText(prev => ({ ...prev, [cat.key]: e.target.value }));
+                      }}
+                      className="w-full bg-white/5 border border-white/15 rounded-lg px-4 py-3 text-white placeholder:text-white/25 focus:outline-none focus:border-white/40 transition-colors resize-y text-sm"
+                      rows={4}
+                      style={{ minHeight: "120px" }}
                     />
-                    <button type="button" onClick={() => handleScoreChange(cat.key, scores[cat.key] + 1)}
-                      className="w-8 h-8 rounded-lg bg-white/8 border border-white/15 text-white/60 hover:text-white hover:border-white/30 transition-colors flex items-center justify-center text-lg select-none">+</button>
                   </div>
-                </div>
-                <input
-                  type="range" min="0" max="10" step="1" value={scores[cat.key]}
-                  onChange={e => handleScoreChange(cat.key, parseInt(e.target.value, 10))}
-                  className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer slider-mono mb-3"
-                />
-                <textarea
-                  placeholder={`What did you think about the ${cat.label.toLowerCase()}?`}
-                  value={categoryText[cat.key]}
-                  onChange={e => setCategoryText(prev => ({ ...prev, [cat.key]: e.target.value }))}
-                  className="w-full bg-white/5 border border-white/15 rounded-lg px-4 py-3 text-white placeholder:text-white/25 focus:outline-none focus:border-white/40 transition-colors resize-none"
-                  rows={3}
-                />
-              </div>
-            ))}
+                );
+              })}
+            </div>
           </div>
 
-          {/* Overall review */}
           <div className="bg-white/5 border border-white/10 rounded-xl p-6">
             <h3 className="text-xl font-bold text-white mb-4">Overall Review</h3>
             <textarea
               placeholder="Write your overall thoughts about the game"
               value={summary}
-              onChange={e => setSummary(e.target.value)}
-              rows={6}
+              onChange={e => {
+                e.target.style.height = "auto";
+                e.target.style.height = e.target.scrollHeight + "px";
+                setSummary(e.target.value);
+              }}
               className="w-full bg-white/5 border border-white/15 rounded-lg px-4 py-3 text-white placeholder:text-white/25 focus:outline-none focus:border-white/40 transition-colors resize-none"
+              style={{ minHeight: "220px" }}
             />
             <label className="flex items-center gap-3 mt-3 cursor-pointer">
               <input type="checkbox" checked={spoilers} onChange={e => setSpoilers(e.target.checked)} className="w-4 h-4 accent-white" />
@@ -233,40 +496,36 @@ export function CreateReviewPage() {
           )}
 
           <div className="flex gap-4">
-            <button
-              onClick={() => navigate(`/game/${gameId}`)}
-              className="flex-1 px-6 py-4 bg-white/5 border border-white/15 text-white/70 font-bold text-lg rounded-lg hover:border-white/30 transition-all"
-            >
+            <button onClick={() => navigate(`/game/${gameId}`)}
+              className="flex-1 px-6 py-4 bg-white/5 border border-white/15 text-white/70 font-bold text-lg rounded-lg hover:border-white/30 transition-all">
               Cancel
             </button>
-            <button
-              onClick={handlePost}
-              disabled={posting}
-              className="flex-1 px-6 py-4 bg-white text-zinc-900 font-bold text-lg rounded-lg hover:shadow-lg hover:shadow-white/10 transition-all disabled:opacity-60"
-            >
+            <button onClick={handlePost} disabled={posting}
+              className="flex-1 px-6 py-4 bg-white text-zinc-900 font-bold text-lg rounded-lg hover:shadow-lg hover:shadow-white/10 transition-all disabled:opacity-60">
               {posting ? "Saving…" : isEditing ? "Save Changes" : "Post Review"}
             </button>
           </div>
         </div>
 
-        {/* Sticky star diagram */}
+        {/* Right column — interactive star */}
         <div className="lg:sticky lg:top-24 h-fit">
           <div className="bg-white/5 border border-white/10 rounded-xl p-6">
-            <h3 className="text-xl font-bold text-white mb-4">Your Rating</h3>
-            <div className="text-center mb-6">
-              <div className={`text-6xl font-bold ${scoreStyle(totalScore).text} ${scoreStyle(totalScore).bg} px-6 py-4 rounded-lg inline-block`}>
-                {totalScore.toFixed(1)}
-              </div>
-              <div className="text-white/50">Overall Score</div>
+            <h3 className="text-xl font-bold text-white mb-1">Your Rating</h3>
+            <p className="text-white/35 text-xs mb-6">Drag the star points or use the sliders to adjust scores</p>
+            <div className="flex justify-center">
+              <InteractiveStar scores={scores} onScoreChange={handleScoreChange} size={408} />
             </div>
-            <div className="flex justify-center mb-6">
-              <div className="w-full max-w-[min(400px,100%)] aspect-square">
-                <InteractiveStarDiagram scores={scores} onScoreChange={handleScoreChange} size={400} />
+            <div className="space-y-2 mt-6">
+              {SCORE_FACTORS.map(f => (
+                <div key={f.key} className="flex items-center justify-between text-sm">
+                  <span style={{ color: f.color, fontWeight: 600 }}>{f.label}</span>
+                  <span style={{ color: f.color, fontWeight: 700 }}>{scores[f.key].toFixed(1)}</span>
+                </div>
+              ))}
+              <div className="border-t border-white/10 pt-2 flex items-center justify-between">
+                <span className="text-white/50 font-semibold text-sm">Average</span>
+                <span className="text-white font-bold text-base">{totalScore.toFixed(1)}</span>
               </div>
-            </div>
-            <div className="text-sm text-white/50 text-center bg-white/5 rounded-lg p-3 border border-white/10">
-              <span className="block mb-1">Interactive Controls</span>
-              <span className="text-xs">Drag star points, use sliders, or type a score (0–10)</span>
             </div>
           </div>
         </div>
