@@ -190,69 +190,69 @@ export function ProfilePage() {
                 </select>
               </div>
               <div className="space-y-4">
-              {(() => {
-                const sorted = [...reviews].sort((a, b) => {
-                  const getOverall = (r: any) => (r.gameplay + r.content + r.narrative + r.aesthetics + r.polish) / 5;
-                  
-                  switch (sortBy) {
-                    case "newest":
-                      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-                    case "oldest":
-                      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-                    case "highestOverall":
-                      return getOverall(b) - getOverall(a);
-                    case "lowestOverall":
-                      return getOverall(a) - getOverall(b);
-                    case "highestGameplay":
-                      return (b.gameplay ?? 0) - (a.gameplay ?? 0);
-                    case "highestContent":
-                      return (b.content ?? 0) - (a.content ?? 0);
-                    case "highestNarrative":
-                      return (b.narrative ?? 0) - (a.narrative ?? 0);
-                    case "highestAesthetics":
-                      return (b.aesthetics ?? 0) - (a.aesthetics ?? 0);
-                    case "highestPolish":
-                      return (b.polish ?? 0) - (a.polish ?? 0);
-                    default:
-                      return 0;
-                  }
-                });
-                return sorted.map((review, i) => (
-                <ReviewCard
-                  key={review.id ?? i}
-                  id={review.id}
-                  reviewer={{
-                    username: profile.username,
-                    avatar:   avatarSrc,
-                  }}
-                  scores={{
-                    gameplay:   review.gameplay   ?? 0,
-                    content:    review.content    ?? 0,
-                    narrative:  review.narrative  ?? 0,
-                    aesthetics: review.aesthetics ?? 0,
-                    polish:     review.polish     ?? 0,
-                  }}
-                  categoryText={{
-                    gameplay:   review.gp_body,
-                    content:    review.con_body,
-                    narrative:  review.ntv_body,
-                    aesthetics: review.aes_body,
-                    polish:     review.pol_body,
-                  }}
-                  title={review.title}
-                  review={review.body ?? ""}
-                  likes={review.likes ?? 0}
-                  dislikes={0}
-                  comments={review.commentsCount ?? 0}
-                  createdAt={review.createdAt}
-                  isOwnReview={isOwnProfile}
-                  showGame={true}
-                  gameId={review.gameId}
-                  gameName={review.gameName}
-                  gameCoverUrl={review.gameCoverUrl}
-                />
-              ));
-              })()}
+                {(() => {
+                  const sorted = [...reviews].sort((a, b) => {
+                    const getOverall = (r: any) => (r.gameplay + r.content + r.narrative + r.aesthetics + r.polish) / 5;
+                    
+                    switch (sortBy) {
+                      case "newest":
+                        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+                      case "oldest":
+                        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+                      case "highestOverall":
+                        return getOverall(b) - getOverall(a);
+                      case "lowestOverall":
+                        return getOverall(a) - getOverall(b);
+                      case "highestGameplay":
+                        return (b.gameplay ?? 0) - (a.gameplay ?? 0);
+                      case "highestContent":
+                        return (b.content ?? 0) - (a.content ?? 0);
+                      case "highestNarrative":
+                        return (b.narrative ?? 0) - (a.narrative ?? 0);
+                      case "highestAesthetics":
+                        return (b.aesthetics ?? 0) - (a.aesthetics ?? 0);
+                      case "highestPolish":
+                        return (b.polish ?? 0) - (a.polish ?? 0);
+                      default:
+                        return 0;
+                    }
+                  });
+                  return sorted.map((review, i) => (
+                    <ReviewCard
+                      key={review.id ?? i}
+                      id={review.id}
+                      reviewer={{
+                        username: profile.username,
+                        avatar:   avatarSrc,
+                      }}
+                      scores={{
+                        gameplay:   review.gameplay   ?? 0,
+                        content:    review.content    ?? 0,
+                        narrative:  review.narrative  ?? 0,
+                        aesthetics: review.aesthetics ?? 0,
+                        polish:     review.polish     ?? 0,
+                      }}
+                      categoryText={{
+                        gameplay:   review.gp_body,
+                        content:    review.con_body,
+                        narrative:  review.ntv_body,
+                        aesthetics: review.aes_body,
+                        polish:     review.pol_body,
+                      }}
+                      title={review.title}
+                      review={review.body ?? ""}
+                      likes={review.likes ?? 0}
+                      dislikes={0}
+                      comments={review.commentsCount ?? 0}
+                      createdAt={review.createdAt}
+                      isOwnReview={isOwnProfile}
+                      showGame={true}
+                      gameId={review.gameId}
+                      gameName={review.gameName}
+                      gameCoverUrl={review.gameCoverUrl}
+                    />
+                  ));
+                })()}
               </div>
             </>
       )}

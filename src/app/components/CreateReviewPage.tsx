@@ -495,7 +495,7 @@ export function CreateReviewPage() {
             <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-2">{error}</p>
           )}
 
-          <div className="flex gap-4">
+          <div className="hidden lg:flex gap-4">
             <button onClick={() => navigate(`/game/${gameId}`)}
               className="flex-1 px-6 py-4 bg-white/5 border border-white/15 text-white/70 font-bold text-lg rounded-lg hover:border-white/30 transition-all">
               Cancel
@@ -529,6 +529,18 @@ export function CreateReviewPage() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Mobile buttons — bottom of page */}
+      <div className="flex lg:hidden gap-4 mt-8">
+        <button onClick={() => navigate(`/game/${gameId}`)}
+          className="flex-1 px-6 py-4 bg-white/5 border border-white/15 text-white/70 font-bold text-lg rounded-lg hover:border-white/30 transition-all">
+          Cancel
+        </button>
+        <button onClick={handlePost} disabled={posting}
+          className="flex-1 px-6 py-4 bg-white text-zinc-900 font-bold text-lg rounded-lg hover:shadow-lg hover:shadow-white/10 transition-all disabled:opacity-60">
+          {posting ? "Saving…" : isEditing ? "Save Changes" : "Post Review"}
+        </button>
       </div>
     </div>
   );
