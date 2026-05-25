@@ -77,7 +77,7 @@ export function GameCard({ id, title, coverArt, platforms, developer, year, genr
 
             <div className={`absolute inset-0 transition-opacity duration-200 bg-gradient-to-t from-black/80 via-black/20 to-transparent ${hovered ? "opacity-60" : "opacity-100"}`} />
 
-            <div className={`absolute top-3 right-3 px-3 py-1 ${scoreColor.bg} rounded-full text-white font-bold text-sm shadow-lg transition-opacity duration-200 ${hovered ? "opacity-0" : "opacity-100"}`}>
+            <div className={`absolute top-3 right-3 px-3 py-1 ${scoreColor.bg} rounded-full text-white font-bold text-sm shadow-lg score-badge transition-opacity duration-200 ${hovered ? "opacity-0" : "opacity-100"}`}>
               {displayScore.toFixed(1)}
             </div>
 
@@ -90,14 +90,14 @@ export function GameCard({ id, title, coverArt, platforms, developer, year, genr
 
       {showDiagram && createPortal(
         <div className="fixed z-[9999] pointer-events-none animate-in fade-in duration-150" style={popoverStyle}>
-          <div className="w-full bg-[#0f0f0f]/97 backdrop-blur-sm border border-white/12 rounded-2xl shadow-2xl shadow-black/80 overflow-hidden">
+          <div className="w-full bg-[#0f0f0f]/97 backdrop-blur-sm border border-white/12 rounded-2xl shadow-2xl shadow-black/80 overflow-hidden game-card-popover">
 
             {/* Header */}
             <div className="px-5 pt-5 pb-4 border-b border-white/8">
               <div className="flex items-start justify-between gap-3">
                 <h3 className="text-white font-bold text-lg leading-tight">{title}</h3>
                 <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
-                  <div className={`px-3 py-1 ${scoreColor.bg} rounded-full text-white font-bold text-sm shadow-lg`}>
+                  <div className={`px-3 py-1 ${scoreColor.bg} rounded-full text-white font-bold text-sm shadow-lg score-badge`}>
                     {displayScore.toFixed(1)}
                   </div>
                   <span className="text-xs text-white/30">{ratingLabel}</span>

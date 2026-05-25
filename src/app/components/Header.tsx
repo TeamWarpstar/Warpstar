@@ -397,7 +397,7 @@ export function Header() {
               }
             </Link>
           )}
-          <button onClick={() => setShowMobileMenu(v => !v)} className="text-white/70 hover:text-white transition-colors p-1" aria-label="Toggle menu">
+          <button onClick={() => setShowMobileMenu(v => !v)} className="mobile-menu-button text-white/70 hover:text-white transition-colors p-1" aria-label="Toggle menu">
             {showMobileMenu ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
         </div>
@@ -405,7 +405,7 @@ export function Header() {
 
       {/* Mobile drawer */}
       {showMobileMenu && (
-        <div className="md:hidden border-t border-white/10 bg-[#0a0a0a]/95 backdrop-blur-xl px-4 py-4 space-y-4">
+        <div className="md:hidden mobile-drawer border-t border-white/10 bg-[#0a0a0a]/95 backdrop-blur-xl px-4 py-4 space-y-4">
           <SearchBox onNavigate={closeMobile} />
           <nav className="flex flex-col gap-1">
             <Link to="/" onClick={closeMobile} className="px-4 py-3 text-white/70 hover:text-white hover:bg-white/5 rounded-xl transition-colors">Home</Link>

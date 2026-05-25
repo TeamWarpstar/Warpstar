@@ -202,7 +202,7 @@ export function ReviewCard({
                       );
                     })}
                   </div>
-                  {blurb && <p style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", lineHeight: 1.55 }}>{blurb}</p>}
+                  {blurb && <p className="text-white/45" style={{ fontSize: 13, lineHeight: 1.55 }}>{blurb}</p>}
                 </div>
               );
             })}
@@ -213,7 +213,7 @@ export function ReviewCard({
         </div>
 
         {review && (
-          <p className="mb-4 text-sm leading-relaxed" style={{ color: "rgba(255,255,255,0.75)" }}>{review}</p>
+          <p className="mb-4 text-sm leading-relaxed text-white/75">{review}</p>
         )}
 
         {/* Footer */}

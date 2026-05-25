@@ -359,7 +359,20 @@ html.light-mode .bg-zinc-700.text-white { color: #ffffff !important; }
 /* --- Game cards: text sits on dark image overlay, keep white --- */
 html.light-mode .game-card .text-white,
 html.light-mode .game-card h3.text-white { color: #ffffff !important; }
+/* --- Score badges: keep white on both themes (sits on colored background) --- */
+html.light-mode .score-badge.text-white { color: #ffffff !important; }
+/* --- Star diagram center total: keep white on both themes --- */
+html.light-mode .star-total { color: #ffffff !important; }
+html.light-mode .game-card-popover .star-total { color: #ffffff !important; }
+/* --- Game card popover: in light mode show white background + dark text ---
+  Keep `.score-badge` white so the total score remains visible on both themes. */
+html.light-mode .game-card-popover { background-color: #ffffff !important; border-color: rgba(0, 0, 0, 0.12) !important; color: #111111 !important; }
+html.light-mode .game-card-popover * { color: #111111 !important; }
+html.light-mode .game-card-popover .score-badge { color: #ffffff !important; }
+/* --- Mobile menu button: light grey background in light mode --- */
+html.light-mode .mobile-menu-button { background-color: #f0f0f0 !important; color: #111111 !important; }
+html.light-mode .mobile-menu-button:hover { background-color: #e0e0e0 !important; color: #111111 !important; }
 
-/* --- Game card popover: dark panel, force all text white --- */
-html.light-mode .game-card-popover,
-html.light-mode .game-card-popover * { color: #ffffff !important; }
+/* --- Mobile drawer: light background with dark text --- */
+html.light-mode .mobile-drawer { background-color: #f5f5f5 !important; border-color: rgba(0, 0, 0, 0.08) !important; }
+html.light-mode .mobile-drawer, html.light-mode .mobile-drawer * { color: #111111 !important; }

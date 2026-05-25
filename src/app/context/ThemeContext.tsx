@@ -21,9 +21,14 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   // Sync class on <html> whenever isDark changes
   useEffect(() => {
     const html = document.documentElement;
+    // Keep both class-based systems in sync:
+    // - add/remove `dark` for Tailwind/custom theming
+    // - add/remove `light-mode` for our legacy light overrides
     if (isDark) {
+      html.classList.add("dark");
       html.classList.remove("light-mode");
     } else {
+      html.classList.remove("dark");
       html.classList.add("light-mode");
     }
   }, [isDark]);

@@ -256,7 +256,7 @@ export function StarPolarDiagram({
       {/* Center total */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
         <div className="text-center">
-          <div style={{
+          <div className="star-total" style={{
             fontSize:   size * 0.12,
             fontWeight: 700,
             color:      "#ffffff",
