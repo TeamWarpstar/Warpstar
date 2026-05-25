@@ -60,6 +60,7 @@ export function ReviewCard({
   showGame = false, gameId, gameName, gameCoverUrl,
 }: ReviewCardProps) {
   const { user } = useAuth();
+  const [isExpanded,      setIsExpanded]      = useState(false);
   const [liked,           setLiked]           = useState(false);
   const [disliked,        setDisliked]         = useState(false);
   const [showComments,    setShowComments]     = useState(false);
@@ -172,75 +173,106 @@ export function ReviewCard({
           </div>
         </div>
 
-        {title && <h4 className="text-white font-bold text-base mb-4">{title}</h4>}
-
-        {/* Score breakdown + star */}
-        <div className="flex flex-col sm:flex-row gap-6 mb-5">
-          <div className="flex-1 space-y-3">
-            {FACTORS.map(f => {
-              const val   = scores[f.key];
-              const pct   = (val / 10) * 100;
-              const blurb = categoryText?.[f.key];
-              return (
-                <div key={f.key}>
-                  <div className="flex items-baseline gap-2 mb-1">
-                    <span style={{ fontSize: 13, fontWeight: 700, color: f.color }}>{f.label}</span>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: f.color, opacity: 0.9 }}>{val.toFixed(1)}</span>
-                    <div className="flex-1 h-px" style={{ background: f.color, opacity: 0.15, marginBottom: 2 }} />
-                  </div>
-                  <div style={{ position: "relative", height: 5, borderRadius: 99, background: "rgba(255,255,255,0.07)", overflow: "hidden", marginBottom: blurb ? 6 : 0 }}>
-                    <div style={{ height: "100%", width: `${pct}%`, background: f.color, opacity: 0.85 }} />
-                    {Array.from({ length: 9 }).map((_, t) => {
-                      const tickPct = (t + 1) * 10;
-                      return (
-                        <div key={t} style={{
-                          position: "absolute", top: 0, bottom: 0,
-                          left: `${tickPct}%`, width: 1.5,
-                          background: tickPct <= pct ? "rgba(0,0,0,0.35)" : "rgba(0,0,0,0.5)",
-                          transform: "translateX(-50%)",
-                        }} />
-                      );
-                    })}
-                  </div>
-                  {blurb && <p className="text-white/45" style={{ fontSize: 13, lineHeight: 1.55 }}>{blurb}</p>}
-                </div>
-              );
-            })}
+        {/* Collapsed view: title and truncated review on left, star on right */}
+        {!isExpanded && (
+          <div className="pr-44 relative">
+            {title && <h4 className="text-white font-bold text-base mb-2">{title}</h4>}
+            <p className="text-white/75 text-sm line-clamp-3">{review}</p>
+            <div className="absolute -top-10 right-1 flex-shrink-0">
+              <StarPolarDiagram scores={scores} size={160} showTotal={true} showLabels={true} showNumbers={true} />
+            </div>
           </div>
-          <div className="flex-shrink-0 flex items-start justify-center pt-1">
-            <StarPolarDiagram scores={scores} size={290} showTotal={true} showLabels={false} showNumbers={false} />
-          </div>
-        </div>
+        )}
 
-        {review && (
+        {/* Expanded view: full breakdown with larger star */}
+        {isExpanded && (
+          <div className="flex flex-col sm:flex-row gap-6 mb-4">
+            <div className="flex-1 space-y-3">
+              {FACTORS.map(f => {
+                const val   = scores[f.key];
+                const pct   = (val / 10) * 100;
+                const blurb = categoryText?.[f.key];
+                return (
+                  <div key={f.key}>
+                    <div className="flex items-baseline gap-2 mb-1">
+                      <span style={{ fontSize: 13, fontWeight: 700, color: f.color }}>{f.label}</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: f.color, opacity: 0.9 }}>{val.toFixed(1)}</span>
+                      <div className="flex-1 h-px" style={{ background: f.color, opacity: 0.15, marginBottom: 2 }} />
+                    </div>
+                    <div style={{ position: "relative", height: 5, borderRadius: 99, background: "rgba(255,255,255,0.07)", overflow: "hidden", marginBottom: blurb ? 6 : 0 }}>
+                      <div style={{ height: "100%", width: `${pct}%`, background: f.color, opacity: 0.85 }} />
+                      {Array.from({ length: 9 }).map((_, t) => {
+                        const tickPct = (t + 1) * 10;
+                        return (
+                          <div key={t} style={{
+                            position: "absolute", top: 0, bottom: 0,
+                            left: `${tickPct}%`, width: 1.5,
+                            background: tickPct <= pct ? "rgba(0,0,0,0.35)" : "rgba(0,0,0,0.5)",
+                            transform: "translateX(-50%)",
+                          }} />
+                        );
+                      })}
+                    </div>
+                    {blurb && <p className="text-white/45" style={{ fontSize: 13, lineHeight: 1.55 }}>{blurb}</p>}
+                  </div>
+                );
+              })}
+            </div>
+            <div className="flex-shrink-0 flex items-start justify-center pt-1">
+              <StarPolarDiagram scores={scores} size={290} showTotal={true} showLabels={false} showNumbers={true} />
+            </div>
+          </div>
+        )}
+
+        {/* Expanded content: review text */}
+        {isExpanded && review && (
           <p className="mb-4 text-sm leading-relaxed text-white/75">{review}</p>
         )}
 
-        {/* Footer */}
-        <div className="flex items-center gap-1 pt-4 border-t border-white/8">
-          <button
-            onClick={() => { setLiked(l => !l); if (disliked) setDisliked(false); }}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${liked ? "bg-white/10 text-white" : "text-white/40 hover:text-white/70 hover:bg-white/5"}`}>
-            <ThumbsUp className="w-3.5 h-3.5" />
-            <span>{liked ? likes + 1 : likes}</span>
-          </button>
-          <button
-            onClick={() => { setDisliked(d => !d); if (liked) setLiked(false); }}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${disliked ? "bg-white/10 text-white" : "text-white/40 hover:text-white/70 hover:bg-white/5"}`}>
-            <ThumbsDown className="w-3.5 h-3.5" />
-            <span>{disliked ? dislikes + 1 : dislikes}</span>
-          </button>
-          <button
-            onClick={handleToggleComments}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${showComments ? "bg-white/10 text-white" : "text-white/40 hover:text-white/70 hover:bg-white/5"}`}>
-            <MessageCircle className="w-3.5 h-3.5" />
-            <span>{localCount}</span>
-            {showComments ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-          </button>
-        </div>
+        {/* Footer with actions — only when expanded */}
+        {isExpanded && (
+          <div className="flex items-center gap-1 pt-4 border-t border-white/8">
+            <button
+              onClick={() => { setLiked(l => !l); if (disliked) setDisliked(false); }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${liked ? "bg-white/10 text-white" : "text-white/40 hover:text-white/70 hover:bg-white/5"}`}>
+              <ThumbsUp className="w-3.5 h-3.5" />
+              <span>{liked ? likes + 1 : likes}</span>
+            </button>
+            <button
+              onClick={() => { setDisliked(d => !d); if (liked) setLiked(false); }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${disliked ? "bg-white/10 text-white" : "text-white/40 hover:text-white/70 hover:bg-white/5"}`}>
+              <ThumbsDown className="w-3.5 h-3.5" />
+              <span>{disliked ? dislikes + 1 : dislikes}</span>
+            </button>
+            <button
+              onClick={handleToggleComments}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${showComments ? "bg-white/10 text-white" : "text-white/40 hover:text-white/70 hover:bg-white/5"}`}>
+              <MessageCircle className="w-3.5 h-3.5" />
+              <span>{localCount}</span>
+              {showComments ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+            </button>
+          </div>
+        )}
+
+        {/* Expand/collapse toggle button */}
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="w-full mt-2 flex items-center justify-center gap-2 py-2 text-white/60 hover:text-white/90 transition-colors text-sm font-medium">
+          {isExpanded ? (
+            <>
+              <ChevronUp className="w-4 h-4" />
+              Show Less
+            </>
+          ) : (
+            <>
+              <ChevronDown className="w-4 h-4" />
+              Show Full Review
+            </>
+          )}
+        </button>
 
         {/* Comments section */}
-        {showComments && (
+        {isExpanded && showComments && (
           <div className="mt-4 pt-4 border-t border-white/8 space-y-3">
             {commentList.length === 0 && commentsLoaded && (
               <p className="text-white/30 text-sm text-center py-2">No comments yet. Be the first!</p>
