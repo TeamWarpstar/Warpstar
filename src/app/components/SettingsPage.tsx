@@ -3,6 +3,8 @@ import { User, Upload, Check, Sun, Moon } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import { updateMe } from "../../api/users";
+import { RecommendationWeightsPanel } from "./RecommendationWeightsPanel";
+import { RecommendationWeights } from "../../api/recommendations";
 
 export function SettingsPage() {
   const { user, refreshUser } = useAuth();
@@ -15,6 +17,10 @@ export function SettingsPage() {
   const [showProfile,      setShowProfile]       = useState(true);
   const [showReviews,      setShowReviews]       = useState(true);
   const [emailNotifications, setEmailNotifications] = useState(false);
+
+  const [savedWeights, setSavedWeights] = useState<Partial<RecommendationWeights>>(
+    (user?.preferences as any)?.weights ?? {}
+  );
 
   const [saving,     setSaving]     = useState(false);
   const [saved,      setSaved]      = useState(false);
@@ -183,6 +189,19 @@ export function SettingsPage() {
               </label>
             ))}
           </div>
+        </section>
+
+        {/* Recommendation Weights */}
+        <section className="bg-white/5 border border-white/10 rounded-xl p-6">
+          <h2 className="text-2xl font-bold text-white mb-2">Recommendation Weights</h2>
+          <p className="text-white/40 text-sm mb-6">
+            Adjust how much each factor influences your game recommendations on the home page.
+            Changes here are saved independently from the rest of your settings.
+          </p>
+          <RecommendationWeightsPanel
+            initialWeights={savedWeights}
+            onSaved={w => setSavedWeights(w)}
+          />
         </section>
 
         {error && <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-2">{error}</p>}
