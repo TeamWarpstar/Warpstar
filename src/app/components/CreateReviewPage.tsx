@@ -413,14 +413,14 @@ export function CreateReviewPage() {
         {/* Left column */}
         <div className="space-y-4 sm:space-y-6">
 
-          <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+          <div className="bg-white/5 border border-white/10 rounded-xl p-4 sm:p-6">
             <h3 className="text-xl font-bold text-white mb-4">Review Title</h3>
             <input type="text" value={title} onChange={e => setTitle(e.target.value)}
               placeholder="Summarise your experience in one line" maxLength={200}
               className="w-full bg-white/5 border border-white/15 rounded-lg px-4 py-3 text-white placeholder:text-white/25 focus:outline-none focus:border-white/40 transition-colors" />
           </div>
 
-          <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+          <div className="bg-white/5 border border-white/10 rounded-xl p-4 sm:p-6">
             <h3 className="text-xl font-bold text-white mb-6">Rate the Game</h3>
             <div className="space-y-8">
               {SCORE_FACTORS.map(cat => {
@@ -472,7 +472,7 @@ export function CreateReviewPage() {
             </div>
           </div>
 
-          <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+          <div className="bg-white/5 border border-white/10 rounded-xl p-4 sm:p-6">
             <h3 className="text-xl font-bold text-white mb-4">Overall Review</h3>
             <textarea
               placeholder="Write your overall thoughts about the game"
@@ -495,21 +495,21 @@ export function CreateReviewPage() {
             <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-2">{error}</p>
           )}
 
-          <div className="flex gap-4">
+          <div className="flex gap-3 sm:gap-4">
             <button onClick={() => navigate(`/game/${gameId}`)}
-              className="flex-1 px-6 py-4 bg-white/5 border border-white/15 text-white/70 font-bold text-lg rounded-lg hover:border-white/30 transition-all">
+              className="flex-1 px-3 sm:px-6 py-3 sm:py-4 bg-white/5 border border-white/15 text-white/70 font-bold text-base sm:text-lg rounded-lg hover:border-white/30 transition-all">
               Cancel
             </button>
             <button onClick={handlePost} disabled={posting}
-              className="flex-1 px-6 py-4 bg-white text-zinc-900 font-bold text-lg rounded-lg hover:shadow-lg hover:shadow-white/10 transition-all disabled:opacity-60">
+              className="flex-1 px-3 sm:px-6 py-3 sm:py-4 bg-white text-zinc-900 font-bold text-base sm:text-lg rounded-lg hover:shadow-lg hover:shadow-white/10 transition-all disabled:opacity-60">
               {posting ? "Saving…" : isEditing ? "Save Changes" : "Post Review"}
             </button>
           </div>
         </div>
 
         {/* Right column — interactive star */}
-        <div className="lg:sticky lg:top-24 h-fit">
-          <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+        <div className="hidden lg:block lg:sticky lg:top-24 h-fit">
+          <div className="bg-white/5 border border-white/10 rounded-xl p-4 sm:p-6">
             <h3 className="text-xl font-bold text-white mb-1">Your Rating</h3>
             <p className="text-white/35 text-xs mb-6">Drag the star points or use the sliders to adjust scores</p>
             <div className="flex justify-center">
