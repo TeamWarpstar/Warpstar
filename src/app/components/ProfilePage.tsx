@@ -223,6 +223,7 @@ export function ProfilePage() {
                       id={review.id}
                       reviewer={{
                         username: profile.username,
+                        displayName: displayName,
                         avatar:   avatarSrc,
                       }}
                       scores={{

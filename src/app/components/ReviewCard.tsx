@@ -28,7 +28,7 @@ function timeAgo(iso: string): string {
 
 interface ReviewCardProps {
   id?: string;
-  reviewer: { username: string; avatar?: string };
+  reviewer: { username: string; displayName?: string; avatar?: string };
   scores: {
     gameplay: number; content: number; narrative: number;
     aesthetics: number; polish: number;
@@ -155,7 +155,7 @@ export function ReviewCard({
             </div>
             <div>
               <span className="font-semibold text-white group-hover:opacity-70 transition-opacity block">
-                @{reviewer.username}
+                {reviewer.displayName || reviewer.username}
               </span>
               {createdAt && (
                 <span className="text-xs text-white/30">{timeAgo(createdAt)}</span>

@@ -6,7 +6,7 @@ import { useState, useEffect } from "react";
 import { ImageWithFallback } from "./ImageWithFallback";
 import { Edit3, Heart, Loader2, Tag, Monitor, Building2 } from "lucide-react";
 import { getGame, getGameReviews, getSimilarGames, Game } from "../../api/games";
-import { toggleFavoriteGame } from "../../api/users";
+import { toggleFavoriteGame, getUserByUsername } from "../../api/users";
 import { deleteReview } from "../../api/reviews";
 import { useAuth } from "../context/AuthContext";
 
@@ -18,10 +18,11 @@ const SCORE_FACTORS = [
   { key: "narrative" as const, label: "Narrative", color: "#f55f5f" },
 ];
 
-function mapReview(r: any, onDelete?: (id: string) => void, isOwn?: boolean) {
+function mapReview(r: any, onDelete?: (id: string) => void, isOwn?: boolean, displayName?: string) {
   return {
     reviewer: {
       username: r.username ?? r.userId ?? "unknown",
+      displayName: displayName ?? (r.username ?? r.userId ?? "unknown"),
       avatar: r.avatar ?? undefined,
     },
     scores: {
@@ -62,6 +63,7 @@ export function GamePage() {
   const [sortBy, setSortBy] = useState<"top" | "hot">("top");
   const [favoriting, setFavoriting] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [userDisplayNames, setUserDisplayNames] = useState<Record<string, string>>({});
 
   const loadReviews = async () => {
     if (!gameId) return;
@@ -91,6 +93,28 @@ export function GamePage() {
       setSimilar(s);
     });
   }, [gameId]);
+
+  useEffect(() => {
+    const fetchDisplayNames = async () => {
+      const uniqueUsernames = [...new Set(reviews.map((r: any) => r.username).filter(Boolean))];
+      const displayNames: Record<string, string> = {};
+
+      for (const username of uniqueUsernames) {
+        try {
+          const userData = await getUserByUsername(username);
+          displayNames[username] = (userData.preferences?.displayName as string) ?? username;
+        } catch {
+          displayNames[username] = username;
+        }
+      }
+
+      setUserDisplayNames(displayNames);
+    };
+
+    if (reviews.length > 0) {
+      fetchDisplayNames();
+    }
+  }, [reviews]);
 
   const myReview = user
     ? reviews.find(r => r.username === user.username)
@@ -733,7 +757,8 @@ export function GamePage() {
                     {...mapReview(
                       review,
                       handleDeleteReview,
-                      user?.username === review.username
+                      user?.username === review.username,
+                      userDisplayNames[review.username]
                     )}
                   />
                 ))
