@@ -116,7 +116,7 @@ function InteractiveStar({
   const cy   = size / 2;
   const totalScore = (scores.gameplay + scores.content + scores.narrative + scores.aesthetics + scores.polish) / 5;
   const baseRMax   = size / 2 - size * 0.20;
-  const rMax       = baseRMax; // no score scaling on create page
+  const rMax       = baseRMax;
   const rMin       = rMax * 0.5;
   const scoreMap   = scores as unknown as Record<string, number>;
   const starPath   = smoothStarPath(scoreMap, rMin, rMax);
@@ -127,16 +127,13 @@ function InteractiveStar({
   const lightId  = (i: number) => `ic-light-${uid}-${i}`;
   const darkId   = (i: number) => `ic-dark-${uid}-${i}`;
 
-  // Convert pointer event → SVG local coords → score for arm i
   const pointerToScore = useCallback((e: PointerEvent | React.PointerEvent, armIdx: number): number => {
     if (!svgRef.current) return 5;
     const rect = svgRef.current.getBoundingClientRect();
     const px = e.clientX - rect.left - cx;
     const py = e.clientY - rect.top  - cy;
-    // Project pointer onto the arm axis
     const a   = outerAngle(armIdx);
     const dot = px * Math.cos(a) + py * Math.sin(a);
-    // dot = rMin + (score/10)*(baseRMax-rMin)  → solve for score
     const raw = ((dot - baseRMax * 0.5) / (baseRMax - baseRMax * 0.5)) * 10;
     return Math.min(10, Math.max(0, Math.round(raw * 2) / 2));
   }, [cx, cy, baseRMax]);
@@ -194,16 +191,13 @@ function InteractiveStar({
           ))}
         </defs>
 
-        {/* Ghost star */}
         <path d={ghostPath} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
 
-        {/* Grid rings */}
         {[2,4,6,8,10].map(lvl => (
           <path key={lvl} d={gridStarPath(lvl, rMin, rMax)}
             fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="1" />
         ))}
 
-        {/* Colored wedges */}
         <g clipPath={`url(#${clipId})`}>
           {SCORE_FACTORS.map((f, i) => (
             <path key={f.key} d={wedgePath(i, rMax)} fill={f.color} fillOpacity="0.95" stroke="none" />
@@ -217,18 +211,15 @@ function InteractiveStar({
           <circle cx="0" cy="0" r={rMax * 1.5} fill={`url(#${shadowId})`} />
         </g>
 
-        {/* Seams */}
         {SCORE_FACTORS.map((_, i) => {
           const [ix, iy] = innerPt(i, rMin);
           return <line key={`s${i}`} x1="0" y1="0" x2={ix.toFixed(2)} y2={iy.toFixed(2)}
             stroke="rgba(0,0,0,0.5)" strokeWidth="1.5" />;
         })}
 
-        {/* Outline */}
         <path d={starPath} fill="none" stroke="rgba(0,0,0,0.55)" strokeWidth="3" />
         <path d={starPath} fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="1" />
 
-        {/* Draggable tip handles */}
         {SCORE_FACTORS.map((f, i) => {
           const [px, py] = outerPt(i, scoreMap[f.key], rMin, rMax);
           return (
@@ -241,7 +232,6 @@ function InteractiveStar({
           );
         })}
 
-        {/* Labels fixed at baseRMax */}
         {SCORE_FACTORS.map((f, i) => {
           const a      = outerAngle(i);
           const r      = baseRMax + size * 0.10;
@@ -271,7 +261,6 @@ function InteractiveStar({
         })}
       </svg>
 
-      {/* Center total */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
         <div style={{
           fontSize: size * 0.12, fontWeight: 700, color: "#ffffff", lineHeight: 1.1,
@@ -420,6 +409,27 @@ export function CreateReviewPage() {
               className="w-full bg-white/5 border border-white/15 rounded-lg px-4 py-3 text-white placeholder:text-white/25 focus:outline-none focus:border-white/40 transition-colors" />
           </div>
 
+          {/* ── Mobile-only interactive star diagram ── */}
+          <div className="lg:hidden bg-white/5 border border-white/10 rounded-xl p-4 sm:p-6">
+            <h3 className="text-xl font-bold text-white mb-1">Your Rating</h3>
+            <p className="text-white/35 text-xs mb-4">Drag the star points to adjust scores</p>
+            <div className="flex justify-center">
+              <InteractiveStar scores={scores} onScoreChange={handleScoreChange} size={300} />
+            </div>
+            <div className="space-y-2 mt-4">
+              {SCORE_FACTORS.map(f => (
+                <div key={f.key} className="flex items-center justify-between text-sm">
+                  <span style={{ color: f.color, fontWeight: 600 }}>{f.label}</span>
+                  <span style={{ color: f.color, fontWeight: 700 }}>{scores[f.key].toFixed(1)}</span>
+                </div>
+              ))}
+              <div className="border-t border-white/10 pt-2 flex items-center justify-between">
+                <span className="text-white/50 font-semibold text-sm">Average</span>
+                <span className="text-white font-bold text-base">{totalScore.toFixed(1)}</span>
+              </div>
+            </div>
+          </div>
+
           <div className="bg-white/5 border border-white/10 rounded-xl p-4 sm:p-6">
             <h3 className="text-xl font-bold text-white mb-6">Rate the Game</h3>
             <div className="space-y-8">
@@ -507,7 +517,7 @@ export function CreateReviewPage() {
           </div>
         </div>
 
-        {/* Right column — interactive star */}
+        {/* Right column — interactive star (desktop only) */}
         <div className="hidden lg:block lg:sticky lg:top-24 h-fit">
           <div className="bg-white/5 border border-white/10 rounded-xl p-4 sm:p-6">
             <h3 className="text-xl font-bold text-white mb-1">Your Rating</h3>
