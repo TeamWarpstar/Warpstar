@@ -402,10 +402,6 @@ export function Header() {
           </button>
         </div>
       </div>
-      {/* Mobile search bar */}
-      <div className="sm:hidden px-4 pb-3">
-        <SearchBox />
-      </div>
       {/* Mobile drawer */}
       {showMobileMenu && (
         <div className="md:hidden mobile-drawer border-t border-white/10 bg-[#0a0a0a]/95 backdrop-blur-xl px-4 py-4 space-y-4">
