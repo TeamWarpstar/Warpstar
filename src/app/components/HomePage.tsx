@@ -90,41 +90,41 @@ export function HomePage() {
   );
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8 space-y-12">
+    <div className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-8 space-y-6 sm:space-y-8 lg:space-y-12">
 
       {/* Recommended */}
       <section>
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-3xl font-bold text-white">
+        <div className="flex items-center justify-between mb-3 sm:mb-6">
+          <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white">
             {user ? "Recommended for You" : "Top Games"}
           </h2>
           <div className="flex gap-2">
             <button
               onClick={() => setRecPage(p => Math.max(0, p - 1))}
               disabled={recPage === 0}
-              className="p-2 bg-white/5 border border-white/10 rounded-lg hover:border-white/25 transition-colors disabled:opacity-40"
+              className="p-2 sm:p-2.5 bg-white/5 border border-white/10 rounded-lg hover:border-white/25 transition-colors disabled:opacity-40"
               aria-label="Previous"
             >
-              <ChevronLeft className="w-5 h-5 text-white/60" />
+              <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 text-white/60" />
             </button>
             <button
               onClick={() => setRecPage(p => Math.min(maxRecPage, p + 1))}
               disabled={recPage >= maxRecPage}
-              className="p-2 bg-white/5 border border-white/10 rounded-lg hover:border-white/25 transition-colors disabled:opacity-40"
+              className="p-2 sm:p-2.5 bg-white/5 border border-white/10 rounded-lg hover:border-white/25 transition-colors disabled:opacity-40"
               aria-label="Next"
             >
-              <ChevronRight className="w-5 h-5 text-white/60" />
+              <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-white/60" />
             </button>
           </div>
         </div>
         {loadingRec ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4 lg:gap-6">
             {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="aspect-[3/4] rounded-xl bg-white/5 border border-white/10 animate-pulse" />
+              <div key={i} className="aspect-[3/4] rounded-lg sm:rounded-xl bg-white/5 border border-white/10 animate-pulse" />
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4 lg:gap-6">
             {recSlice.map(g => <GameCard key={g.id} {...gameToCardProps(g)} />)}
           </div>
         )}
@@ -132,24 +132,24 @@ export function HomePage() {
 
       {/* Top Rated */}
       <section>
-        <h2 className="text-3xl font-bold text-white mb-6">Top Rated</h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
+        <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-3 sm:mb-6">Top Rated</h2>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-4 lg:gap-6">
           {trending.map(g => <GameCard key={g.id} {...gameToCardProps(g)} />)}
         </div>
       </section>
 
       {/* Browse by Genre */}
       <section>
-        <h2 className="text-3xl font-bold text-white mb-6">Browse by Genre</h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-3 sm:mb-6">Browse by Genre</h2>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3 lg:gap-4">
           {genres.map(genre => (
             <Link
               key={genre.id}
               to={`/genre/${genre.name.toLowerCase()}`}
-              className="group relative overflow-hidden rounded-xl p-6 aspect-square flex flex-col items-center justify-center gap-3 bg-white/5 border border-white/10 hover:border-white/25 hover:scale-105 transition-all duration-300"
+              className="group relative overflow-hidden rounded-lg sm:rounded-xl p-3 sm:p-6 aspect-square flex flex-col items-center justify-center gap-2 sm:gap-3 bg-white/5 border border-white/10 hover:border-white/25 hover:scale-105 transition-all duration-300"
             >
               <div className={`absolute inset-0 bg-gradient-to-br ${GENRE_COLORS[genre.name] ?? "from-zinc-700 to-zinc-600"} opacity-20 group-hover:opacity-30 transition-opacity`} />
-              <span className="text-white font-semibold relative z-10">{genre.name}</span>
+              <span className="text-white font-semibold relative z-10 text-xs sm:text-base text-center">{genre.name}</span>
             </Link>
           ))}
         </div>
