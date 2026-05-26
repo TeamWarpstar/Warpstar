@@ -145,7 +145,7 @@ export function HomePage() {
           {genres.map(genre => (
             <Link
               key={genre.id}
-              to={`/genre/${genre.name.toLowerCase()}`}
+              to={`/genre/${encodeURIComponent(genre.name.toLowerCase())}`}
               className="group relative overflow-hidden rounded-lg sm:rounded-xl p-3 sm:p-6 aspect-square flex flex-col items-center justify-center gap-2 sm:gap-3 bg-white/5 border border-white/10 hover:border-white/25 hover:scale-105 transition-all duration-300"
             >
               <div className={`absolute inset-0 bg-gradient-to-br ${GENRE_COLORS[genre.name] ?? "from-zinc-700 to-zinc-600"} opacity-20 group-hover:opacity-30 transition-opacity`} />
