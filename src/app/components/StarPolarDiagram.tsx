@@ -116,7 +116,7 @@ export function StarPolarDiagram({
 
   // rMax is the fixed outer boundary — used for grid, labels, and the ghost outline
   // rMaxScaled is the actual star size, which shrinks with lower scores
-  const rMax       = size / 2 - ((showLabels || showNumbers) ? size * 0.18 : size * 0.04);
+  const rMax       = size / 2 - ((showLabels || showNumbers) ? size * 0.16 : size * 0.04);
   const scoreScale = 0.4 + (totalScore / 10) * 0.6;
   const rMaxScaled = rMax * scoreScale;
   const rMin       = rMaxScaled * 0.5;
@@ -277,10 +277,17 @@ export function StarPolarDiagram({
                 </text>
               )}
               {showNumbers && (
-                <text x={lx.toFixed(1)} y={scoreY.toFixed(1)}
-                  textAnchor={anchor} dominantBaseline="middle"
-                  fill={f.color} fontSize={fs} fontWeight="700" fontFamily="sans-serif">
-                  {score.toFixed(1)}
+                <text
+                  x={lx.toFixed(1)}
+                  y={scoreY.toFixed(1)}
+                  textAnchor={anchor}
+                  dominantBaseline="middle"
+                  fill={f.color}
+                  fontSize={fs}
+                  fontWeight="700"
+                  fontFamily="sans-serif"
+                >
+                  {Number.isInteger(score) ? score : score.toFixed(1)}
                 </text>
               )}
             </g>
@@ -291,14 +298,20 @@ export function StarPolarDiagram({
       {/* Center total */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
         <div className="text-center">
-          <div className="star-total" style={{
-            fontSize:   size * 0.17,
-            fontWeight: 700,
-            color:      "#ffffff",
-            lineHeight: 1.1,
-            textShadow: "0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,1), 0 0 20px rgba(0,0,0,1)",
-          }}>
-            {totalScore.toFixed(1)}
+          <div
+            className="star-total"
+            style={{
+              fontSize: size * 0.17,
+              fontWeight: 700,
+              color: "#ffffff",
+              lineHeight: 1.1,
+              textShadow:
+                "0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,1), 0 0 20px rgba(0,0,0,1)",
+            }}
+          >
+            {Number.isInteger(totalScore)
+              ? totalScore
+              : totalScore.toFixed(1)}
           </div>
         </div>
       </div>

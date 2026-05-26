@@ -24,9 +24,6 @@ export interface Review extends ReviewPayload {
   likes:        number;
   commentsCount:number;
   createdAt:    string;
-  // Game data (may be included by backend)
-  gameName?:    string;
-  gameCoverUrl?: string;
 }
 
 export async function createReview(gameId: string, payload: ReviewPayload): Promise<Review> {
@@ -66,9 +63,7 @@ export async function getUserReviews(
   skip   = 0,
   limit  = 20,
 ): Promise<{ total: number; skip: number; limit: number; results: Review[] }> {
-  return apiFetch<{ total: number; skip: number; limit: number; results: Review[] }>(
-    `/api/users/${userId}/reviews?skip=${skip}&limit=${limit}`
-  );
+  return apiFetch(`/api/reviews/user/${userId}?skip=${skip}&limit=${limit}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -85,9 +80,7 @@ export interface Comment {
 }
 
 export async function getComments(reviewId: string): Promise<{ total: number; results: Comment[] }> {
-  return apiFetch<{ total: number; results: Comment[] }>(
-    `/api/reviews/${reviewId}/comments`
-  );
+  return apiFetch(`/api/reviews/${reviewId}/comments`);
 }
 
 export async function postComment(reviewId: string, content: string): Promise<Comment> {
@@ -99,4 +92,12 @@ export async function postComment(reviewId: string, content: string): Promise<Co
 
 export async function deleteComment(reviewId: string, commentId: string): Promise<void> {
   return apiFetch(`/api/reviews/${reviewId}/comments/${commentId}`, { method: "DELETE" });
+}
+
+export async function toggleDislike(reviewId: string): Promise<{ liked: boolean; disliked: boolean }> {
+  return apiFetch(`/api/reviews/${reviewId}/dislike`, { method: "POST" });
+}
+
+export async function toggleLike(reviewId: string): Promise<{ liked: boolean; disliked: boolean }> {
+  return apiFetch(`/api/reviews/${reviewId}/like`, { method: "POST" });
 }

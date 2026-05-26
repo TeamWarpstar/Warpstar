@@ -16,13 +16,13 @@ function WeightSlider({ label, description, value, color, onChange }: WeightSlid
       <div className="flex items-center justify-between mb-1.5">
         <div>
           <span className="text-sm font-semibold text-white">{label}</span>
-          <span className="text-xs text-white/35 ml-2">{description}</span>
+          <span className="hidden sm:inline text-xs text-white/35 ml-2">{description}</span>
         </div>
         <span className="text-sm font-bold tabular-nums" style={{ color }}>
           {value.toFixed(1)}
         </span>
       </div>
-      <div className="relative flex items-center gap-3">
+      <div className="relative flex items-center gap-2">
         <span className="text-xs text-white/25 w-4 text-right">0</span>
         <input
           type="range"
@@ -61,11 +61,13 @@ const WEIGHT_CONFIG: {
 interface RecommendationWeightsPanelProps {
   initialWeights?: Partial<RecommendationWeights>;
   onSaved?:        (weights: RecommendationWeights) => void;
+  inline?:         boolean; // no save button — just reports changes via onSaved
 }
 
 export function RecommendationWeightsPanel({
   initialWeights,
   onSaved,
+  inline = false,
 }: RecommendationWeightsPanelProps) {
   const [weights, setWeights] = useState<RecommendationWeights>({
     ...DEFAULT_WEIGHTS,
@@ -75,8 +77,10 @@ export function RecommendationWeightsPanel({
   const [saved,   setSaved]   = useState(false);
 
   const set = (key: keyof RecommendationWeights) => (v: number) => {
-    setWeights(w => ({ ...w, [key]: v }));
+    const updated = { ...weights, [key]: v };
+    setWeights(updated);
     setSaved(false);
+    if (inline) onSaved?.(updated);
   };
 
   const handleSave = async () => {
@@ -141,8 +145,8 @@ export function RecommendationWeightsPanel({
         </div>
       </div>
 
-      {/* Actions */}
-      <div className="flex items-center gap-3 pt-2">
+      {/* Actions — hidden in inline mode */}
+      {!inline && <div className="flex items-center gap-3 pt-2">
         <button
           onClick={handleSave}
           disabled={saving}
@@ -158,7 +162,7 @@ export function RecommendationWeightsPanel({
           <RotateCcw className="w-3.5 h-3.5" />
           Reset to Defaults
         </button>
-      </div>
+      </div>}
     </div>
   );
 }

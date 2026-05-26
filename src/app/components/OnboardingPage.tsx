@@ -3,7 +3,10 @@ import { useNavigate } from "react-router";
 import { useAuth } from "../context/AuthContext";
 import { updateMe } from "../../api/users";
 import { getGenres, getPlatforms, Genre } from "../../api/games";
-import { Check, ChevronRight, ChevronLeft, User, Image, Gamepad2, Monitor, Upload, Loader2 } from "lucide-react";
+import { Check, ChevronRight, ChevronLeft, User, Image, Gamepad2, Monitor, Upload, Loader2, SlidersHorizontal } from "lucide-react";
+import { RecommendationWeightsPanel } from "./RecommendationWeightsPanel";
+import { ImageRepositioner } from "./ImageRepositioner";
+import { RecommendationWeights, DEFAULT_WEIGHTS, saveWeights } from "../../api/recommendations";
 import warpstarWhiteLogo from "../../imports/warpstarwhite.png";
 
 // ---------------------------------------------------------------------------
@@ -11,7 +14,7 @@ import warpstarWhiteLogo from "../../imports/warpstarwhite.png";
 // Names must match exactly what's stored in the platforms collection.
 // ---------------------------------------------------------------------------
 
-const PLATFORM_PRESETS = [
+export const PLATFORM_PRESETS = [
   // PC
   { name: "PC (Microsoft Windows)", label: "PC / Windows", icon: "", group: "PC" },
   { name: "Mac",                    label: "Mac",           icon: "", group: "PC" },
@@ -35,7 +38,7 @@ const PLATFORM_PRESETS = [
   { name: "Wii U",                  label: "Wii U",         icon: "", group: "Nintendo" },
 ];
 
-const PLATFORM_GROUPS = ["PC", "PlayStation", "Xbox", "Nintendo", "Mobile"];
+export const PLATFORM_GROUPS = ["PC", "PlayStation", "Xbox", "Nintendo", "Mobile"];
 
 // ---------------------------------------------------------------------------
 // Pixel avatars (unchanged from designer)
@@ -83,6 +86,7 @@ const STEPS = [
   { id: 2, label: "Avatar",    icon: Image    },
   { id: 3, label: "Platforms", icon: Monitor  },
   { id: 4, label: "Genres",    icon: Gamepad2 },
+  { id: 5, label: "Weights",   icon: SlidersHorizontal },
 ];
 
 // ---------------------------------------------------------------------------
@@ -92,6 +96,18 @@ const STEPS = [
 export function OnboardingPage() {
   const { user, refreshUser } = useAuth();
   const navigate = useNavigate();
+
+  // If user already completed onboarding — send home.
+  // Also handles the case where someone types /onboarding directly in the URL.
+  useEffect(() => {
+    if (user === undefined || user === null) return; // still loading or not logged in
+    console.log("[OnboardingPage] user.onboardingComplete:", user.onboardingComplete);
+    if (user.onboardingComplete) {
+      console.log("[OnboardingPage] User already completed onboarding, redirecting to home");
+      navigate("/", { replace: true });
+    }
+  }, [user, navigate]);
+
   const [step,   setStep]   = useState(1);
   const [saving, setSaving] = useState(false);
   const [error,  setError]  = useState("");
@@ -104,7 +120,10 @@ export function OnboardingPage() {
   // Step 2
   const [selectedAvatarId, setSelectedAvatarId] = useState<string | null>(null);
   const [uploadedImage,    setUploadedImage]     = useState<string | null>(null);
+  const [bannerImage,      setBannerImage]       = useState<string | null>(null);
+  const [imageToReposition, setImageToReposition] = useState<{ image: string; type: "profile" | "banner" } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const bannerInputRef = useRef<HTMLInputElement>(null);
 
   // Step 3
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
@@ -113,6 +132,9 @@ export function OnboardingPage() {
   const [genres,         setGenres]         = useState<Genre[]>([]);
   const [genresLoading,  setGenresLoading]  = useState(false);
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
+
+  // Step 5
+  const [weights, setWeights] = useState<RecommendationWeights>(DEFAULT_WEIGHTS);
 
   const profilePicture =
     uploadedImage ??
@@ -159,21 +181,10 @@ export function OnboardingPage() {
       const err = validateUsername(username);
       if (err) { setUsernameError(err); return; }
     }
-    if (step < 4) setStep(s => s + 1);
+    if (step < 5) setStep(s => s + 1);
   };
 
   const handleBack = () => { if (step > 1) setStep(s => s - 1); };
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = ev => {
-      setUploadedImage(ev.target?.result as string);
-      setSelectedAvatarId(null);
-    };
-    reader.readAsDataURL(file);
-  };
 
   const togglePlatform = (name: string) => {
     setSelectedPlatforms(prev =>
@@ -207,6 +218,10 @@ export function OnboardingPage() {
         newPreferences.profilePicture = profilePicture;
       }
       
+      if (bannerImage) {
+        newPreferences.bannerImage = bannerImage;
+      }
+
       await updateMe({
         username: username.trim(),
         preferences: newPreferences,
@@ -219,7 +234,29 @@ export function OnboardingPage() {
     }
   };
 
-  const isStepValid = [step1Valid, step2Valid, step3Valid, step4Valid][step - 1];
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, type: "profile" | "banner") => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const result = ev.target?.result as string;
+      setImageToReposition({ image: result, type });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRepositionConfirm = (croppedImage: string) => {
+    if (imageToReposition?.type === "profile") {
+      setUploadedImage(croppedImage);
+      setSelectedAvatarId(null);
+    } else {
+      setBannerImage(croppedImage);
+    }
+    setImageToReposition(null);
+  };
+
+  const step5Valid = true; // weights always valid
+  const isStepValid = [step1Valid, step2Valid, step3Valid, step4Valid, step5Valid][step - 1];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0a0a0a] via-[#111111] to-[#0a0a0a] flex flex-col items-center justify-center px-4 py-12">
@@ -228,7 +265,7 @@ export function OnboardingPage() {
       </div>
 
       {/* Step indicator */}
-      <div className="flex items-center gap-0 mb-10">
+      <div className="flex items-center justify-center gap-0 mb-8 w-full max-w-sm px-2 mx-auto">
         {STEPS.map((s, i) => {
           const Icon      = s.icon;
           const isComplete = step > s.id;
@@ -236,27 +273,27 @@ export function OnboardingPage() {
           return (
             <div key={s.id} className="flex items-center">
               <div className="flex flex-col items-center gap-1.5">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${
+                <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${
                   isComplete ? "bg-white border-white" : isCurrent ? "bg-zinc-900 border-white" : "bg-zinc-900/50 border-white/20"
                 }`}>
                   {isComplete
-                    ? <Check className="w-4 h-4 text-zinc-900" />
-                    : <Icon className={`w-4 h-4 ${isCurrent ? "text-white" : "text-white/30"}`} />
+                    ? <Check className="w-3 h-3 sm:w-4 sm:h-4 text-zinc-900" />
+                    : <Icon className={`w-3 h-3 sm:w-4 sm:h-4 ${isCurrent ? "text-white" : "text-white/30"}`} />
                   }
                 </div>
-                <span className={`text-xs font-medium ${isCurrent ? "text-white" : isComplete ? "text-white/60" : "text-white/30"}`}>
+                <span className={`hidden sm:block text-xs font-medium ${isCurrent ? "text-white" : isComplete ? "text-white/60" : "text-white/30"}`}>
                   {s.label}
                 </span>
               </div>
               {i < STEPS.length - 1 && (
-                <div className={`w-12 h-0.5 mx-2 mb-5 rounded transition-all duration-300 ${step > s.id ? "bg-white" : "bg-white/15"}`} />
+                <div className={`w-6 sm:w-12 h-0.5 mx-1 sm:mx-2 mb-0 sm:mb-5 rounded transition-all duration-300 ${step > s.id ? "bg-white" : "bg-white/15"}`} />
               )}
             </div>
           );
         })}
       </div>
 
-      <div className="w-full max-w-lg bg-white/5 border border-white/10 rounded-3xl p-8 shadow-2xl shadow-black/40 backdrop-blur-sm">
+      <div className="w-full max-w-lg bg-white/5 border border-white/10 rounded-2xl sm:rounded-3xl p-5 sm:p-8 shadow-2xl shadow-black/40 backdrop-blur-sm">
 
         {/* ── Step 1: Identity ── */}
         {step === 1 && (
@@ -298,43 +335,65 @@ export function OnboardingPage() {
         {/* ── Step 2: Avatar ── */}
         {step === 2 && (
           <div>
-            <h2 className="text-2xl font-bold text-white mb-1">Pick your avatar</h2>
-            <p className="text-white/45 text-sm mb-6">Choose a pixel-art preset or upload your own image.</p>
-            <div className="flex justify-center mb-6">
-              <div className="relative">
-                {profilePicture
-                  ? <img src={profilePicture} alt="Profile preview" className="w-24 h-24 rounded-full object-cover border-4 border-white/20 shadow-lg" style={{ imageRendering: "pixelated" }} />
-                  : <div className="w-24 h-24 rounded-full bg-white/8 border-4 border-white/15 flex items-center justify-center"><User className="w-10 h-10 text-white/40" /></div>
-                }
-                <div className="absolute inset-0 rounded-full ring-4 ring-white/15 animate-pulse" />
+            <h2 className="text-2xl font-bold text-white mb-1">Customize your profile</h2>
+            <p className="text-white/45 text-sm mb-6">Pick an avatar and optionally add a banner.</p>
+            
+            {/* Profile Picture */}
+            <div className="mb-8">
+              <h3 className="text-white font-semibold mb-4">Profile Picture</h3>
+              <div className="flex justify-center mb-6">
+                <div className="relative">
+                  {profilePicture
+                    ? <img src={profilePicture} alt="Profile preview" className="w-24 h-24 rounded-full object-cover border-4 border-white/20 shadow-lg" style={{ imageRendering: "pixelated" }} />
+                    : <div className="w-24 h-24 rounded-full bg-white/8 border-4 border-white/15 flex items-center justify-center"><User className="w-10 h-10 text-white/40" /></div>
+                  }
+                  <div className="absolute inset-0 rounded-full ring-4 ring-white/15 animate-pulse" />
+                </div>
+              </div>
+              <div className="grid grid-cols-6 gap-3 mb-6">
+                {PIXEL_AVATAR_PRESETS.map(avatar => (
+                  <button
+                    key={avatar.id}
+                    onClick={() => { setSelectedAvatarId(avatar.id); setUploadedImage(null); }}
+                    title={avatar.label}
+                    className={`relative rounded-xl overflow-hidden aspect-square border-2 transition-all hover:scale-110 ${selectedAvatarId === avatar.id && !uploadedImage ? "border-white shadow-lg" : "border-white/15 hover:border-white/40"}`}
+                    style={{ imageRendering: "pixelated" }}
+                  >
+                    <img src={avatar.url} alt={avatar.label} className="w-full h-full" style={{ imageRendering: "pixelated" }} />
+                    {selectedAvatarId === avatar.id && !uploadedImage && (
+                      <div className="absolute inset-0 bg-white/10 flex items-center justify-center"><Check className="w-3.5 h-3.5 text-white drop-shadow" /></div>
+                    )}
+                  </button>
+                ))}
+              </div>
+              <div>
+                <p className="text-sm font-medium text-white/70 mb-2">Or upload your own image</p>
+                <input ref={fileInputRef} type="file" accept="image/*" onChange={(e) => handleFileUpload(e, "profile")} className="hidden" />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border transition-all ${uploadedImage ? "bg-white/10 border-white/40 text-white/80" : "bg-white/5 border-white/15 text-white/50 hover:border-white/30 hover:text-white/70"}`}
+                >
+                  <Upload className="w-4 h-4" />
+                  {uploadedImage ? "Image uploaded — click to change" : "Choose a file…"}
+                </button>
               </div>
             </div>
-            <div className="grid grid-cols-6 gap-3 mb-6">
-              {PIXEL_AVATAR_PRESETS.map(avatar => (
-                <button
-                  key={avatar.id}
-                  onClick={() => { setSelectedAvatarId(avatar.id); setUploadedImage(null); }}
-                  title={avatar.label}
-                  className={`relative rounded-xl overflow-hidden aspect-square border-2 transition-all hover:scale-110 ${selectedAvatarId === avatar.id && !uploadedImage ? "border-white shadow-lg" : "border-white/15 hover:border-white/40"}`}
-                  style={{ imageRendering: "pixelated" }}
-                >
-                  <img src={avatar.url} alt={avatar.label} className="w-full h-full" style={{ imageRendering: "pixelated" }} />
-                  {selectedAvatarId === avatar.id && !uploadedImage && (
-                    <div className="absolute inset-0 bg-white/10 flex items-center justify-center"><Check className="w-3.5 h-3.5 text-white drop-shadow" /></div>
-                  )}
-                </button>
-              ))}
-            </div>
+
+            {/* Banner */}
             <div>
-              <p className="text-sm font-medium text-white/70 mb-2">Or upload your own image</p>
-              <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border transition-all ${uploadedImage ? "bg-white/10 border-white/40 text-white/80" : "bg-white/5 border-white/15 text-white/50 hover:border-white/30 hover:text-white/70"}`}
-              >
+              <h3 className="text-white font-semibold mb-3">Profile Banner (Optional)</h3>
+              <div className="relative h-24 rounded-lg overflow-hidden bg-gradient-to-r from-zinc-900 via-zinc-800 to-zinc-900 mb-3 cursor-pointer group" onClick={() => bannerInputRef.current?.click()}>
+                {bannerImage
+                  ? <img src={bannerImage} alt="Banner" className="w-full h-full object-cover" />
+                  : <div className="absolute inset-0 flex items-center justify-center"><Upload className="w-6 h-6 text-white/30 group-hover:text-white/60 transition-colors" /></div>
+                }
+              </div>
+              <input ref={bannerInputRef} type="file" accept="image/*" onChange={(e) => handleFileUpload(e, "banner")} className="hidden" />
+              <button onClick={() => bannerInputRef.current?.click()}
+                className="w-full px-4 py-2 bg-white/5 border border-white/15 rounded-xl text-white/50 hover:border-white/30 hover:text-white/70 transition-all flex items-center justify-center gap-2">
                 <Upload className="w-4 h-4" />
-                {uploadedImage ? "Image uploaded — click to change" : "Choose a file…"}
+                {bannerImage ? "Change Banner" : "Upload Banner"}
               </button>
             </div>
           </div>
@@ -395,7 +454,7 @@ export function OnboardingPage() {
 
             {genresLoading
               ? <div className="flex items-center justify-center py-12"><Loader2 className="w-6 h-6 text-white/40 animate-spin" /></div>
-              : <div className="grid grid-cols-3 gap-2 mb-2 max-h-80 overflow-y-auto pr-1">
+              : <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-2 max-h-72 overflow-y-auto pr-1">
                   {genres.map(genre => {
                     const selected = selectedGenres.includes(genre.name);
                     const maxed    = selectedGenres.length >= 3 && !selected;
@@ -426,6 +485,19 @@ export function OnboardingPage() {
           </div>
         )}
 
+        {/* ── Step 5: Weights ── */}
+        {step === 5 && (
+          <div>
+            <h2 className="text-2xl font-bold text-white mb-1">Tune your recommendations</h2>
+            <p className="text-white/45 text-sm mb-6">Adjust what matters most to you. You can change this anytime in settings.</p>
+            <RecommendationWeightsPanel
+              initialWeights={weights}
+              onSaved={w => setWeights(w)}
+              inline
+            />
+          </div>
+        )}
+
         {error && <p className="mt-4 text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-2">{error}</p>}
 
         {/* Navigation */}
@@ -436,17 +508,17 @@ export function OnboardingPage() {
               </button>
             : <div />
           }
-          {step < 4
+          {step < 5
             ? <button
                 onClick={handleNext}
                 disabled={!isStepValid}
                 className="flex items-center gap-1.5 px-6 py-2.5 bg-white rounded-xl text-zinc-900 font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-lg hover:scale-105 active:scale-100 transition-all"
               >
-                {step === 3 && selectedPlatforms.length === 0 ? "Skip" : "Next"} <ChevronRight className="w-4 h-4" />
+                {(step === 3 && selectedPlatforms.length === 0) ? "Skip" : "Next"} <ChevronRight className="w-4 h-4" />
               </button>
             : <button
                 onClick={handleFinish}
-                disabled={!step4Valid || saving}
+                disabled={!step5Valid || saving}
                 className="flex items-center gap-2 px-6 py-2.5 bg-white rounded-xl text-zinc-900 font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-lg hover:scale-105 active:scale-100 transition-all"
               >
                 {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</> : <><Check className="w-4 h-4" /> Launch Warpstar</>}
@@ -454,6 +526,18 @@ export function OnboardingPage() {
           }
         </div>
       </div>
+
+      {/* Image Repositioner Modal */}
+      {imageToReposition && (
+        <ImageRepositioner
+          initialImage={imageToReposition.image}
+          onConfirm={handleRepositionConfirm}
+          onCancel={() => setImageToReposition(null)}
+          aspectRatio={imageToReposition.type === "profile" ? 1 : 16 / 9}
+          frameSize={imageToReposition.type === "profile" ? { width: 300, height: 300 } : { width: 400, height: 225 }}
+          title={imageToReposition.type === "profile" ? "Reposition Profile Picture" : "Reposition Banner"}
+        />
+      )}
 
       <p className="mt-6 text-xs text-white/25 text-center">You can update all of this any time in your profile settings.</p>
     </div>

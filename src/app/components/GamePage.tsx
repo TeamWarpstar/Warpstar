@@ -426,7 +426,7 @@ export function GamePage() {
               <div className="flex-shrink-0">
                 <StarPolarDiagram
                   scores={scores}
-                  size={200}
+                  size={320}
                   showTotal={true}
                   showLabels={false}
                   showNumbers={true}
