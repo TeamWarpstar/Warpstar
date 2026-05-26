@@ -403,9 +403,12 @@ export function CreateReviewPage() {
         <div className="space-y-4 sm:space-y-6">
 
           <div className="bg-white/5 border border-white/10 rounded-xl p-4 sm:p-6">
-            <h3 className="text-xl font-bold text-white mb-4">Review Title</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-white">Review Title</h3>
+              <span className="text-xs text-white/50">{title.length} / 100</span>
+            </div>
             <input type="text" value={title} onChange={e => setTitle(e.target.value)}
-              placeholder="Summarise your experience in one line" maxLength={200}
+              placeholder="Summarise your experience in one line" maxLength={100}
               className="w-full bg-white/5 border border-white/15 rounded-lg px-4 py-3 text-white placeholder:text-white/25 focus:outline-none focus:border-white/40 transition-colors" />
           </div>
 
@@ -464,18 +467,25 @@ export function CreateReviewPage() {
                       })}
                     </div>
                     {/* Auto-expanding textarea */}
-                    <textarea
-                      placeholder={`What did you think about the ${cat.label.toLowerCase()}?`}
-                      value={categoryText[cat.key]}
-                      onChange={e => {
-                        e.target.style.height = "auto";
-                        e.target.style.height = e.target.scrollHeight + "px";
-                        setCategoryText(prev => ({ ...prev, [cat.key]: e.target.value }));
-                      }}
-                      className="w-full bg-white/5 border border-white/15 rounded-lg px-4 py-3 text-white placeholder:text-white/25 focus:outline-none focus:border-white/40 transition-colors resize-y text-sm"
-                      rows={4}
-                      style={{ minHeight: "120px" }}
-                    />
+                    <div className="mb-2">
+                      <div className="flex items-center justify-between mb-1">
+                        <span></span>
+                        <span className="text-xs text-white/50">{categoryText[cat.key].length} / 2500</span>
+                      </div>
+                      <textarea
+                        placeholder={`What did you think about the ${cat.label.toLowerCase()}?`}
+                        value={categoryText[cat.key]}
+                        onChange={e => {
+                          e.target.style.height = "auto";
+                          e.target.style.height = e.target.scrollHeight + "px";
+                          setCategoryText(prev => ({ ...prev, [cat.key]: e.target.value.slice(0, 2500) }));
+                        }}
+                        maxLength={2500}
+                        className="w-full bg-white/5 border border-white/15 rounded-lg px-4 py-3 text-white placeholder:text-white/25 focus:outline-none focus:border-white/40 transition-colors resize-y text-sm"
+                        rows={4}
+                        style={{ minHeight: "120px" }}
+                      />
+                    </div>
                   </div>
                 );
               })}
