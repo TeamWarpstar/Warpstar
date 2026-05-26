@@ -319,10 +319,10 @@ export function Header() {
           <img src={isDark ? warpstarWhiteLogo : warpstarDarkLogo} alt="Warpstar" className="h-10 md:h-12 w-auto" />
         </Link>
 
-        {/* Desktop search */}
-        <div className="hidden md:flex flex-1 max-w-2xl">
-          <SearchBox className="w-full" />
-        </div>
+        {/* Responsive search */}
+          <div className="flex-1 min-w-0 max-w-2xl hidden sm:flex">
+            <SearchBox className="w-full" />
+          </div>
 
         {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-6 ml-auto">
@@ -383,8 +383,8 @@ export function Header() {
           )}
         </nav>
 
-        {/* Mobile right side */}
-        <div className="flex md:hidden items-center gap-3 ml-auto">
+        {/* Mobile / tablet right side */}
+        <div className="flex sm:hidden items-center gap-3 ml-auto">
           <button className="relative text-white/70" aria-label="Notifications">
             <Bell className="w-5 h-5" />
             <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-white rounded-full" />
@@ -402,7 +402,10 @@ export function Header() {
           </button>
         </div>
       </div>
-
+      {/* Mobile search bar */}
+      <div className="sm:hidden px-4 pb-3">
+        <SearchBox />
+      </div>
       {/* Mobile drawer */}
       {showMobileMenu && (
         <div className="md:hidden mobile-drawer border-t border-white/10 bg-[#0a0a0a]/95 backdrop-blur-xl px-4 py-4 space-y-4">
