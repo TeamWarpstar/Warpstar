@@ -3,6 +3,7 @@ import { User, Upload, Check, Sun, Moon } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import { updateMe } from "../../api/users";
+import { RecommendationWeightsPanel } from "./RecommendationWeightsPanel";
 
 export function SettingsPage() {
   const { user, refreshUser } = useAuth();
@@ -183,6 +184,13 @@ export function SettingsPage() {
               </label>
             ))}
           </div>
+        </section>
+
+        {/* Recommendation Weights */}
+        <section className="bg-white/5 border border-white/10 rounded-xl p-6">
+          <h2 className="text-2xl font-bold text-white mb-6">Recommendation Preferences</h2>
+          <p className="text-white/60 text-sm mb-6">Adjust how games are recommended to you by setting weights for different factors and signals.</p>
+          <RecommendationWeightsPanel />
         </section>
 
         {error && <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-2">{error}</p>}
