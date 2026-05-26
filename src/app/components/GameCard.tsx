@@ -102,7 +102,7 @@ export function GameCard({ id, title, coverArt, platforms, developer, year, genr
 
             {/* Title — hidden on hover */}
             <div className={`absolute bottom-3 left-3 right-3 transition-opacity duration-200 ${hovered ? "opacity-0" : "opacity-100"}`}>
-              <h3 className="text-white font-bold text-base leading-tight line-clamp-2 drop-shadow">{title}</h3>
+              <h3 className="text-white font-bold text-base leading-tight line-clamp-2 drop-shadow !text-white">{title}</h3>
             </div>
           </div>
         </div>
