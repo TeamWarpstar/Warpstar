@@ -3,10 +3,11 @@ import { User, Calendar, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { ImageWithFallback } from "./ImageWithFallback";
 import { ReviewCard } from "./ReviewCard";
+import { GameCard } from "./GameCard";
 import { useAuth } from "../context/AuthContext";
 import { getUserByUsername, followUser, BackendUser } from "../../api/users";
 import { getUserReviews } from "../../api/reviews";
-import { getGame } from "../../api/games";
+import { getGame, Game } from "../../api/games";
 
 const SORT_OPTIONS = [
   { value: "newest", label: "Newest" },
@@ -20,16 +21,49 @@ const SORT_OPTIONS = [
   { value: "highestPolish", label: "Highest Polish" },
 ];
 
+const FAVORITE_SORT_OPTIONS = [
+  { value: "lastFavorited", label: "Last Favorited" },
+  { value: "firstFavorited", label: "First Favorited" },
+  { value: "titleAZ", label: "Title (A-Z)" },
+  { value: "highestRated", label: "Highest Rated" },
+];
+
+function gameToCardProps(g: Game & { [k: string]: any }) {
+  const platforms = g.platforms ?? [];
+  const genres    = g.genres    ?? [];
+  const devs      = g.developers ?? [];
+  return {
+    id:        g.id,
+    title:     g.name,
+    coverArt:  g.coverUrl ?? "https://images.unsplash.com/photo-1538481199705-c710c4e965fc?w=400&h=600&fit=crop",
+    platforms,
+    developer: devs[0] ?? "",
+    year:      g.releaseDate ? new Date(g.releaseDate).getFullYear() : 0,
+    genres,
+    scores: {
+      gameplay:   g.gameplayAvg   ?? 0,
+      content:    g.contentAvg    ?? 0,
+      narrative:  g.narrativeAvg  ?? 0,
+      aesthetics: g.aestheticsAvg ?? 0,
+      polish:     g.polishAvg     ?? 0,
+    },
+    igdbRating: g.igdbRating ?? 0,
+  };
+}
+
 export function ProfilePage() {
   const { username }              = useParams<{ username: string }>();
   const { user: me, refreshUser } = useAuth();
-  const [profile,       setProfile]       = useState<BackendUser | null>(null);
-  const [reviews,       setReviews]       = useState<any[]>([]);
-  const [loading,       setLoading]       = useState(true);
-  const [activeTab,     setActiveTab]     = useState<"reviews" | "activity">("reviews");
-  const [sortBy,        setSortBy]        = useState("newest");
-  const [following,     setFollowing]     = useState(false);
-  const [followerCount, setFollowerCount] = useState(0);
+  const [profile,         setProfile]         = useState<BackendUser | null>(null);
+  const [reviews,         setReviews]         = useState<any[]>([]);
+  const [favoriteGames,   setFavoriteGames]   = useState<Game[]>([]);
+  const [loadingActivity, setLoadingActivity] = useState(false);
+  const [loading,         setLoading]         = useState(true);
+  const [activeTab,       setActiveTab]       = useState<"reviews" | "favorites">("reviews");
+  const [sortBy,          setSortBy]          = useState("newest");
+  const [favoriteSortBy,  setFavoriteSortBy]  = useState("lastFavorited");
+  const [following,       setFollowing]       = useState(false);
+  const [followerCount,   setFollowerCount]   = useState(0);
 
   const isOwnProfile = !!me && username === me.username;
 
@@ -81,6 +115,18 @@ export function ProfilePage() {
         } catch (err) {
           console.error("Error fetching reviews:", err);
           setReviews([]);
+        }
+
+        // Fetch favorite games for the activity tab
+        try {
+          const favoriteGameIds = p.favoriteGames ?? [];
+          const favoriteGamesData = await Promise.all(
+            favoriteGameIds.map(id => getGame(id))
+          );
+          setFavoriteGames(favoriteGamesData);
+        } catch (err) {
+          console.error("Error fetching favorite games:", err);
+          setFavoriteGames([]);
         }
       })
       .catch(err => {
@@ -165,7 +211,7 @@ export function ProfilePage() {
 
       {/* Tabs */}
       <div className="flex gap-4 mb-8 border-b border-white/10">
-        {(["reviews", "activity"] as const).map(tab => (
+        {(["reviews", "favorites"] as const).map(tab => (
           <button key={tab} onClick={() => setActiveTab(tab)}
             className={`px-6 py-3 font-semibold capitalize transition-all ${
               activeTab === tab ? "text-white border-b-2 border-white" : "text-white/50 hover:text-white/80"
@@ -258,9 +304,46 @@ export function ProfilePage() {
             </>
       )}
 
-      {/* Activity tab */}
-      {activeTab === "activity" && (
-        <p className="text-white/40 text-center py-20">Activity feed coming soon.</p>
+      {/* Favorites tab */}
+      {activeTab === "favorites" && (
+        favoriteGames.length === 0 ? (
+          <p className="text-white/40 text-center py-20">No favorite games yet.</p>
+        ) : (
+          <>
+            <div className="mb-6 flex items-center justify-end">
+              <select
+                value={favoriteSortBy}
+                onChange={e => setFavoriteSortBy(e.target.value)}
+                className="profile-sort-select bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-white/40 text-sm"
+              >
+                {FAVORITE_SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4 lg:gap-6">
+              {(() => {
+                const sorted = [...favoriteGames].sort((a, b) => {
+                  const getOverall = (g: Game) => {
+                    const avg = (g.gameplayAvg + g.contentAvg + g.narrativeAvg + g.aestheticsAvg + g.polishAvg) / 5;
+                    return avg > 0 ? avg : (g.igdbRating ?? 0);
+                  };
+
+                  switch (favoriteSortBy) {
+                    case "firstFavorited":
+                      return favoriteGames.indexOf(a) - favoriteGames.indexOf(b);
+                    case "titleAZ":
+                      return a.name.localeCompare(b.name);
+                    case "highestRated":
+                      return getOverall(b) - getOverall(a);
+                    case "lastFavorited":
+                    default:
+                      return favoriteGames.indexOf(b) - favoriteGames.indexOf(a);
+                  }
+                });
+                return sorted.map(g => <GameCard key={g.id} {...gameToCardProps(g)} />);
+              })()}
+            </div>
+          </>
+        )
       )}
     </div>
   );
