@@ -1,5 +1,5 @@
-﻿import { useState, useEffect } from "react";
-import { User, Upload, Check, Sun, Moon, X } from "lucide-react";
+import { useState, useEffect } from "react";
+import { User, Upload, Check, Sun, Moon, X, AlertTriangle } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import { updateMe } from "../../api/users";
@@ -7,6 +7,8 @@ import { RecommendationWeightsPanel } from "./RecommendationWeightsPanel";
 import { ImageRepositioner } from "./ImageRepositioner";
 import { getGenres, Genre } from "../../api/games";
 import { PLATFORM_PRESETS, PLATFORM_GROUPS } from "./OnboardingPage";
+import { useBlocker } from "react-router";
+import { RecommendationWeights, DEFAULT_WEIGHTS, saveWeights } from "../../api/recommendations";
 
 export function SettingsPage() {
   const { user, refreshUser } = useAuth();
@@ -15,8 +17,6 @@ export function SettingsPage() {
   const [displayName,      setDisplayName]      = useState(user?.displayName ?? "");
   const [newUsername,      setNewUsername]      = useState(user?.username ?? "");
   const [usernameError,    setUsernameError]    = useState("");
-  const [savingUsername,   setSavingUsername]   = useState(false);
-  const [savedUsername,    setSavedUsername]    = useState(false);
   const [displayNameDirty, setDisplayNameDirty] = useState(false);
   const [profilePicture,   setProfilePicture]   = useState(user?.profilePicture ?? "");
   const [bannerImage,      setBannerImage]       = useState(user?.bannerImage ?? "");
@@ -25,13 +25,30 @@ export function SettingsPage() {
   const [emailNotifications, setEmailNotifications] = useState(false);
 
   const [saving,     setSaving]     = useState(false);
+  const [saved,      setSaved]      = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
+  const [error,      setError]      = useState("");
+  const [imageToReposition, setImageToReposition] = useState<{ image: string; type: "profile" | "banner" } | null>(null);
 
   // Genre + platform prefs
-  const [genres,           setGenres]           = useState<Genre[]>([]);
-  const [selectedGenres,   setSelectedGenres]   = useState<string[]>((user?.preferences?.topGenres as string[]) ?? []);
+  const [genres,            setGenres]            = useState<Genre[]>([]);
+  const [selectedGenres,    setSelectedGenres]    = useState<string[]>((user?.preferences?.topGenres as string[]) ?? []);
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>((user?.preferences?.platforms as string[]) ?? []);
-  const [savingPrefs,      setSavingPrefs]      = useState(false);
-  const [savedPrefs,       setSavedPrefs]       = useState(false);
+
+  // Recommendation weights — lifted from panel so they're saved universally
+  const [weights, setWeights] = useState<RecommendationWeights>({
+    ...DEFAULT_WEIGHTS,
+    ...((user?.preferences as any)?.weights ?? {}),
+  });
+
+  // Username cooldown
+  const usernameChangedAt = (user as any)?.usernameChangedAt;
+  const cooldownEnd       = usernameChangedAt ? new Date(new Date(usernameChangedAt).getTime() + 30 * 24 * 60 * 60 * 1000) : null;
+  const onCooldown        = cooldownEnd ? cooldownEnd > new Date() : false;
+  const daysLeft          = cooldownEnd ? Math.ceil((cooldownEnd.getTime() - Date.now()) / 86400000) : 0;
+
+  // Block in-app navigation when there are unsaved changes
+  const blocker = useBlocker(hasChanges);
 
   useEffect(() => {
     getGenres().then(all => {
@@ -41,22 +58,24 @@ export function SettingsPage() {
       setGenres([...ordered, ...all.filter(g => !names.has(g.name))].slice(0, 24));
     });
   }, []);
-  const [saved,      setSaved]      = useState(false);
-  const [hasChanges, setHasChanges] = useState(false);
-  const [error,      setError]      = useState("");
-  const [imageToReposition, setImageToReposition] = useState<{ image: string; type: "profile" | "banner" } | null>(null);
 
   useEffect(() => {
     if (!displayNameDirty) setDisplayName(user?.displayName ?? "");
   }, [user?.displayName, displayNameDirty]);
 
-  const markDirty = () => { setHasChanges(true); setSaved(false); };
+  // Warn on browser tab close / hard navigation
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (hasChanges) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [hasChanges]);
 
-  // Username cooldown
-  const usernameChangedAt = (user as any)?.usernameChangedAt;
-  const cooldownEnd       = usernameChangedAt ? new Date(new Date(usernameChangedAt).getTime() + 30 * 24 * 60 * 60 * 1000) : null;
-  const onCooldown        = cooldownEnd ? cooldownEnd > new Date() : false;
-  const daysLeft          = cooldownEnd ? Math.ceil((cooldownEnd.getTime() - Date.now()) / 86400000) : 0;
+  const markDirty = () => { setHasChanges(true); setSaved(false); };
 
   const validateUsername = (val: string) => {
     if (!val)            return "Username is required.";
@@ -64,24 +83,6 @@ export function SettingsPage() {
     if (val.length > 20) return "At most 20 characters.";
     if (!/^[a-z0-9_]+$/.test(val)) return "Lowercase letters, numbers and underscores only.";
     return "";
-  };
-
-  const handleSaveUsername = async () => {
-    const err = validateUsername(newUsername);
-    if (err) { setUsernameError(err); return; }
-    if (newUsername === user?.username) return;
-    setSavingUsername(true);
-    setUsernameError("");
-    try {
-      await updateMe({ username: newUsername.trim() });
-      await refreshUser();
-      setSavedUsername(true);
-      setTimeout(() => setSavedUsername(false), 3000);
-    } catch (e: any) {
-      setUsernameError(e?.message ?? "Failed to update username.");
-    } finally {
-      setSavingUsername(false);
-    }
   };
 
   const handleFileUpload = (type: "profile" | "banner") => {
@@ -114,18 +115,35 @@ export function SettingsPage() {
   const handleSave = async () => {
     setSaving(true);
     setError("");
+    setUsernameError("");
     try {
-      await updateMe({
-        preferences: {
-          ...user?.preferences,
-          displayName:    displayName.trim(),
-          profilePicture,
-          bannerImage,
-          showProfile,
-          showReviews,
-          emailNotifications,
-        },
-      });
+      // Save username if it changed and isn't on cooldown
+      if (newUsername !== user?.username) {
+        const err = validateUsername(newUsername);
+        if (err) { setUsernameError(err); setSaving(false); return; }
+        if (!onCooldown) {
+          await updateMe({ username: newUsername.trim() });
+        }
+      }
+
+      // Save profile, privacy, and game preferences together
+      await Promise.all([
+        updateMe({
+          preferences: {
+            ...user?.preferences,
+            displayName:    displayName.trim(),
+            profilePicture,
+            bannerImage,
+            showProfile,
+            showReviews,
+            emailNotifications,
+            topGenres:  selectedGenres,
+            platforms:  selectedPlatforms,
+          },
+        }),
+        saveWeights(weights),
+      ]);
+
       await refreshUser();
       setSaved(true);
       setHasChanges(false);
@@ -138,24 +156,19 @@ export function SettingsPage() {
     }
   };
 
-  const handleCancel = () => {
+  const handleDiscard = () => {
     setDisplayName(user?.displayName ?? "");
+    setNewUsername(user?.username ?? "");
     setProfilePicture(user?.profilePicture ?? "");
     setBannerImage(user?.bannerImage ?? "");
+    setSelectedGenres((user?.preferences?.topGenres as string[]) ?? []);
+    setSelectedPlatforms((user?.preferences?.platforms as string[]) ?? []);
+    setWeights({ ...DEFAULT_WEIGHTS, ...((user?.preferences as any)?.weights ?? {}) });
     setDisplayNameDirty(false);
     setHasChanges(false);
     setSaved(false);
     setError("");
-  };
-
-  const handleSavePrefs = async () => {
-    setSavingPrefs(true);
-    try {
-      await updateMe({ preferences: { ...user?.preferences, topGenres: selectedGenres, platforms: selectedPlatforms } });
-      await refreshUser();
-      setSavedPrefs(true);
-      setTimeout(() => setSavedPrefs(false), 2000);
-    } finally { setSavingPrefs(false); }
+    setUsernameError("");
   };
 
   const toggleGenre = (name: string) => {
@@ -163,6 +176,7 @@ export function SettingsPage() {
       ? prev.filter(g => g !== name)
       : prev.length < 3 ? [...prev, name] : prev
     );
+    markDirty();
   };
 
   const togglePlatform = (name: string) => {
@@ -170,10 +184,11 @@ export function SettingsPage() {
       ? prev.filter(p => p !== name)
       : [...prev, name]
     );
+    markDirty();
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
+    <div className="max-w-4xl mx-auto px-4 py-8 pb-28">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-8">
         <h1 className="text-4xl font-bold text-white">Settings</h1>
         {saved && (
@@ -228,31 +243,24 @@ export function SettingsPage() {
 
             <div>
               <label className="block text-white/70 mb-2 font-semibold">Username</label>
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/35">@</span>
-                  <input
-                    type="text"
-                    value={newUsername}
-                    onChange={e => {
-                      setNewUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""));
-                      setUsernameError("");
-                    }}
-                    disabled={onCooldown}
-                    className={`w-full bg-white/5 border rounded-lg pl-7 pr-4 py-3 text-white focus:outline-none transition-colors ${
-                      onCooldown ? "border-white/10 text-white/40 cursor-not-allowed" :
-                      usernameError ? "border-red-500/60 focus:border-red-500/80" :
-                      "border-white/15 focus:border-white/40"
-                    }`}
-                  />
-                </div>
-                <button
-                  onClick={handleSaveUsername}
-                  disabled={onCooldown || savingUsername || newUsername === user?.username}
-                  className="px-4 py-3 bg-white text-zinc-900 font-semibold rounded-lg hover:shadow-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed text-sm whitespace-nowrap"
-                >
-                  {savingUsername ? "Saving…" : savedUsername ? "Saved!" : "Change"}
-                </button>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/35">@</span>
+                <input
+                  type="text"
+                  value={newUsername}
+                  onChange={e => {
+                    const val = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "");
+                    setNewUsername(val);
+                    setUsernameError("");
+                    if (val !== user?.username) markDirty();
+                  }}
+                  disabled={onCooldown}
+                  className={`w-full bg-white/5 border rounded-lg pl-7 pr-4 py-3 text-white focus:outline-none transition-colors ${
+                    onCooldown ? "border-white/10 text-white/40 cursor-not-allowed" :
+                    usernameError ? "border-red-500/60 focus:border-red-500/80" :
+                    "border-white/15 focus:border-white/40"
+                  }`}
+                />
               </div>
               {usernameError && <p className="mt-1.5 text-xs text-red-400">{usernameError}</p>}
               {onCooldown
@@ -273,8 +281,8 @@ export function SettingsPage() {
               </div>
               <div>
                 <div className="text-white/80 font-semibold">{isDark ? "Dark Mode" : "Light Mode"}</div>
+              </div>
             </div>
-          </div>
             <button onClick={toggleTheme} aria-label="Toggle theme"
               className={`relative w-14 h-8 rounded-full transition-colors duration-300 ${isDark ? "bg-zinc-600" : "bg-gradient-to-r from-yellow-400 to-orange-400"}`}>
               <div className={`absolute top-1 left-1 w-6 h-6 bg-white rounded-full shadow-md transition-transform duration-300 flex items-center justify-center ${isDark ? "translate-x-6" : "translate-x-0"}`}>
@@ -304,9 +312,8 @@ export function SettingsPage() {
 
         {/* Game Preferences */}
         <section className="bg-white/5 border border-white/10 rounded-xl p-6">
-          <div className="flex items-center justify-between mb-2">
+          <div className="mb-2">
             <h2 className="text-2xl font-bold text-white">Game Preferences</h2>
-            {savedPrefs && <span className="text-green-400 text-sm flex items-center gap-1"><Check className="w-4 h-4" /> Saved!</span>}
           </div>
           <p className="text-white/40 text-sm mb-6">These affect your recommendations and genre browsing.</p>
 
@@ -334,7 +341,7 @@ export function SettingsPage() {
           </div>
 
           {/* Platforms */}
-          <div className="mb-6">
+          <div>
             <label className="block text-white/70 font-semibold mb-3">Your Platforms</label>
 
             {/* Selected chips with delete */}
@@ -377,33 +384,69 @@ export function SettingsPage() {
               })}
             </div>
           </div>
-
-          <button onClick={handleSavePrefs} disabled={savingPrefs}
-            className="px-5 py-2.5 bg-white text-zinc-900 font-semibold rounded-lg hover:shadow-lg hover:shadow-white/10 transition-all disabled:opacity-50 text-sm">
-            {savingPrefs ? "Saving…" : "Save Preferences"}
-          </button>
         </section>
 
         {/* Recommendation Weights */}
         <section className="bg-white/5 border border-white/10 rounded-xl p-6">
           <h2 className="text-2xl font-bold text-white mb-6">Recommendation Preferences</h2>
           <p className="text-white/60 text-sm mb-6">Adjust how games are recommended to you by setting weights for different factors and signals.</p>
-          <RecommendationWeightsPanel />
+          <RecommendationWeightsPanel
+            initialWeights={weights}
+            onChange={(w) => { setWeights(w); markDirty(); }}
+          />
         </section>
 
         {error && <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-2">{error}</p>}
-
-        <div className="flex justify-end gap-4">
-          <button onClick={handleCancel} disabled={!hasChanges}
-            className="px-6 py-3 bg-white/5 border border-white/15 rounded-lg text-white/70 hover:border-white/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-            Cancel
-          </button>
-          <button onClick={handleSave} disabled={!hasChanges || saving}
-            className="px-6 py-3 bg-white text-zinc-900 font-semibold rounded-lg hover:shadow-lg hover:shadow-white/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
-            {saving ? "Saving..." : "Save Changes"}
-          </button>
-        </div>
       </div>
+
+      {/* Fixed bottom save bar — only visible when there are unsaved changes */}
+      {hasChanges && (
+        <div className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-between gap-4 px-6 py-4 bg-zinc-900/95 backdrop-blur-sm border-t border-white/10 shadow-2xl">
+          <p className="text-white/60 text-sm hidden sm:block">You have unsaved changes</p>
+          <div className="flex gap-3 ml-auto">
+            <button
+              onClick={handleDiscard}
+              className="px-5 py-2 bg-white/5 border border-white/15 rounded-lg text-white/70 hover:border-white/30 transition-colors text-sm"
+            >
+              Discard
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="px-5 py-2 bg-white text-zinc-900 font-semibold rounded-lg hover:shadow-lg hover:shadow-white/10 transition-all disabled:opacity-50 text-sm"
+            >
+              {saving ? "Saving..." : "Save Changes"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Navigation blocker — warns before leaving with unsaved changes */}
+      {blocker.state === "blocked" && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-zinc-900 border border-white/15 rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl">
+            <div className="flex items-center gap-3 mb-3">
+              <AlertTriangle className="w-6 h-6 text-yellow-400 flex-shrink-0" />
+              <h3 className="text-white font-bold text-lg">Unsaved changes</h3>
+            </div>
+            <p className="text-white/60 text-sm mb-6">You have unsaved changes that will be lost if you leave this page.</p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => blocker.reset()}
+                className="px-4 py-2 bg-white/5 border border-white/15 rounded-lg text-white/70 hover:border-white/30 transition-colors text-sm"
+              >
+                Stay
+              </button>
+              <button
+                onClick={() => blocker.proceed()}
+                className="px-4 py-2 bg-red-500/20 border border-red-500/40 rounded-lg text-red-400 hover:bg-red-500/30 transition-colors text-sm font-semibold"
+              >
+                Leave anyway
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Image Repositioner Modal */}
       {imageToReposition && (

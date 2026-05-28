@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Save, RotateCcw } from "lucide-react";
-import { RecommendationWeights, DEFAULT_WEIGHTS, saveWeights } from "../../api/recommendations";
+import { RotateCcw } from "lucide-react";
+import { RecommendationWeights, DEFAULT_WEIGHTS } from "../../api/recommendations";
 
 interface WeightSliderProps {
   label:       string;
@@ -60,44 +60,27 @@ const WEIGHT_CONFIG: {
 
 interface RecommendationWeightsPanelProps {
   initialWeights?: Partial<RecommendationWeights>;
-  onSaved?:        (weights: RecommendationWeights) => void;
-  inline?:         boolean; // no save button — just reports changes via onSaved
+  onChange:        (weights: RecommendationWeights) => void;
 }
 
 export function RecommendationWeightsPanel({
   initialWeights,
-  onSaved,
-  inline = false,
+  onChange,
 }: RecommendationWeightsPanelProps) {
   const [weights, setWeights] = useState<RecommendationWeights>({
     ...DEFAULT_WEIGHTS,
     ...initialWeights,
   });
-  const [saving,  setSaving]  = useState(false);
-  const [saved,   setSaved]   = useState(false);
 
   const set = (key: keyof RecommendationWeights) => (v: number) => {
     const updated = { ...weights, [key]: v };
     setWeights(updated);
-    setSaved(false);
-    if (inline) onSaved?.(updated);
-  };
-
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      await saveWeights(weights);
-      setSaved(true);
-      onSaved?.(weights);
-      setTimeout(() => setSaved(false), 2000);
-    } finally {
-      setSaving(false);
-    }
+    onChange(updated);
   };
 
   const handleReset = () => {
     setWeights(DEFAULT_WEIGHTS);
-    setSaved(false);
+    onChange(DEFAULT_WEIGHTS);
   };
 
   const factors = WEIGHT_CONFIG.filter(w => w.group === "factors");
@@ -145,16 +128,7 @@ export function RecommendationWeightsPanel({
         </div>
       </div>
 
-      {/* Actions — hidden in inline mode */}
-      {!inline && <div className="flex items-center gap-3 pt-2">
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="flex items-center gap-2 px-5 py-2 bg-white text-zinc-900 font-semibold rounded-lg hover:shadow-lg hover:shadow-white/10 transition-all disabled:opacity-50 text-sm"
-        >
-          <Save className="w-4 h-4" />
-          {saving ? "Saving…" : saved ? "Saved!" : "Save Preferences"}
-        </button>
+      <div className="pt-2">
         <button
           onClick={handleReset}
           className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 text-white/60 font-semibold rounded-lg hover:bg-white/10 transition-all text-sm"
@@ -162,7 +136,7 @@ export function RecommendationWeightsPanel({
           <RotateCcw className="w-3.5 h-3.5" />
           Reset to Defaults
         </button>
-      </div>}
+      </div>
     </div>
   );
 }
