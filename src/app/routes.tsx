@@ -10,6 +10,7 @@ import { DiscoverPage } from "./components/DiscoverPage";
 import { SearchPage } from "./components/SearchPage";
 import { SplashPage } from "./components/SplashPage";
 import { OnboardingPage } from "./components/OnboardingPage";
+import { FollowingFeedPage } from "./components/FollowingFeedPage";
 import { AuthProvider } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
 
@@ -46,6 +47,7 @@ export const router = createBrowserRouter([
           { path: "game/:gameId/review", Component: CreateReviewPage },
           { path: "profile/:username", Component: ProfilePage },
           { path: "settings", Component: SettingsPage },
+          { path: "following", Component: FollowingFeedPage },
           { path: "genre/:genreName", Component: GenrePage },
           //{ path: "discover", Component: DiscoverPage },
           { path: "search", Component: SearchPage },

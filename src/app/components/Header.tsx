@@ -328,6 +328,7 @@ export function Header() {
         <nav className="hidden md:flex items-center gap-6 ml-auto">
           <Link to="/" className="text-white/70 hover:text-white transition-colors">Home</Link>
           {/* <Link to="/discover" className="text-white/70 hover:text-white transition-colors">Discover</Link> */}
+          {user && <Link to="/following" className="text-white/70 hover:text-white transition-colors">Following</Link>}
           {user && <Link to={profileUrl} className="text-white/70 hover:text-white transition-colors">Profile</Link>}
           <Link to="/settings" className="text-white/70 hover:text-white transition-colors">
             <Settings className="w-5 h-5" />
@@ -411,6 +412,7 @@ export function Header() {
             {/* <Link to="/discover" onClick={closeMobile} className="px-4 py-3 text-white/70 hover:text-white hover:bg-white/5 rounded-xl transition-colors">Discover</Link> */}
             {user ? (
               <>
+                <Link to="/following" onClick={closeMobile} className="px-4 py-3 text-white/70 hover:text-white hover:bg-white/5 rounded-xl transition-colors">Following</Link>
                 <Link to={profileUrl} onClick={closeMobile} className="px-4 py-3 text-white/70 hover:text-white hover:bg-white/5 rounded-xl transition-colors">Profile</Link>
                 <Link to="/settings" onClick={closeMobile} className="px-4 py-3 text-white/70 hover:text-white hover:bg-white/5 rounded-xl transition-colors">Settings</Link>
                 <button onClick={() => { handleSignOut(); closeMobile(); }} className="text-left px-4 py-3 text-white/60 hover:text-white hover:bg-white/5 rounded-xl transition-colors">Sign Out</button>

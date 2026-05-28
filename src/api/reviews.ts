@@ -66,6 +66,23 @@ export async function getUserReviews(
   return apiFetch(`/api/reviews/user/${userId}?skip=${skip}&limit=${limit}`);
 }
 
+export interface FollowingReview extends Review {
+  gameName?:    string;
+  gameCoverUrl?: string;
+  reviewer?: {
+    username?:       string;
+    displayName?:    string;
+    profilePicture?: string;
+  };
+}
+
+export async function getFollowingReviews(
+  skip  = 0,
+  limit = 20,
+): Promise<{ total: number; skip: number; limit: number; results: FollowingReview[] }> {
+  return apiFetch(`/api/feed/reviews?skip=${skip}&limit=${limit}`);
+}
+
 // ---------------------------------------------------------------------------
 // Comments
 // ---------------------------------------------------------------------------

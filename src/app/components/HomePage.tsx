@@ -3,7 +3,13 @@ import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { Link } from "react-router";
 import { GameCard } from "./GameCard";
 import { getGames, getGenres, Game, Genre } from "../../api/games";
-import { getRecommendations } from "../../api/recommendations";
+import {
+  getRecommendations,
+  getRecommendationFeedback,
+  setRecommendationFeedback,
+  clearRecommendationFeedback,
+  FeedbackType,
+} from "../../api/recommendations";
 import { useAuth } from "../context/AuthContext";
 
 const GENRE_COLORS: Record<string, string> = {
@@ -52,6 +58,7 @@ export function HomePage() {
   const [loadingShell,   setLoadingShell]   = useState(true);   // trending + genres
   const [loadingRec,     setLoadingRec]     = useState(true);   // recommendations
   const [recPage,        setRecPage]        = useState(0);
+  const [feedback,       setFeedback]       = useState<Record<string, FeedbackType>>({});
   const REC_PAGE_SIZE = 5;
 
   useEffect(() => {
@@ -68,7 +75,7 @@ export function HomePage() {
       setGenres(gens.slice(0, 12));
     }).finally(() => setLoadingShell(false));
 
-    // Phase 2 — recommendations load in background (may be slower)
+    // Phase 2 — recommendations + feedback load in background
     const recPromise: Promise<Game[]> = user
       ? getRecommendations(undefined, 20)
           .then(r => r.results as unknown as Game[])
@@ -78,7 +85,40 @@ export function HomePage() {
     recPromise
       .then(rec => setRecommended(rec))
       .finally(() => setLoadingRec(false));
+
+    if (user) {
+      getRecommendationFeedback().then(setFeedback).catch(() => setFeedback({}));
+    } else {
+      setFeedback({});
+    }
   }, [user?.id]);
+
+  const handleFeedback = async (gameId: string, type: FeedbackType | null) => {
+    const prev = feedback[gameId] ?? null;
+    // Optimistic state update
+    setFeedback(f => {
+      const next = { ...f };
+      if (type === null) delete next[gameId];
+      else next[gameId] = type;
+      return next;
+    });
+    // Thumbs down: hide from the visible recommendations immediately
+    if (type === "down") {
+      setRecommended(rs => rs.filter(g => g.id !== gameId));
+    }
+    try {
+      if (type === null) await clearRecommendationFeedback(gameId);
+      else                await setRecommendationFeedback(gameId, type);
+    } catch {
+      // Roll back optimistic state on failure
+      setFeedback(f => {
+        const next = { ...f };
+        if (prev) next[gameId] = prev;
+        else      delete next[gameId];
+        return next;
+      });
+    }
+  };
 
   const recSlice   = recommended.slice(recPage * REC_PAGE_SIZE, (recPage + 1) * REC_PAGE_SIZE);
   const maxRecPage = Math.max(0, Math.ceil(recommended.length / REC_PAGE_SIZE) - 1);
@@ -125,7 +165,15 @@ export function HomePage() {
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4 lg:gap-6">
-            {recSlice.map(g => <GameCard key={g.id} {...gameToCardProps(g)} />)}
+            {recSlice.map(g => (
+              <GameCard
+                key={g.id}
+                {...gameToCardProps(g)}
+                feedback={user ? (feedback[g.id] ?? null) : undefined}
+                onFeedback={user ? (t) => handleFeedback(g.id, t) : undefined}
+                reasons={(g as any)._reasons}
+              />
+            ))}
           </div>
         )}
       </section>

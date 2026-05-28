@@ -23,10 +23,29 @@ export const DEFAULT_WEIGHTS: RecommendationWeights = {
   recency:       5,
 };
 
+export type RecommendationReasonType =
+  | "feedback"
+  | "history"
+  | "genre"
+  | "platform"
+  | "quality"
+  | "recency"
+  | "popularity";
+
+export interface RecommendationReason {
+  type: RecommendationReasonType;
+  text: string;
+}
+
+export type RecommendedGame = Game & {
+  _score:   number;
+  _reasons?: RecommendationReason[];
+};
+
 export interface RecommendationResponse {
   total:   number;
   weights: RecommendationWeights;
-  results: (Game & { _score: number })[];
+  results: RecommendedGame[];
 }
 
 function buildQuery(params: Partial<RecommendationWeights> & { limit?: number }): string {
@@ -68,7 +87,7 @@ export async function getRecommendations(
       needsEnrich.map(async (g: any) => {
         try {
           const full = await apiFetch<any>(`/api/games/${g.id}`);
-          enrichMap.set(g.id, { ...full, _score: g._score });
+          enrichMap.set(g.id, { ...full, _score: g._score, _reasons: g._reasons });
         } catch {
           enrichMap.set(g.id, g);
         }
@@ -88,4 +107,27 @@ export async function getRecommendations(
 export async function saveWeights(weights: Partial<RecommendationWeights>): Promise<void> {
   clearRecommendationsCache();
   return apiFetch(`/api/recommendations/weights${buildQuery(weights)}`, { method: "PATCH" });
+}
+
+// ---------------------------------------------------------------------------
+// Thumbs up / down feedback
+// ---------------------------------------------------------------------------
+
+export type FeedbackType = "up" | "down";
+
+export async function getRecommendationFeedback(): Promise<Record<string, FeedbackType>> {
+  return apiFetch<Record<string, FeedbackType>>(`/api/recommendations/feedback`);
+}
+
+export async function setRecommendationFeedback(gameId: string, type: FeedbackType): Promise<void> {
+  clearRecommendationsCache();
+  await apiFetch(`/api/recommendations/feedback`, {
+    method: "POST",
+    body:   JSON.stringify({ gameId, type }),
+  });
+}
+
+export async function clearRecommendationFeedback(gameId: string): Promise<void> {
+  clearRecommendationsCache();
+  await apiFetch(`/api/recommendations/feedback/${gameId}`, { method: "DELETE" });
 }

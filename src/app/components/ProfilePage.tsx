@@ -1,11 +1,12 @@
 ﻿import { useParams, Link } from "react-router";
-import { User, Calendar, Loader2 } from "lucide-react";
+import { User, Calendar, Loader2, X } from "lucide-react";
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { ImageWithFallback } from "./ImageWithFallback";
 import { ReviewCard } from "./ReviewCard";
 import { GameCard } from "./GameCard";
 import { useAuth } from "../context/AuthContext";
-import { getUserByUsername, followUser, BackendUser } from "../../api/users";
+import { getUserByUsername, followUser, getFollowers, getFollowing, BackendUser } from "../../api/users";
 import { getUserReviews } from "../../api/reviews";
 import { getGame, Game } from "../../api/games";
 
@@ -57,13 +58,18 @@ export function ProfilePage() {
   const [profile,         setProfile]         = useState<BackendUser | null>(null);
   const [reviews,         setReviews]         = useState<any[]>([]);
   const [favoriteGames,   setFavoriteGames]   = useState<Game[]>([]);
-  const [loadingActivity, setLoadingActivity] = useState(false);
   const [loading,         setLoading]         = useState(true);
   const [activeTab,       setActiveTab]       = useState<"reviews" | "favorites">("reviews");
   const [sortBy,          setSortBy]          = useState("newest");
   const [favoriteSortBy,  setFavoriteSortBy]  = useState("lastFavorited");
   const [following,       setFollowing]       = useState(false);
   const [followerCount,   setFollowerCount]   = useState(0);
+
+  // Follow list modal
+  const [followModalTab,    setFollowModalTab]    = useState<"followers" | "following" | null>(null);
+  const [followersList,     setFollowersList]     = useState<BackendUser[]>([]);
+  const [followingList,     setFollowingList]     = useState<BackendUser[]>([]);
+  const [loadingFollowList, setLoadingFollowList] = useState(false);
 
   const isOwnProfile = !!me && username === me.username;
 
@@ -117,7 +123,6 @@ export function ProfilePage() {
           setReviews([]);
         }
 
-        // Fetch favorite games for the activity tab
         try {
           const favoriteGameIds = p.favoriteGames ?? [];
           const favoriteGamesData = await Promise.all(
@@ -142,7 +147,38 @@ export function ProfilePage() {
     setFollowing(res.following);
     setFollowerCount(res.follower_count);
     await refreshUser();
+    // Invalidate cached lists — they'll re-fetch next time the modal opens
+    setFollowersList([]);
+    setFollowingList([]);
   };
+
+  // Reset cached follow lists when the visited profile changes
+  useEffect(() => {
+    setFollowersList([]);
+    setFollowingList([]);
+    setFollowModalTab(null);
+  }, [username]);
+
+  // Lazy-load follow lists when the modal opens or the tab switches
+  useEffect(() => {
+    if (!followModalTab || !username) return;
+    const tab = followModalTab;
+    const alreadyLoaded = tab === "followers"
+      ? followersList.length > 0
+      : followingList.length > 0;
+    if (alreadyLoaded) return;
+    setLoadingFollowList(true);
+    const fetcher = tab === "followers"
+      ? getFollowers(username)
+      : getFollowing(username);
+    fetcher
+      .then(list => {
+        if (tab === "followers") setFollowersList(list);
+        else                     setFollowingList(list);
+      })
+      .catch(() => {})
+      .finally(() => setLoadingFollowList(false));
+  }, [followModalTab, username]);
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
@@ -182,8 +218,20 @@ export function ProfilePage() {
           <h1 className="text-2xl sm:text-4xl font-bold text-white mb-1 sm:mb-2">{displayName}</h1>
           <p className="text-base sm:text-xl text-white/50 mb-3 sm:mb-4">@{profile.username}</p>
           <div className="flex items-center gap-4 sm:gap-6 text-white/60 text-sm sm:text-base flex-wrap">
-            <div><span className="font-bold text-white">{followerCount.toLocaleString()}</span> Followers</div>
-            <div><span className="font-bold text-white">{(profile.following?.length ?? 0).toLocaleString()}</span> Following</div>
+            <button
+              type="button"
+              onClick={() => setFollowModalTab("followers")}
+              className="hover:text-white transition-colors cursor-pointer"
+            >
+              <span className="font-bold text-white">{followerCount.toLocaleString()}</span> Followers
+            </button>
+            <button
+              type="button"
+              onClick={() => setFollowModalTab("following")}
+              className="hover:text-white transition-colors cursor-pointer"
+            >
+              <span className="font-bold text-white">{(profile.following?.length ?? 0).toLocaleString()}</span> Following
+            </button>
             <div><span className="font-bold text-white">{reviews.length}</span> Reviews</div>
             <div className="flex items-center gap-1.5 text-sm text-white/40">
               <Calendar className="w-3.5 h-3.5" /> Joined {joinDate}
@@ -344,6 +392,98 @@ export function ProfilePage() {
             </div>
           </>
         )
+      )}
+
+      {/* Followers / Following modal */}
+      {followModalTab && createPortal(
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/65 backdrop-blur-sm animate-in fade-in duration-150"
+          onClick={() => setFollowModalTab(null)}
+        >
+          <div
+            className="relative w-full max-w-md max-h-[80vh] mx-4 bg-zinc-900 border border-white/15 rounded-2xl shadow-2xl shadow-black/80 overflow-hidden flex flex-col"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Tabs */}
+            <div className="flex border-b border-white/10 relative">
+              <button
+                onClick={() => setFollowModalTab("followers")}
+                className={`flex-1 px-4 py-4 text-sm font-semibold transition-colors ${
+                  followModalTab === "followers"
+                    ? "text-white border-b-2 border-white"
+                    : "text-white/50 hover:text-white/80"
+                }`}
+              >
+                {followerCount.toLocaleString()} Followers
+              </button>
+              <button
+                onClick={() => setFollowModalTab("following")}
+                className={`flex-1 px-4 py-4 text-sm font-semibold transition-colors ${
+                  followModalTab === "following"
+                    ? "text-white border-b-2 border-white"
+                    : "text-white/50 hover:text-white/80"
+                }`}
+              >
+                {(profile.following?.length ?? 0).toLocaleString()} Following
+              </button>
+              <button
+                onClick={() => setFollowModalTab(null)}
+                aria-label="Close"
+                className="absolute top-2.5 right-2.5 p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* List */}
+            <div className="overflow-y-auto flex-1 p-2">
+              {(() => {
+                const currentList = followModalTab === "followers" ? followersList : followingList;
+
+                if (loadingFollowList) {
+                  return (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2 className="w-6 h-6 text-white/40 animate-spin" />
+                    </div>
+                  );
+                }
+                if (currentList.length === 0) {
+                  return (
+                    <p className="text-white/40 text-center py-12 px-4 text-sm">
+                      {followModalTab === "followers"
+                        ? `${displayName} doesn't have any followers yet.`
+                        : `${displayName} isn't following anyone yet.`}
+                    </p>
+                  );
+                }
+                return currentList.map(u => {
+                  const dName  = (u.preferences?.displayName as string) || u.username;
+                  const avatar = u.preferences?.profilePicture as string | undefined;
+                  return (
+                    <Link
+                      key={u.id}
+                      to={`/profile/${u.username}`}
+                      onClick={() => setFollowModalTab(null)}
+                      className="flex items-center gap-3 p-3 rounded-lg hover:bg-white/5 transition-colors"
+                    >
+                      <div className="w-10 h-10 rounded-full bg-zinc-700 overflow-hidden flex-shrink-0 border border-white/10">
+                        {avatar
+                          ? <img src={avatar} alt={dName} className="w-full h-full object-cover" />
+                          : <div className="w-full h-full flex items-center justify-center text-white font-bold text-sm">{u.username[0]?.toUpperCase() ?? "?"}</div>
+                        }
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-white font-semibold truncate text-sm">{dName}</p>
+                        <p className="text-white/40 text-xs truncate">@{u.username}</p>
+                      </div>
+                    </Link>
+                  );
+                });
+              })()}
+            </div>
+          </div>
+        </div>,
+        document.body,
       )}
     </div>
   );

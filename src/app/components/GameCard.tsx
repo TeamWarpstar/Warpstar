@@ -1,9 +1,14 @@
 ﻿import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router";
+import {
+  ThumbsUp, ThumbsDown, Sparkles, X,
+  Heart, History, Tag, Monitor, Award, Clock, Users,
+} from "lucide-react";
 import { StarPolarDiagram } from "./StarPolarDiagram";
 import { ImageWithFallback } from "./ImageWithFallback";
 import { scoreStyle } from "./scoreStyle";
 import { createPortal } from "react-dom";
+import { FeedbackType, RecommendationReason, RecommendationReasonType } from "../../api/recommendations";
 
 interface GameCardProps {
   id: string;
@@ -21,13 +26,31 @@ interface GameCardProps {
     polish: number;
   };
   igdbRating: number;
+  // Thumbs feedback — only rendered when onFeedback is provided
+  feedback?:   FeedbackType | null;
+  onFeedback?: (type: FeedbackType | null) => void;
+  // Reasons the algorithm picked this game — only rendered when present
+  reasons?: RecommendationReason[];
 }
 
-export function GameCard({ id, title, coverArt, platforms, developer, year, genres, scores, igdbRating }: GameCardProps) {
+const REASON_STYLES: Record<RecommendationReasonType, { icon: typeof Heart; color: string; bg: string; label: string }> = {
+  feedback:   { icon: Heart,   color: "text-pink-300",   bg: "bg-pink-500/15 border-pink-400/30",     label: "Your feedback" },
+  history:    { icon: History, color: "text-purple-300", bg: "bg-purple-500/15 border-purple-400/30", label: "Your history"  },
+  genre:      { icon: Tag,     color: "text-sky-300",    bg: "bg-sky-500/15 border-sky-400/30",       label: "Your genres"   },
+  platform:   { icon: Monitor, color: "text-cyan-300",   bg: "bg-cyan-500/15 border-cyan-400/30",     label: "Your platforms"},
+  quality:    { icon: Award,   color: "text-amber-300",  bg: "bg-amber-500/15 border-amber-400/30",   label: "Reception"     },
+  recency:    { icon: Clock,   color: "text-emerald-300",bg: "bg-emerald-500/15 border-emerald-400/30",label: "Recency"      },
+  popularity: { icon: Users,   color: "text-orange-300", bg: "bg-orange-500/15 border-orange-400/30", label: "Popularity"    },
+};
+
+export function GameCard({ id, title, coverArt, platforms, developer, year, genres, scores, igdbRating, feedback, onFeedback, reasons }: GameCardProps) {
   const [hovered,      setHovered]      = useState(false);
   const [showDiagram,  setShowDiagram]  = useState(false);
+  const [showWhy,      setShowWhy]      = useState(false);
   const cardRef        = useRef<HTMLDivElement>(null);
   const [popoverStyle, setPopoverStyle] = useState<React.CSSProperties>({});
+
+  const hasReasons = !!(reasons && reasons.length > 0);
 
   const DIAGRAM_SIZE  = 300;
   const POPOVER_WIDTH = 380;
@@ -104,6 +127,61 @@ export function GameCard({ id, title, coverArt, platforms, developer, year, genr
             <div className={`absolute bottom-3 left-3 right-3 transition-opacity duration-200 ${hovered ? "opacity-0" : "opacity-100"}`}>
               <h3 className="text-white font-bold text-base leading-tight line-clamp-2 drop-shadow !text-white">{title}</h3>
             </div>
+
+            {/* Thumbs feedback + "Why?" — only rendered for recommendation cards */}
+            {(onFeedback || hasReasons) && (
+              <div
+                className={`absolute top-2 left-2 flex gap-1.5 z-10 transition-opacity duration-200 ${hovered ? "opacity-100" : "opacity-0 sm:opacity-90"}`}
+              >
+                {onFeedback && (
+                  <>
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onFeedback(feedback === "up" ? null : "up");
+                      }}
+                      aria-label={feedback === "up" ? "Remove like" : "More like this"}
+                      className={`p-1.5 rounded-full backdrop-blur-md border transition-all ${
+                        feedback === "up"
+                          ? "bg-green-500/80 border-green-400/60 text-white shadow-lg"
+                          : "bg-black/55 border-white/15 text-white/75 hover:bg-black/75 hover:text-white"
+                      }`}
+                    >
+                      <ThumbsUp className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onFeedback(feedback === "down" ? null : "down");
+                      }}
+                      aria-label={feedback === "down" ? "Remove dislike" : "Not interested"}
+                      className={`p-1.5 rounded-full backdrop-blur-md border transition-all ${
+                        feedback === "down"
+                          ? "bg-red-500/80 border-red-400/60 text-white shadow-lg"
+                          : "bg-black/55 border-white/15 text-white/75 hover:bg-black/75 hover:text-white"
+                      }`}
+                    >
+                      <ThumbsDown className="w-3.5 h-3.5" />
+                    </button>
+                  </>
+                )}
+                {hasReasons && (
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setShowWhy(true);
+                    }}
+                    aria-label="Why this was recommended"
+                    className="p-1.5 rounded-full backdrop-blur-md border bg-black/55 border-white/15 text-white/75 hover:bg-violet-500/80 hover:border-violet-400/60 hover:text-white transition-all"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </Link>
@@ -165,6 +243,76 @@ export function GameCard({ id, title, coverArt, platforms, developer, year, genr
                 No Warpstar reviews yet — showing IGDB rating
               </div>
             )}
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* "Why recommended?" modal */}
+      {showWhy && hasReasons && createPortal(
+        <div
+          className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/70 backdrop-blur-sm animate-in fade-in duration-150"
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowWhy(false); }}
+        >
+          <div
+            className="relative w-full max-w-md mx-4 bg-zinc-900 border border-white/15 rounded-2xl shadow-2xl shadow-black/80 overflow-hidden"
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+          >
+            {/* Header — cover thumb + title */}
+            <div className="flex items-center gap-4 p-5 border-b border-white/8 bg-gradient-to-br from-violet-500/10 via-transparent to-transparent">
+              <div className="w-14 h-20 rounded-lg overflow-hidden flex-shrink-0 bg-zinc-800 ring-1 ring-white/10">
+                <ImageWithFallback src={coverArt} alt={title} className="w-full h-full object-cover" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-violet-300 uppercase tracking-wider mb-1">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Why this game?
+                </div>
+                <h3 className="text-white font-bold text-lg leading-tight truncate">{title}</h3>
+                {developer && (
+                  <p className="text-white/40 text-xs mt-0.5 truncate">{developer}{year > 0 ? ` · ${year}` : ""}</p>
+                )}
+              </div>
+              <button
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowWhy(false); }}
+                aria-label="Close"
+                className="absolute top-3 right-3 p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Reason list */}
+            <div className="p-5 space-y-2.5">
+              <p className="text-xs text-white/40 mb-3">Based on your preferences, history, and feedback:</p>
+              {reasons!.map((r, i) => {
+                const style = REASON_STYLES[r.type];
+                const Icon  = style.icon;
+                return (
+                  <div
+                    key={i}
+                    className={`flex items-start gap-3 px-3 py-2.5 rounded-lg border ${style.bg}`}
+                  >
+                    <div className={`flex-shrink-0 mt-0.5 ${style.color}`}>
+                      <Icon className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className={`text-[10px] font-semibold uppercase tracking-wider ${style.color}`}>
+                        {style.label}
+                      </div>
+                      <div className="text-sm text-white/85 leading-snug mt-0.5">{r.text}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Footer hint */}
+            <div className="px-5 pb-4 pt-1">
+              <p className="text-[11px] text-white/30 text-center">
+                Use the thumbs to refine future recommendations.
+              </p>
+            </div>
           </div>
         </div>,
         document.body

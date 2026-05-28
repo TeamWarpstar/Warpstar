@@ -29,6 +29,14 @@ export async function followUser(username: string): Promise<{ following: boolean
   return apiFetch(`/api/users/${username}/follow`, { method: "POST" });
 }
 
+export async function getFollowers(username: string): Promise<BackendUser[]> {
+  return apiFetch<BackendUser[]>(`/api/users/${username}/followers`);
+}
+
+export async function getFollowing(username: string): Promise<BackendUser[]> {
+  return apiFetch<BackendUser[]>(`/api/users/${username}/following`);
+}
+
 export async function toggleFavoriteGame(gameId: string): Promise<{ favorited: boolean }> {
   return apiFetch(`/api/users/me/favorites/${gameId}`, { method: "POST" });
 }
