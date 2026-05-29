@@ -1,7 +1,7 @@
 ﻿import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { login as apiLogin, register as apiRegister, logout as apiLogout, googleLogin as apiGoogleLogin } from "../../api/auth";
 import { getMe, BackendUser } from "../../api/users";
-import { clearTokens } from "../../api/client";
+import { clearTokens, apiFetch } from "../../api/client";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -56,13 +56,6 @@ function mapBackendUser(u: BackendUser): WarpstarUser {
   
   // New user if: explicit flag is false, or no display name and no top genres
   const onboardingComplete = onboardingCompleteFlag ?? (displayNameSet && topGenresSet);
-  
-  console.log("[mapBackendUser] Onboarding detection:", {
-    explicit: onboardingCompleteFlag,
-    displayName: u.preferences?.displayName,
-    topGenres: u.preferences?.topGenres,
-    calculated: onboardingComplete,
-  });
 
   return {
     id:                 u.id,
@@ -92,18 +85,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    // Fire a tiny /health ping immediately so a sleeping backend starts
+    // waking up while React boots, instead of paying the full cold-start
+    // cost on the user's first real request.
+    void apiFetch("/health", { skipAuth: true }).catch(() => {});
+
     const token = localStorage.getItem("ws_access_token");
     if (!token) { setIsLoading(false); return; }
 
-    const timeout = setTimeout(() => {
-      clearTokens();
-      setIsLoading(false);
-    }, 5000);
+    // After 15s, unblock the UI even if getMe is still hanging on a cold
+    // backend. Do NOT clear tokens here — if the request eventually
+    // resolves, .then() will fill in the session. Tokens only get cleared
+    // when getMe actually fails (.catch).
+    const unblockTimeout = setTimeout(() => setIsLoading(false), 15000);
 
     getMe()
       .then(u => setUser(mapBackendUser(u)))
       .catch(() => clearTokens())
-      .finally(() => { clearTimeout(timeout); setIsLoading(false); });
+      .finally(() => { clearTimeout(unblockTimeout); setIsLoading(false); });
   }, []);
 
   // ---------------------------------------------------------------------------
@@ -128,25 +127,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signInWithGoogle = async (googleCredential: string): Promise<{ is_new_user: boolean }> => {
-    const resp = await apiGoogleLogin(googleCredential);
-    console.log("[AuthContext] googleLogin response:", resp);
-    console.log("[AuthContext] resp.is_new_user:", resp.is_new_user);
-    
-    const u    = await getMe();
+    const resp       = await apiGoogleLogin(googleCredential);
+    const u          = await getMe();
     const mappedUser = mapBackendUser(u);
     setUser(mappedUser);
-    
-    // Determine if new user: from response or from profile incompleteness
-    let is_new_user = (resp.is_new_user) ?? false;
-    
-    // Fallback: If backend didn't specify, check if profile is incomplete
+
+    // Determine if new user: prefer the backend signal, otherwise fall back
+    // to profile incompleteness so a partial signup still routes through onboarding.
+    let is_new_user = resp.is_new_user ?? false;
     if (!is_new_user && !mappedUser.onboardingComplete) {
-      console.log("[AuthContext] Backend didn't specify is_new_user, checking profile completion");
       is_new_user = true;
     }
-    
-    console.log("[AuthContext] Final is_new_user:", is_new_user, "| onboardingComplete:", mappedUser.onboardingComplete);
-    
     return { is_new_user };
   };
 
