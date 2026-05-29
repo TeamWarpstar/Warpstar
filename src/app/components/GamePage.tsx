@@ -431,7 +431,7 @@ export function GamePage() {
                   showLabels={false}
                   showNumbers={true}
                 />
-              </div>
+              </div> 
 
               <div className="flex-1 w-full space-y-3">
                 {SCORE_FACTORS.map(f => {
