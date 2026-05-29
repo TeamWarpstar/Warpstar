@@ -14,7 +14,13 @@ export async function getMe(): Promise<BackendUser> {
   return apiFetch<BackendUser>("/api/users/me");
 }
 
-export async function updateMe(data: { preferences?: Record<string, unknown> }): Promise<BackendUser> {
+export interface UpdateMeData {
+  username?:           string;
+  preferences?:        Record<string, unknown>;
+  onboardingComplete?: boolean;
+}
+
+export async function updateMe(data: UpdateMeData): Promise<BackendUser> {
   return apiFetch<BackendUser>("/api/users/me", {
     method: "PATCH",
     body:   JSON.stringify(data),

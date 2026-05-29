@@ -1,7 +1,7 @@
 ﻿import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router";
 import {
-  ThumbsUp, ThumbsDown, Sparkles, X,
+  ThumbsUp, ThumbsDown, HelpCircle, X,
   Heart, History, Tag, Monitor, Award, Clock, Users,
 } from "lucide-react";
 import { StarPolarDiagram } from "./StarPolarDiagram";
@@ -9,6 +9,7 @@ import { ImageWithFallback } from "./ImageWithFallback";
 import { scoreStyle } from "./scoreStyle";
 import { createPortal } from "react-dom";
 import { FeedbackType, RecommendationReason, RecommendationReasonType } from "../../api/recommendations";
+import { useTheme } from "../context/ThemeContext";
 
 interface GameCardProps {
   id: string;
@@ -33,7 +34,9 @@ interface GameCardProps {
   reasons?: RecommendationReason[];
 }
 
-const REASON_STYLES: Record<RecommendationReasonType, { icon: typeof Heart; color: string; bg: string; label: string }> = {
+type ReasonStyle = { icon: typeof Heart; color: string; bg: string; label: string };
+
+const REASON_STYLES_DARK: Record<RecommendationReasonType, ReasonStyle> = {
   feedback:   { icon: Heart,   color: "text-pink-300",   bg: "bg-pink-500/15 border-pink-400/30",     label: "Your feedback" },
   history:    { icon: History, color: "text-purple-300", bg: "bg-purple-500/15 border-purple-400/30", label: "Your history"  },
   genre:      { icon: Tag,     color: "text-sky-300",    bg: "bg-sky-500/15 border-sky-400/30",       label: "Your genres"   },
@@ -43,7 +46,18 @@ const REASON_STYLES: Record<RecommendationReasonType, { icon: typeof Heart; colo
   popularity: { icon: Users,   color: "text-orange-300", bg: "bg-orange-500/15 border-orange-400/30", label: "Popularity"    },
 };
 
+const REASON_STYLES_LIGHT: Record<RecommendationReasonType, ReasonStyle> = {
+  feedback:   { icon: Heart,   color: "text-pink-700",    bg: "bg-pink-50 border-pink-200",        label: "Your feedback" },
+  history:    { icon: History, color: "text-purple-700",  bg: "bg-purple-50 border-purple-200",    label: "Your history"  },
+  genre:      { icon: Tag,     color: "text-sky-700",     bg: "bg-sky-50 border-sky-200",          label: "Your genres"   },
+  platform:   { icon: Monitor, color: "text-cyan-700",    bg: "bg-cyan-50 border-cyan-200",        label: "Your platforms"},
+  quality:    { icon: Award,   color: "text-amber-700",   bg: "bg-amber-50 border-amber-200",      label: "Reception"     },
+  recency:    { icon: Clock,   color: "text-emerald-700", bg: "bg-emerald-50 border-emerald-200",  label: "Recency"      },
+  popularity: { icon: Users,   color: "text-orange-700",  bg: "bg-orange-50 border-orange-200",    label: "Popularity"    },
+};
+
 export function GameCard({ id, title, coverArt, platforms, developer, year, genres, scores, igdbRating, feedback, onFeedback, reasons }: GameCardProps) {
+  const { isDark }     = useTheme();
   const [hovered,      setHovered]      = useState(false);
   const [showDiagram,  setShowDiagram]  = useState(false);
   const [showWhy,      setShowWhy]      = useState(false);
@@ -51,6 +65,24 @@ export function GameCard({ id, title, coverArt, platforms, developer, year, genr
   const [popoverStyle, setPopoverStyle] = useState<React.CSSProperties>({});
 
   const hasReasons = !!(reasons && reasons.length > 0);
+
+  // Theme-aware overlay button styles. Active states stay colourful in both
+  // themes; inactive flips to a light pill so it doesn't look like a heavy
+  // dark glob sitting on a bright page.
+  const inactiveBtn = isDark
+    ? "bg-black/55 border-white/15 text-white/75 hover:bg-black/75 hover:text-white"
+    : "bg-white/85 border-zinc-300/80 text-zinc-700 hover:bg-white hover:text-zinc-900 shadow-md";
+  const activeUpBtn = isDark
+    ? "bg-green-500/80 border-green-400/60 text-white shadow-lg"
+    : "bg-green-500 border-green-600 text-white shadow-md";
+  const activeDownBtn = isDark
+    ? "bg-red-500/80 border-red-400/60 text-white shadow-lg"
+    : "bg-red-500 border-red-600 text-white shadow-md";
+  const helpBtnHover = isDark
+    ? "hover:bg-violet-500/80 hover:border-violet-400/60 hover:text-white"
+    : "hover:bg-violet-600 hover:border-violet-700 hover:text-white";
+
+  const REASON_STYLES = isDark ? REASON_STYLES_DARK : REASON_STYLES_LIGHT;
 
   const DIAGRAM_SIZE  = 300;
   const POPOVER_WIDTH = 380;
@@ -143,9 +175,7 @@ export function GameCard({ id, title, coverArt, platforms, developer, year, genr
                       }}
                       aria-label={feedback === "up" ? "Remove like" : "More like this"}
                       className={`p-1.5 rounded-full backdrop-blur-md border transition-all ${
-                        feedback === "up"
-                          ? "bg-green-500/80 border-green-400/60 text-white shadow-lg"
-                          : "bg-black/55 border-white/15 text-white/75 hover:bg-black/75 hover:text-white"
+                        feedback === "up" ? activeUpBtn : inactiveBtn
                       }`}
                     >
                       <ThumbsUp className="w-3.5 h-3.5" />
@@ -158,9 +188,7 @@ export function GameCard({ id, title, coverArt, platforms, developer, year, genr
                       }}
                       aria-label={feedback === "down" ? "Remove dislike" : "Not interested"}
                       className={`p-1.5 rounded-full backdrop-blur-md border transition-all ${
-                        feedback === "down"
-                          ? "bg-red-500/80 border-red-400/60 text-white shadow-lg"
-                          : "bg-black/55 border-white/15 text-white/75 hover:bg-black/75 hover:text-white"
+                        feedback === "down" ? activeDownBtn : inactiveBtn
                       }`}
                     >
                       <ThumbsDown className="w-3.5 h-3.5" />
@@ -175,9 +203,9 @@ export function GameCard({ id, title, coverArt, platforms, developer, year, genr
                       setShowWhy(true);
                     }}
                     aria-label="Why this was recommended"
-                    className="p-1.5 rounded-full backdrop-blur-md border bg-black/55 border-white/15 text-white/75 hover:bg-violet-500/80 hover:border-violet-400/60 hover:text-white transition-all"
+                    className={`p-1.5 rounded-full backdrop-blur-md border transition-all ${inactiveBtn} ${helpBtnHover}`}
                   >
-                    <Sparkles className="w-3.5 h-3.5" />
+                    <HelpCircle className="w-3.5 h-3.5" />
                   </button>
                 )}
               </div>
@@ -255,28 +283,50 @@ export function GameCard({ id, title, coverArt, platforms, developer, year, genr
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowWhy(false); }}
         >
           <div
-            className="relative w-full max-w-md mx-4 bg-zinc-900 border border-white/15 rounded-2xl shadow-2xl shadow-black/80 overflow-hidden"
+            className={`relative w-full max-w-md mx-4 rounded-2xl shadow-2xl overflow-hidden border ${
+              isDark
+                ? "bg-zinc-900 border-white/15 shadow-black/80"
+                : "bg-white border-zinc-200 shadow-black/30"
+            }`}
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
           >
             {/* Header — cover thumb + title */}
-            <div className="flex items-center gap-4 p-5 border-b border-white/8 bg-gradient-to-br from-violet-500/10 via-transparent to-transparent">
-              <div className="w-14 h-20 rounded-lg overflow-hidden flex-shrink-0 bg-zinc-800 ring-1 ring-white/10">
+            <div
+              className={`flex items-center gap-4 p-5 border-b bg-gradient-to-br from-violet-500/10 via-transparent to-transparent ${
+                isDark ? "border-white/8" : "border-zinc-200"
+              }`}
+            >
+              <div
+                className={`w-14 h-20 rounded-lg overflow-hidden flex-shrink-0 ring-1 ${
+                  isDark ? "bg-zinc-800 ring-white/10" : "bg-zinc-100 ring-zinc-200"
+                }`}
+              >
                 <ImageWithFallback src={coverArt} alt={title} className="w-full h-full object-cover" />
               </div>
               <div className="min-w-0">
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-violet-300 uppercase tracking-wider mb-1">
-                  <Sparkles className="w-3.5 h-3.5" />
+                <div className={`flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider mb-1 ${
+                  isDark ? "text-violet-300" : "text-violet-700"
+                }`}>
+                  <HelpCircle className="w-3.5 h-3.5" />
                   Why this game?
                 </div>
-                <h3 className="text-white font-bold text-lg leading-tight truncate">{title}</h3>
+                <h3 className={`font-bold text-lg leading-tight truncate ${isDark ? "text-white" : "text-zinc-900"}`}>
+                  {title}
+                </h3>
                 {developer && (
-                  <p className="text-white/40 text-xs mt-0.5 truncate">{developer}{year > 0 ? ` · ${year}` : ""}</p>
+                  <p className={`text-xs mt-0.5 truncate ${isDark ? "text-white/40" : "text-zinc-500"}`}>
+                    {developer}{year > 0 ? ` · ${year}` : ""}
+                  </p>
                 )}
               </div>
               <button
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowWhy(false); }}
                 aria-label="Close"
-                className="absolute top-3 right-3 p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-colors"
+                className={`absolute top-3 right-3 p-1.5 rounded-lg transition-colors ${
+                  isDark
+                    ? "text-white/40 hover:text-white hover:bg-white/10"
+                    : "text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100"
+                }`}
               >
                 <X className="w-4 h-4" />
               </button>
@@ -284,7 +334,9 @@ export function GameCard({ id, title, coverArt, platforms, developer, year, genr
 
             {/* Reason list */}
             <div className="p-5 space-y-2.5">
-              <p className="text-xs text-white/40 mb-3">Based on your preferences, history, and feedback:</p>
+              <p className={`text-xs mb-3 ${isDark ? "text-white/40" : "text-zinc-500"}`}>
+                Based on your preferences, history, and feedback:
+              </p>
               {reasons!.map((r, i) => {
                 const style = REASON_STYLES[r.type];
                 const Icon  = style.icon;
@@ -300,7 +352,9 @@ export function GameCard({ id, title, coverArt, platforms, developer, year, genr
                       <div className={`text-[10px] font-semibold uppercase tracking-wider ${style.color}`}>
                         {style.label}
                       </div>
-                      <div className="text-sm text-white/85 leading-snug mt-0.5">{r.text}</div>
+                      <div className={`text-sm leading-snug mt-0.5 ${isDark ? "text-white/85" : "text-zinc-800"}`}>
+                        {r.text}
+                      </div>
                     </div>
                   </div>
                 );
@@ -309,7 +363,7 @@ export function GameCard({ id, title, coverArt, platforms, developer, year, genr
 
             {/* Footer hint */}
             <div className="px-5 pb-4 pt-1">
-              <p className="text-[11px] text-white/30 text-center">
+              <p className={`text-[11px] text-center ${isDark ? "text-white/30" : "text-zinc-400"}`}>
                 Use the thumbs to refine future recommendations.
               </p>
             </div>

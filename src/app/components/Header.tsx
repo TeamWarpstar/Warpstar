@@ -44,6 +44,7 @@ function SearchBox({ className = "", onNavigate }: SearchBoxProps) {
   const [userResults, setUserResults] = useState<any[]>([]);
   const [searching,   setSearching]   = useState(false);
   const [showTypeMenu,setShowTypeMenu]= useState(false);
+  const [isFocused,   setIsFocused]   = useState(false);
   const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
   const [typeMenuPos, setTypeMenuPos] = useState({ top: 0, left: 0, width: 0 });
 
@@ -53,9 +54,26 @@ function SearchBox({ className = "", onNavigate }: SearchBoxProps) {
   const typeMenuRef    = useRef<HTMLDivElement>(null);
   const resultsRef     = useRef<HTMLDivElement>(null);
   const debounceRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const blurTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const hasResults = gameResults.length > 0 || genreResults.length > 0 || userResults.length > 0;
-  const showResults = query.trim().length > 0 && (hasResults || searching);
+  // Dropdown is gated on focus so it doesn't pop open just because the URL
+  // populated `query` (e.g. refreshing /search?q=foo).
+  const showResults = isFocused && query.trim().length > 0 && (hasResults || searching);
+
+  const handleFocus = () => {
+    if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
+    setIsFocused(true);
+  };
+  const handleBlur = () => {
+    if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
+    // Delay so clicks on result items in the portal fire before the dropdown closes
+    blurTimeoutRef.current = setTimeout(() => setIsFocused(false), 150);
+  };
+
+  useEffect(() => {
+    return () => { if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current); };
+  }, []);
 
   // Reposition portals on scroll/resize
   const updatePositions = () => {
@@ -179,6 +197,8 @@ function SearchBox({ className = "", onNavigate }: SearchBoxProps) {
             type="text"
             value={query}
             onChange={e => setQuery(e.target.value)}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
             onKeyDown={e => { if (e.key === "Enter") handleSubmit(); }}
             placeholder={placeholder}
             className="w-full bg-transparent pl-9 pr-10 py-3 text-white placeholder:text-white/30 focus:outline-none text-sm"

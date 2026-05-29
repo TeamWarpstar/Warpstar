@@ -75,26 +75,8 @@ export async function getRecommendations(
 
   const raw = await apiFetch<RecommendationResponse>(`/api/recommendations/${buildQuery({ ...overrides, limit })}`);
 
-  // Only re-fetch games that are missing string arrays — avoids 20 requests
-  // when the data is already correct
-  const needsEnrich = raw.results.filter((g: any) =>
-    !(Array.isArray(g.genres) && g.genres.length > 0 && typeof g.genres[0] === "string")
-  );
-
-  if (needsEnrich.length > 0) {
-    const enrichMap = new Map<string, any>();
-    await Promise.all(
-      needsEnrich.map(async (g: any) => {
-        try {
-          const full = await apiFetch<any>(`/api/games/${g.id}`);
-          enrichMap.set(g.id, { ...full, _score: g._score, _reasons: g._reasons });
-        } catch {
-          enrichMap.set(g.id, g);
-        }
-      })
-    );
-    raw.results = raw.results.map((g: any) => enrichMap.get(g.id) ?? g) as any;
-  }
+  // The backend now returns games with genres/platforms/developers resolved
+  // to string arrays, so there's no per-game enrichment round-trip here.
 
   // Cache only non-override results
   if (!overrides) {

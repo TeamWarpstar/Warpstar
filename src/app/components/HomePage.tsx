@@ -1,8 +1,7 @@
 ﻿import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
-import { Link } from "react-router";
 import { GameCard } from "./GameCard";
-import { getGames, getGenres, Game, Genre } from "../../api/games";
+import { getGames, Game } from "../../api/games";
 import {
   getRecommendations,
   getRecommendationFeedback,
@@ -11,21 +10,6 @@ import {
   FeedbackType,
 } from "../../api/recommendations";
 import { useAuth } from "../context/AuthContext";
-
-const GENRE_COLORS: Record<string, string> = {
-  Action:      "from-red-500 to-orange-500",
-  RPG:         "from-purple-500 to-pink-500",
-  Strategy:    "from-blue-500 to-cyan-500",
-  Indie:       "from-green-500 to-teal-500",
-  Adventure:   "from-yellow-500 to-orange-500",
-  Horror:      "from-gray-700 to-purple-900",
-  Puzzle:      "from-teal-500 to-blue-500",
-  Sports:      "from-orange-500 to-yellow-500",
-  Simulation:  "from-emerald-500 to-cyan-500",
-  Fighting:    "from-red-600 to-pink-600",
-  Platformer:  "from-pink-500 to-purple-600",
-  Racing:      "from-cyan-500 to-blue-600",
-};
 
 function gameToCardProps(g: Game & { [k: string]: any }) {
   const platforms = g.platforms ?? [];
@@ -54,8 +38,7 @@ export function HomePage() {
   const { user }                          = useAuth();
   const [recommended,    setRecommended]    = useState<Game[]>([]);
   const [trending,       setTrending]       = useState<Game[]>([]);
-  const [genres,         setGenres]         = useState<Genre[]>([]);
-  const [loadingShell,   setLoadingShell]   = useState(true);   // trending + genres
+  const [loadingShell,   setLoadingShell]   = useState(true);   // top rated rail
   const [loadingRec,     setLoadingRec]     = useState(true);   // recommendations
   const [recPage,        setRecPage]        = useState(0);
   const [feedback,       setFeedback]       = useState<Record<string, FeedbackType>>({});
@@ -66,14 +49,10 @@ export function HomePage() {
     setLoadingRec(true);
     setRecPage(0);
 
-    // Phase 1 — trending + genres load immediately (fast, no auth needed)
-    Promise.all([
-      getGames({ sort: "topRated", limit: 12 }),
-      getGenres(),
-    ]).then(([trend, gens]) => {
-      setTrending(trend.results ?? []);
-      setGenres(gens.slice(0, 12));
-    }).finally(() => setLoadingShell(false));
+    // Phase 1 — top rated rail loads immediately (fast, no auth needed)
+    getGames({ sort: "topRated", limit: 12 })
+      .then(trend => setTrending(trend.results ?? []))
+      .finally(() => setLoadingShell(false));
 
     // Phase 2 — recommendations + feedback load in background
     const recPromise: Promise<Game[]> = user
@@ -183,23 +162,6 @@ export function HomePage() {
         <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-3 sm:mb-6">Top Rated</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-4 lg:gap-6">
           {trending.map(g => <GameCard key={g.id} {...gameToCardProps(g)} />)}
-        </div>
-      </section>
-
-      {/* Browse by Genre */}
-      <section>
-        <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-3 sm:mb-6">Browse by Genre</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3 lg:gap-4">
-          {genres.map(genre => (
-            <Link
-              key={genre.id}
-              to={`/genre/${encodeURIComponent(genre.name.toLowerCase())}`}
-              className="group relative overflow-hidden rounded-lg sm:rounded-xl p-3 sm:p-6 aspect-square flex flex-col items-center justify-center gap-2 sm:gap-3 bg-white/5 border border-white/10 hover:border-white/25 hover:scale-105 transition-all duration-300"
-            >
-              <div className={`absolute inset-0 bg-gradient-to-br ${GENRE_COLORS[genre.name] ?? "from-zinc-700 to-zinc-600"} opacity-20 group-hover:opacity-30 transition-opacity`} />
-              <span className="text-white font-semibold relative z-10 text-xs sm:text-base text-center">{genre.name}</span>
-            </Link>
-          ))}
         </div>
       </section>
     </div>

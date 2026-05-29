@@ -101,9 +101,7 @@ export function OnboardingPage() {
   // Also handles the case where someone types /onboarding directly in the URL.
   useEffect(() => {
     if (user === undefined || user === null) return; // still loading or not logged in
-    console.log("[OnboardingPage] user.onboardingComplete:", user.onboardingComplete);
     if (user.onboardingComplete) {
-      console.log("[OnboardingPage] User already completed onboarding, redirecting to home");
       navigate("/", { replace: true });
     }
   }, [user, navigate]);
@@ -113,9 +111,18 @@ export function OnboardingPage() {
   const [error,  setError]  = useState("");
 
   // Step 1
-  const [username,      setUsername]      = useState("");
-  const [displayName,   setDisplayName]   = useState(user?.googleName ?? "");
-  const [usernameError, setUsernameError] = useState("");
+  const [username,         setUsername]         = useState("");
+  const [displayName,      setDisplayName]      = useState("");
+  const [displayNameDirty, setDisplayNameDirty] = useState(false);
+  const [usernameError,    setUsernameError]    = useState("");
+
+  // Seed display name from the Google profile once user loads — only if the
+  // user hasn't typed anything yet, so we don't overwrite their input.
+  useEffect(() => {
+    if (!displayNameDirty && user?.googleName) {
+      setDisplayName(user.googleName);
+    }
+  }, [user?.googleName, displayNameDirty]);
 
   // Step 2
   const [selectedAvatarId, setSelectedAvatarId] = useState<string | null>(null);
@@ -212,22 +219,29 @@ export function OnboardingPage() {
         googleName:        user?.googleName,
         googleAvatar:      user?.googleAvatar,
       };
-      
+
       // Only update profilePicture if user explicitly set one during onboarding
       if (uploadedImage || selectedAvatarId) {
         newPreferences.profilePicture = profilePicture;
       }
-      
+
       if (bannerImage) {
         newPreferences.bannerImage = bannerImage;
       }
 
-      await updateMe({
-        username: username.trim(),
-        preferences: newPreferences,
-      });
+      // Save profile + recommendation weights in parallel. onboardingComplete
+      // is what gates the redirect guard on this page, so it must be set here
+      // or users will be sent back through the flow on every visit.
+      await Promise.all([
+        updateMe({
+          username:           username.trim(),
+          preferences:        newPreferences,
+          onboardingComplete: true,
+        }),
+        saveWeights(weights),
+      ]);
       await refreshUser();
-      navigate("/");
+      navigate("/", { replace: true });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to save profile.");
       setSaving(false);
@@ -305,8 +319,8 @@ export function OnboardingPage() {
               <input
                 type="text"
                 value={displayName}
-                onChange={e => setDisplayName(e.target.value)}
-                placeholder="Example Username"
+                onChange={e => { setDisplayName(e.target.value); setDisplayNameDirty(true); }}
+                placeholder="Your display name"
                 className="w-full bg-white/5 border border-white/15 rounded-xl px-4 py-3 text-white placeholder:text-white/25 focus:outline-none focus:border-white/40 transition-colors"
               />
               <p className="mt-1.5 text-xs text-white/35">Your public name — can include spaces and capitals.</p>
@@ -492,8 +506,7 @@ export function OnboardingPage() {
             <p className="text-white/45 text-sm mb-6">Adjust what matters most to you. You can change this anytime in settings.</p>
             <RecommendationWeightsPanel
               initialWeights={weights}
-              onSaved={w => setWeights(w)}
-              inline
+              onChange={setWeights}
             />
           </div>
         )}

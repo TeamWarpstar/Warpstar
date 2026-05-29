@@ -183,22 +183,31 @@ export function GamePage() {
       })
     : null;
 
+  // Pull an overall score off a review — falls back to the mean of the five
+  // factor scores if the backend didn't denormalise it.
+  const reviewOverall = (r: any) =>
+    typeof r.overallScore === "number"
+      ? r.overallScore
+      : ((r.gameplay   ?? 0) + (r.content    ?? 0) + (r.narrative ?? 0) +
+         (r.aesthetics ?? 0) + (r.polish     ?? 0)) / 5;
+
+  // Game's own average across the five factors — what every review is
+  // compared against when sorting by "hottest take".
+  const gameOverallAvg = (
+    scores.gameplay + scores.content + scores.narrative +
+    scores.aesthetics + scores.polish
+  ) / 5;
+
   const sortedReviews =
     sortBy === "hot"
+      // Hottest take: review whose overall score deviates most from the
+      // game's average, in either direction.
       ? [...reviews].sort((a, b) => {
-          const cA =
-            Math.min(a.likes ?? 0, a.dislikes ?? 0) /
-            Math.max(a.likes ?? 0, a.dislikes ?? 0, 1);
-
-          const cB =
-            Math.min(b.likes ?? 0, b.dislikes ?? 0) /
-            Math.max(b.likes ?? 0, b.dislikes ?? 0, 1);
-
-          return cB - cA;
+          const devA = Math.abs(reviewOverall(a) - gameOverallAvg);
+          const devB = Math.abs(reviewOverall(b) - gameOverallAvg);
+          return devB - devA;
         })
-      : [...reviews].sort(
-          (a, b) => (b.overallScore ?? 0) - (a.overallScore ?? 0)
-        );
+      : [...reviews].sort((a, b) => reviewOverall(b) - reviewOverall(a));
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6 sm:py-8">
