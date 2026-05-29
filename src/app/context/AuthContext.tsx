@@ -43,6 +43,28 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+// localStorage key for the last-known user. We restore from this immediately
+// on boot so the UI lights up without waiting for a network round-trip.
+const CACHED_USER_KEY = "ws_cached_user";
+
+function cacheUser(u: WarpstarUser | null) {
+  try {
+    if (u) localStorage.setItem(CACHED_USER_KEY, JSON.stringify(u));
+    else   localStorage.removeItem(CACHED_USER_KEY);
+  } catch {
+    // Storage full, private mode, etc — non-fatal
+  }
+}
+
+function readCachedUser(): WarpstarUser | null {
+  try {
+    const raw = localStorage.getItem(CACHED_USER_KEY);
+    return raw ? (JSON.parse(raw) as WarpstarUser) : null;
+  } catch {
+    return null;
+  }
+}
+
 function mapBackendUser(u: BackendUser): WarpstarUser {
   const profilePictureValue = u.preferences?.profilePicture as string | undefined;
   const googleAvatarValue   = u.preferences?.googleAvatar   as string | undefined;
@@ -81,8 +103,15 @@ function mapBackendUser(u: BackendUser): WarpstarUser {
 // ---------------------------------------------------------------------------
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user,      setUser]      = useState<WarpstarUser | null>(null);
+  // Start with the cached user if we have one — the UI doesn't have to wait
+  // for the network round-trip on a returning visit.
+  const [user,      setUser]      = useState<WarpstarUser | null>(() => readCachedUser());
   const [isLoading, setIsLoading] = useState(true);
+
+  const setAndCacheUser = (next: WarpstarUser | null) => {
+    setUser(next);
+    cacheUser(next);
+  };
 
   useEffect(() => {
     // Fire a tiny /health ping immediately so a sleeping backend starts
@@ -91,18 +120,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     void apiFetch("/health", { skipAuth: true }).catch(() => {});
 
     const token = localStorage.getItem("ws_access_token");
-    if (!token) { setIsLoading(false); return; }
+    if (!token) {
+      // No session — make sure stale cache doesn't linger.
+      cacheUser(null);
+      setIsLoading(false);
+      return;
+    }
 
-    // After 15s, unblock the UI even if getMe is still hanging on a cold
-    // backend. Do NOT clear tokens here — if the request eventually
-    // resolves, .then() will fill in the session. Tokens only get cleared
-    // when getMe actually fails (.catch).
-    const unblockTimeout = setTimeout(() => setIsLoading(false), 15000);
+    // If we already restored a user from cache, unblock the UI immediately.
+    // The getMe() below still runs and replaces the user with the fresh
+    // server copy when it resolves — but the user already sees the app.
+    const restoredFromCache = user !== null;
+    if (restoredFromCache) setIsLoading(false);
+
+    // Fallback timeout for sessions without a cache hit — unblocks the UI
+    // after 15s even if getMe is still pending. Don't clear tokens here.
+    const unblockTimeout = restoredFromCache
+      ? null
+      : setTimeout(() => setIsLoading(false), 15000);
 
     getMe()
-      .then(u => setUser(mapBackendUser(u)))
-      .catch(() => clearTokens())
-      .finally(() => { clearTimeout(unblockTimeout); setIsLoading(false); });
+      .then(u => setAndCacheUser(mapBackendUser(u)))
+      .catch(() => {
+        clearTokens();
+        cacheUser(null);
+        setUser(null);
+      })
+      .finally(() => {
+        if (unblockTimeout) clearTimeout(unblockTimeout);
+        setIsLoading(false);
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ---------------------------------------------------------------------------
@@ -111,26 +159,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshUser = async () => {
     const u = await getMe();
-    setUser(mapBackendUser(u));
+    setAndCacheUser(mapBackendUser(u));
   };
 
   const login = async (email: string, password: string) => {
     await apiLogin(email, password);
     const u = await getMe();
-    setUser(mapBackendUser(u));
+    setAndCacheUser(mapBackendUser(u));
   };
 
   const register = async (username: string, email: string, password: string) => {
     await apiRegister(username, email, password);
     const u = await getMe();
-    setUser(mapBackendUser(u));
+    setAndCacheUser(mapBackendUser(u));
   };
 
   const signInWithGoogle = async (googleCredential: string): Promise<{ is_new_user: boolean }> => {
     const resp       = await apiGoogleLogin(googleCredential);
     const u          = await getMe();
     const mappedUser = mapBackendUser(u);
-    setUser(mappedUser);
+    setAndCacheUser(mappedUser);
 
     // Determine if new user: prefer the backend signal, otherwise fall back
     // to profile incompleteness so a partial signup still routes through onboarding.
@@ -143,12 +191,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = () => {
     apiLogout();
-    setUser(null);
+    setAndCacheUser(null);
   };
 
   const updateProfile = (data: Partial<WarpstarUser>) => {
     if (!user) return;
-    setUser({ ...user, ...data });
+    setAndCacheUser({ ...user, ...data });
   };
 
   return (

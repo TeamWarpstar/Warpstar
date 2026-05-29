@@ -41,6 +41,21 @@ async function refreshAccessToken(): Promise<string | null> {
   }
 }
 
+// Decode the JWT's `exp` claim and check if it's already past (or within
+// 10s of expiring). Returns true for unparseable tokens so we err on the
+// side of refreshing — preventing a wasted 401 round-trip is cheap.
+function isAccessTokenExpired(token: string): boolean {
+  try {
+    const parts = token.split(".");
+    if (parts.length < 2) return true;
+    const payload = JSON.parse(atob(parts[1]));
+    if (typeof payload.exp !== "number") return false;
+    return payload.exp * 1000 - 10_000 < Date.now();
+  } catch {
+    return true;
+  }
+}
+
 export async function apiFetch<T = unknown>(
   path: string,
   options: RequestInit & { skipAuth?: boolean } = {},
@@ -52,13 +67,20 @@ export async function apiFetch<T = unknown>(
   };
 
   if (!skipAuth) {
-    const { access } = getTokens();
+    let { access } = getTokens();
+    // Proactively refresh expired tokens before sending the request —
+    // saves a round-trip to the backend just to get a 401 back.
+    if (access && isAccessTokenExpired(access)) {
+      const refreshed = await refreshAccessToken();
+      access = refreshed ?? access;
+    }
     if (access) headers["Authorization"] = `Bearer ${access}`;
   }
 
   let res = await fetch(`${BASE_URL}${path}`, { ...init, headers });
 
-  // Try a single token refresh on 401
+  // Defensive: backend may have rotated keys or our exp check was wrong.
+  // Refresh once on 401 and retry.
   if (res.status === 401 && !skipAuth) {
     const newToken = await refreshAccessToken();
     if (newToken) {
