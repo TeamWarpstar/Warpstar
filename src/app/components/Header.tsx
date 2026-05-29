@@ -1,11 +1,12 @@
-﻿import { Link, useNavigate, useLocation } from "react-router";
-import { Search, Bell, Settings, Menu, X, Loader2, ChevronDown } from "lucide-react";
+﻿import { Link, useNavigate, useLocation, useSearchParams } from "react-router";
+import { Search, Settings, Menu, X, Loader2, ChevronDown } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import { getGames, getGenres, Game, Genre } from "../../api/games";
 import { getUserByUsername, searchUsers } from "../../api/users";
+import { NotificationsMenu } from "./NotificationsMenu";
 import warpstarWhiteLogo from "../../imports/warpstarwhite.png";
 import warpstarDarkLogo from "../../imports/warpstartransparent.png";
 
@@ -31,7 +32,11 @@ interface SearchBoxProps {
 }
 
 function SearchBox({ className = "", onNavigate }: SearchBoxProps) {
-  const navigate = useNavigate();
+  const navigate     = useNavigate();
+  const location     = useLocation();
+  const [urlParams]  = useSearchParams();
+  const onSearchPage = location.pathname === "/search";
+
   const [query,       setQuery]       = useState("");
   const [searchType,  setSearchType]  = useState<SearchType>("games");
   const [gameResults, setGameResults] = useState<Game[]>([]);
@@ -76,6 +81,16 @@ function SearchBox({ className = "", onNavigate }: SearchBoxProps) {
 
   // Also update when menus open
   useEffect(() => { updatePositions(); }, [showTypeMenu, showResults]);
+
+  // Sync the header input with the URL when we're on the search page —
+  // keeps the header bar matching the active search and prevents the
+  // "header search doesn't work" feeling when re-submitting.
+  useEffect(() => {
+    if (onSearchPage) {
+      setQuery(urlParams.get("q") ?? "");
+      setSearchType((urlParams.get("type") as SearchType) ?? "games");
+    }
+  }, [onSearchPage, urlParams]);
 
   // Close on outside click — must also exclude the portalled menus
   useEffect(() => {
@@ -132,7 +147,9 @@ function SearchBox({ className = "", onNavigate }: SearchBoxProps) {
     e?.preventDefault();
     if (!query.trim()) return;
     navigate(`/search?q=${encodeURIComponent(query.trim())}&type=${searchType}`);
-    setQuery(""); setGameResults([]); setGenreResults([]); setUserResults([]);
+    // Close the live-results dropdown but keep the input value;
+    // the sync effect will set it from the new URL.
+    setGameResults([]); setGenreResults([]); setUserResults([]);
     onNavigate?.();
   };
 
@@ -333,10 +350,7 @@ export function Header() {
           <Link to="/settings" className="text-white/70 hover:text-white transition-colors">
             <Settings className="w-5 h-5" />
           </Link>
-          <button className="relative text-white/70 hover:text-white transition-colors" aria-label="Notifications">
-            <Bell className="w-5 h-5" />
-            <span className="absolute -top-1 -right-1 w-3 h-3 bg-white rounded-full" />
-          </button>
+          <NotificationsMenu />
 
           {user ? (
             <div className="relative" ref={menuRef}>
@@ -386,10 +400,7 @@ export function Header() {
 
         {/* Mobile / tablet right side */}
         <div className="flex sm:hidden items-center gap-3 ml-auto">
-          <button className="relative text-white/70" aria-label="Notifications">
-            <Bell className="w-5 h-5" />
-            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-white rounded-full" />
-          </button>
+          <NotificationsMenu />
           {user && (
             <Link to={profileUrl} className="w-9 h-9 rounded-full overflow-hidden border-2 border-white/20 flex-shrink-0">
               {user.profilePicture

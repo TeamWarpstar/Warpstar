@@ -59,7 +59,7 @@ export function HomePage() {
   const [loadingRec,     setLoadingRec]     = useState(true);   // recommendations
   const [recPage,        setRecPage]        = useState(0);
   const [feedback,       setFeedback]       = useState<Record<string, FeedbackType>>({});
-  const REC_PAGE_SIZE = 5;
+  const REC_PAGE_SIZE = 4;
 
   useEffect(() => {
     setLoadingShell(true);
@@ -158,13 +158,13 @@ export function HomePage() {
           </div>
         </div>
         {loadingRec ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4 lg:gap-6">
-            {Array.from({ length: 5 }).map((_, i) => (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 lg:gap-6">
+            {Array.from({ length: REC_PAGE_SIZE }).map((_, i) => (
               <div key={i} className="aspect-[3/4] rounded-lg sm:rounded-xl bg-white/5 border border-white/10 animate-pulse" />
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4 lg:gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 lg:gap-6">
             {recSlice.map(g => (
               <GameCard
                 key={g.id}

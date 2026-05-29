@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { User, Upload, Check, Sun, Moon, X, AlertTriangle } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
@@ -238,7 +238,7 @@ export function SettingsPage() {
               <input type="text" value={displayName}
                 onChange={e => { setDisplayName(e.target.value); setDisplayNameDirty(true); markDirty(); }}
                 className="w-full bg-white/5 border border-white/15 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-white/40 transition-colors" />
-              <p className="mt-1.5 text-xs text-white/35">This updates your name across the whole platform on save.</p>
+              <p className="mt-1.5 text-xs text-white/35">Your display name shows on your reviews and profile page.</p>
             </div>
 
             <div>
@@ -265,7 +265,7 @@ export function SettingsPage() {
               {usernameError && <p className="mt-1.5 text-xs text-red-400">{usernameError}</p>}
               {onCooldown
                 ? <p className="mt-1.5 text-xs text-white/40">You can change your username again in <span className="text-white/70 font-semibold">{daysLeft} day{daysLeft !== 1 ? "s" : ""}</span>.</p>
-                : <p className="mt-1.5 text-xs text-white/35">3–20 chars, lowercase, numbers and underscores only. 30-day cooldown after each change.</p>
+                : <p className="mt-1.5 text-xs text-white/35">Your username is a unique identifier shown on your profile. 3–20 chars, lowercase, numbers and underscores only. 30-day cooldown after each change.</p>
               }
             </div>
           </div>
@@ -319,7 +319,7 @@ export function SettingsPage() {
 
           {/* Genres */}
           <div className="mb-6">
-            <label className="block text-white/70 font-semibold mb-1">Favourite Genres <span className="text-white/30 font-normal text-xs">(up to 3)</span></label>
+            <label className="block text-white/70 font-semibold mb-1">Favorite Genres <span className="text-white/30 font-normal text-xs">(up to 3)</span></label>
             <p className="text-xs text-white/35 mb-3">{selectedGenres.length}/3 selected</p>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
               {genres.map(genre => {
@@ -389,7 +389,7 @@ export function SettingsPage() {
         {/* Recommendation Weights */}
         <section className="bg-white/5 border border-white/10 rounded-xl p-6">
           <h2 className="text-2xl font-bold text-white mb-6">Recommendation Preferences</h2>
-          <p className="text-white/60 text-sm mb-6">Adjust how games are recommended to you by setting weights for different factors and signals.</p>
+          <p className="text-white/60 text-sm mb-6">Adjust how games are recommended to you.</p>
           <RecommendationWeightsPanel
             initialWeights={weights}
             onChange={(w) => { setWeights(w); markDirty(); }}

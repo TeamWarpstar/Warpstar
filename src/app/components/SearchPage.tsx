@@ -51,6 +51,20 @@ export function SearchPage() {
   const hasMore     = searchType === "games" && skip + PAGE_SIZE < total;
 
   // ---------------------------------------------------------------------------
+  // Sync state with URL params — fires when the header (or anything else)
+  // navigates to /search?q=… while this page is already mounted.
+  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    const q = searchParams.get("q") ?? "";
+    const t = (searchParams.get("type") as SearchType) ?? "games";
+    setQuery(q);
+    setInputValue(q);
+    setSearchType(t);
+    setSkip(0);
+    setSearched(!!q);
+  }, [searchParams]);
+
+  // ---------------------------------------------------------------------------
   // Initial / query-change / sort-change / page-jump fetch (replaces results)
   // ---------------------------------------------------------------------------
   useEffect(() => {
