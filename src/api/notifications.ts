@@ -36,6 +36,11 @@ export async function listNotifications(skip = 0, limit = 20): Promise<Notificat
   return apiFetch<NotificationsResponse>(`/api/notifications/?skip=${skip}&limit=${limit}`);
 }
 
+// Cheap badge-only polling endpoint — single count, no enrichment.
+export async function getUnreadNotificationCount(): Promise<{ unread: number }> {
+  return apiFetch<{ unread: number }>(`/api/notifications/unread-count`);
+}
+
 export async function markNotificationsRead(): Promise<void> {
   await apiFetch(`/api/notifications/mark-read`, { method: "POST" });
 }

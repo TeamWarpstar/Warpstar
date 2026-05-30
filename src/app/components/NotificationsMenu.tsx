@@ -4,6 +4,7 @@ import { Bell, Loader2, Heart, MessageCircle } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import {
   listNotifications,
+  getUnreadNotificationCount,
   markNotificationsRead,
   NotificationItem,
 } from "../../api/notifications";
@@ -82,6 +83,18 @@ export function NotificationsMenu() {
   const [loading, setLoading] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
+  // Cheap: just the unread count for the badge. Polled on a schedule.
+  const fetchCount = async () => {
+    if (!user) return;
+    try {
+      const { unread } = await getUnreadNotificationCount();
+      setUnread(unread);
+    } catch {
+      // Swallow — badge stays in last-known state
+    }
+  };
+
+  // Expensive: full list with enrichment. Only run when the menu opens.
   const fetchNotifs = async () => {
     if (!user) return;
     setLoading(true);
@@ -90,24 +103,42 @@ export function NotificationsMenu() {
       setItems(res.results);
       setUnread(res.unread);
     } catch {
-      // Swallow — bell stays in last-known state
+      // Swallow
     } finally {
       setLoading(false);
     }
   };
 
-  // Initial fetch + polling
+  // Badge polling — count only, paused while the tab is hidden so we don't
+  // burn requests on backgrounded tabs.
   useEffect(() => {
     if (!user) { setItems([]); setUnread(0); return; }
-    fetchNotifs();
-    const t = setInterval(fetchNotifs, POLL_INTERVAL_MS);
-    return () => clearInterval(t);
+
+    fetchCount();
+
+    const tick = () => {
+      if (document.visibilityState === "visible") fetchCount();
+    };
+    const interval = setInterval(tick, POLL_INTERVAL_MS);
+
+    // Catch up immediately when the tab regains focus so the badge isn't
+    // stale by an entire polling interval.
+    const onVisible = () => {
+      if (document.visibilityState === "visible") fetchCount();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [user?.id]);
 
   const handleToggle = async () => {
     const wasClosed = !open;
     setOpen(o => !o);
     if (wasClosed) {
+      // Full fetch only when the menu actually opens.
       await fetchNotifs();
       // Mark read on the server; keep the local items' read state until next
       // fetch so the user can still see what was new in this session.
