@@ -1,7 +1,7 @@
 ﻿import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { login as apiLogin, register as apiRegister, logout as apiLogout, googleLogin as apiGoogleLogin } from "../../api/auth";
 import { getMe, BackendUser } from "../../api/users";
-import { clearTokens, apiFetch } from "../../api/client";
+import { clearTokens, apiFetch, ApiError } from "../../api/client";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -141,10 +141,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     getMe()
       .then(u => setAndCacheUser(mapBackendUser(u)))
-      .catch(() => {
-        clearTokens();
-        cacheUser(null);
-        setUser(null);
+      .catch((err: unknown) => {
+        // ONLY wipe the session on genuine auth failures. Transient backend
+        // issues (cold-start 502/503, Mongo blips, network errors) used to
+        // wipe tokens here too, which caused the "logged out after a slow
+        // load" bug — refreshing then showed an instant guest UI because
+        // tokens were already gone. Now we keep the session intact and let
+        // the next request retry; the cached user keeps the UI alive.
+        if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
+          clearTokens();
+          cacheUser(null);
+          setUser(null);
+        }
       })
       .finally(() => {
         if (unblockTimeout) clearTimeout(unblockTimeout);

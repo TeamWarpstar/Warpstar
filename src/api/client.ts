@@ -22,6 +22,18 @@ export function clearTokens() {
   localStorage.removeItem("ws_refresh_token");
 }
 
+// Error subclass that carries the HTTP status. Callers can distinguish
+// real auth failures (401/403 — wipe the session) from transient backend
+// problems (5xx, network — keep the session, try again later).
+export class ApiError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.name   = "ApiError";
+    this.status = status;
+  }
+}
+
 async function refreshAccessToken(): Promise<string | null> {
   const { refresh } = getTokens();
   if (!refresh) return null;
@@ -31,12 +43,20 @@ async function refreshAccessToken(): Promise<string | null> {
       headers: { "Content-Type": "application/json" },
       body:    JSON.stringify({ refresh_token: refresh }),
     });
-    if (!res.ok) { clearTokens(); return null; }
+    // Refresh token was actually rejected by the backend — wipe it.
+    if (res.status === 401 || res.status === 403) {
+      clearTokens();
+      return null;
+    }
+    // Anything else non-ok (5xx, 429, etc.) is a transient backend issue.
+    // Keep tokens; this attempt just failed and the next one may work.
+    if (!res.ok) return null;
+
     const data = await res.json();
     setTokens(data.access_token, data.refresh_token);
     return data.access_token;
   } catch {
-    clearTokens();
+    // Network error / timeout — also transient, keep tokens.
     return null;
   }
 }
@@ -91,7 +111,7 @@ export async function apiFetch<T = unknown>(
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error(body?.detail ?? `API error ${res.status}`);
+    throw new ApiError(body?.detail ?? `API error ${res.status}`, res.status);
   }
 
   // 204 No Content
