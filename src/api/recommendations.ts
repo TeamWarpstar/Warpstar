@@ -26,6 +26,7 @@ export const DEFAULT_WEIGHTS: RecommendationWeights = {
 export type RecommendationReasonType =
   | "feedback"
   | "history"
+  | "social"
   | "genre"
   | "platform"
   | "quality"

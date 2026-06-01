@@ -154,7 +154,7 @@ export function GamePage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 text-pink-400 animate-spin" />
+        <Loader2 className="w-8 h-8 text-white/40 animate-spin" />
       </div>
     );
   }

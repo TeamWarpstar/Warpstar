@@ -85,41 +85,26 @@ export function ProfilePage() {
 
         try {
           const res = await getUserReviews(p.id);
-          console.log("Reviews API Response:", res);
-          
           // Handle different possible response formats
           let reviewsList = Array.isArray(res) ? res : (res?.results ?? res ?? []);
-          console.log("Reviews to display (raw):", reviewsList);
-          
-          // Ensure we have an array
-          if (!Array.isArray(reviewsList)) {
-            reviewsList = [];
-          }
-          
+          if (!Array.isArray(reviewsList)) reviewsList = [];
+
           // Enrich reviews with game data if missing
           const enrichedReviews = await Promise.all(
             reviewsList.map(async (review: any) => {
               if (!review.gameName && review.gameId) {
                 try {
                   const game = await getGame(review.gameId);
-                  return {
-                    ...review,
-                    gameName: game.name,
-                    gameCoverUrl: game.coverUrl,
-                  };
-                } catch (err) {
-                  console.warn(`Could not fetch game data for ${review.gameId}:`, err);
+                  return { ...review, gameName: game.name, gameCoverUrl: game.coverUrl };
+                } catch {
                   return review;
                 }
               }
               return review;
             })
           );
-          
-          console.log("Enriched reviews:", enrichedReviews);
           setReviews(enrichedReviews);
-        } catch (err) {
-          console.error("Error fetching reviews:", err);
+        } catch {
           setReviews([]);
         }
 
@@ -129,13 +114,11 @@ export function ProfilePage() {
             favoriteGameIds.map(id => getGame(id))
           );
           setFavoriteGames(favoriteGamesData);
-        } catch (err) {
-          console.error("Error fetching favorite games:", err);
+        } catch {
           setFavoriteGames([]);
         }
       })
-      .catch(err => {
-        console.error("Error fetching user profile:", err);
+      .catch(() => {
         setProfile(null);
       })
       .finally(() => setLoading(false));

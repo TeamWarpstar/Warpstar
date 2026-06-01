@@ -394,6 +394,8 @@ export function Header() {
                     <p className="text-white/40 text-xs truncate">@{user.username}</p>
                   </div>
                   <Link to={profileUrl} onClick={() => setShowUserMenu(false)} className="block px-4 py-3 text-white/70 hover:bg-white/5 hover:text-white transition-colors text-sm">View Profile</Link>
+                  <Link to="/drafts" onClick={() => setShowUserMenu(false)} className="block px-4 py-3 text-white/70 hover:bg-white/5 hover:text-white transition-colors text-sm border-t border-white/10">Drafts</Link>
+                  <Link to="/feedback" onClick={() => setShowUserMenu(false)} className="block px-4 py-3 text-white/70 hover:bg-white/5 hover:text-white transition-colors text-sm border-t border-white/10">Liked &amp; Disliked</Link>
                   <Link to="/settings" onClick={() => setShowUserMenu(false)} className="block px-4 py-3 text-white/70 hover:bg-white/5 hover:text-white transition-colors text-sm border-t border-white/10">Settings</Link>
                   {user.topGenres && user.topGenres.length > 0 && (
                     <div className="px-4 py-3 border-t border-white/10">
@@ -445,6 +447,8 @@ export function Header() {
               <>
                 <Link to="/following" onClick={closeMobile} className="px-4 py-3 text-white/70 hover:text-white hover:bg-white/5 rounded-xl transition-colors">Following</Link>
                 <Link to={profileUrl} onClick={closeMobile} className="px-4 py-3 text-white/70 hover:text-white hover:bg-white/5 rounded-xl transition-colors">Profile</Link>
+                <Link to="/drafts" onClick={closeMobile} className="px-4 py-3 text-white/70 hover:text-white hover:bg-white/5 rounded-xl transition-colors">Drafts</Link>
+                <Link to="/feedback" onClick={closeMobile} className="px-4 py-3 text-white/70 hover:text-white hover:bg-white/5 rounded-xl transition-colors">Liked &amp; Disliked</Link>
                 <Link to="/settings" onClick={closeMobile} className="px-4 py-3 text-white/70 hover:text-white hover:bg-white/5 rounded-xl transition-colors">Settings</Link>
                 <button onClick={() => { handleSignOut(); closeMobile(); }} className="text-left px-4 py-3 text-white/60 hover:text-white hover:bg-white/5 rounded-xl transition-colors">Sign Out</button>
               </>

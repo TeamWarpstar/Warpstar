@@ -1,11 +1,12 @@
 ﻿import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router";
 import { ImageWithFallback } from "./ImageWithFallback";
-import { Loader2 } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 import { getGame, getGameReviews, Game } from "../../api/games";
 import { createReview, updateReview } from "../../api/reviews";
 import { useAuth } from "../context/AuthContext";
 import { useId } from "react";
+import { saveDraft, loadDraft, clearDraft, timeAgoShort } from "./drafts";
 
 interface ReviewScores {
   gameplay: number; content: number; narrative: number;
@@ -282,11 +283,14 @@ export function CreateReviewPage() {
   const navigate   = useNavigate();
   const { user }   = useAuth();
 
-  const [game,       setGame]       = useState<Game | null>(null);
-  const [existingId, setExistingId] = useState<string | null>(null);
-  const [loading,    setLoading]    = useState(true);
-  const [posting,    setPosting]    = useState(false);
-  const [error,      setError]      = useState("");
+  const [game,             setGame]             = useState<Game | null>(null);
+  const [existingId,       setExistingId]       = useState<string | null>(null);
+  const [loading,          setLoading]          = useState(true);
+  const [posting,          setPosting]          = useState(false);
+  const [error,            setError]            = useState("");
+  const [draftRestoredAt,  setDraftRestoredAt]  = useState<string | null>(null);
+  const [showSavedFlash,   setShowSavedFlash]   = useState(false);
+  const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [scores, setScores] = useState<ReviewScores>({
     gameplay: 5, content: 5, narrative: 5, aesthetics: 5, polish: 5,
@@ -327,9 +331,40 @@ export function CreateReviewPage() {
           aesthetics: existing.aes_body ?? "",
           polish:     existing.pol_body ?? "",
         });
+      } else {
+        const draft = loadDraft(gameId);
+        if (draft) {
+          setTitle(draft.title);
+          setSummary(draft.summary);
+          setScores(draft.scores);
+          setCategoryText(draft.categoryText);
+          setSpoilers(draft.spoilers);
+          setDraftRestoredAt(draft.savedAt);
+        }
       }
     }).finally(() => setLoading(false));
   }, [gameId, user]);
+
+  // Auto-save draft — debounced 1s, only for new reviews (not edits)
+  useEffect(() => {
+    if (isEditing || !gameId || loading) return;
+    // Don't persist an untouched form — avoids junk drafts on every visit
+    const hasContent = title.trim() || summary.trim() ||
+      Object.values(categoryText).some(t => t.trim());
+    if (!hasContent) return;
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    autoSaveTimer.current = setTimeout(() => {
+      saveDraft(gameId, {
+        title, summary, scores, categoryText, spoilers,
+        savedAt: new Date().toISOString(),
+        gameName: game?.name,
+        coverUrl: game?.coverUrl ?? undefined,
+      });
+      setShowSavedFlash(true);
+      setTimeout(() => setShowSavedFlash(false), 2000);
+    }, 1000);
+    return () => { if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current); };
+  }, [title, summary, scores, categoryText, spoilers, isEditing, gameId, loading]);
 
   if (!user) return (
     <div className="max-w-2xl mx-auto px-4 py-20 text-center">
@@ -361,6 +396,7 @@ export function CreateReviewPage() {
     try {
       if (isEditing) await updateReview(existingId!, payload);
       else           await createReview(gameId, payload);
+      clearDraft(gameId);
       navigate(`/game/${gameId}`);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to save review.");
@@ -397,6 +433,27 @@ export function CreateReviewPage() {
           </div>
         )}
       </div>
+
+      {/* Draft restored banner */}
+      {draftRestoredAt && (
+        <div className="flex items-center justify-between mb-6 px-4 py-3 bg-amber-500/10 border border-amber-500/25 rounded-xl text-sm">
+          <span className="text-amber-300/80">
+            Draft restored · saved {timeAgoShort(draftRestoredAt)}
+          </span>
+          <button
+            onClick={() => {
+              if (gameId) clearDraft(gameId);
+              setTitle(""); setSummary(""); setScores({ gameplay:5, content:5, narrative:5, aesthetics:5, polish:5 });
+              setCategoryText({ gameplay:"", content:"", narrative:"", aesthetics:"", polish:"" });
+              setSpoilers(false);
+              setDraftRestoredAt(null);
+            }}
+            className="flex items-center gap-1 text-amber-300/60 hover:text-amber-300 transition-colors"
+          >
+            <X className="w-3.5 h-3.5" /> Discard
+          </button>
+        </div>
+      )}
 
       <div className="grid lg:grid-cols-2 gap-8">
         {/* Left column */}
@@ -515,7 +572,10 @@ export function CreateReviewPage() {
             <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-2">{error}</p>
           )}
 
-          <div className="flex gap-3 sm:gap-4">
+          <div className="flex gap-3 sm:gap-4 items-center">
+            {showSavedFlash && (
+              <span className="text-xs text-white/40 transition-opacity">Draft saved</span>
+            )}
             <button onClick={() => navigate(`/game/${gameId}`)}
               className="flex-1 px-3 sm:px-6 py-3 sm:py-4 bg-white/5 border border-white/15 text-white/70 font-bold text-base sm:text-lg rounded-lg hover:border-white/30 transition-all">
               Cancel

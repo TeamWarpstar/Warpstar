@@ -45,23 +45,11 @@ export function SplashPage() {
     setIsSigningIn(true);
     setError("");
     try {
-      console.log("[SplashPage] Starting Google sign-in...");
       const result = await signInWithGoogle(credentialResponse.credential);
-      console.log("[SplashPage] Sign-in result:", result);
-      console.log("[SplashPage] result.is_new_user:", result.is_new_user);
-      console.log("[SplashPage] result.isNewUser:", result.isNewUser);
-      
       // New users go through onboarding, returning users go straight to the app
-      const isNewUser = result.is_new_user ?? result.isNewUser ?? false;
-      const targetPath = isNewUser ? "/onboarding" : "/";
-      console.log("[SplashPage] Final isNewUser:", isNewUser);
-      console.log("[SplashPage] Navigating to:", targetPath);
-      
-      // Use replace to avoid back button issues
-      navigate(targetPath, { replace: true });
-      console.log("[SplashPage] Navigate called successfully");
+      const isNewUser = result.is_new_user ?? false;
+      navigate(isNewUser ? "/onboarding" : "/", { replace: true });
     } catch (err: unknown) {
-      console.error("[SplashPage] Sign-in error:", err);
       setError(err instanceof Error ? err.message : "Sign-in failed. Please try again.");
       setIsSigningIn(false);
     }

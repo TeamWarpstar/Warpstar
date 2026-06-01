@@ -2,6 +2,7 @@
 import { User, Upload, Check, Sun, Moon, X, AlertTriangle } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
+import { useScoring } from "../context/ScoringContext";
 import { updateMe } from "../../api/users";
 import { RecommendationWeightsPanel } from "./RecommendationWeightsPanel";
 import { ImageRepositioner } from "./ImageRepositioner";
@@ -11,8 +12,9 @@ import { useBlocker } from "react-router";
 import { RecommendationWeights, DEFAULT_WEIGHTS, saveWeights } from "../../api/recommendations";
 
 export function SettingsPage() {
-  const { user, refreshUser } = useAuth();
-  const { isDark, toggleTheme } = useTheme();
+  const { user, refreshUser }                              = useAuth();
+  const { isDark, toggleTheme }                            = useTheme();
+  const { personalizedScoring, togglePersonalizedScoring } = useScoring();
 
   const [displayName,      setDisplayName]      = useState(user?.displayName ?? "");
   const [newUsername,      setNewUsername]      = useState(user?.username ?? "");
@@ -388,8 +390,30 @@ export function SettingsPage() {
 
         {/* Recommendation Weights */}
         <section className="bg-white/5 border border-white/10 rounded-xl p-6">
-          <h2 className="text-2xl font-bold text-white mb-6">Recommendation Preferences</h2>
+          <h2 className="text-2xl font-bold text-white mb-2">Recommendation Preferences</h2>
           <p className="text-white/60 text-sm mb-6">Adjust how games are recommended to you.</p>
+
+          {/* Personalized scoring toggle */}
+          <div className="flex items-start justify-between gap-4 mb-6 pb-6 border-b border-white/10">
+            <div>
+              <p className="text-white font-semibold text-sm">Personalized Scores</p>
+              <p className="text-white/50 text-xs mt-0.5 max-w-sm">
+                When on, game scores are re-weighted using your factor preferences below.
+                A game that excels in what you care about will score higher than its community average.
+              </p>
+            </div>
+            <button
+              onClick={togglePersonalizedScoring}
+              className={`flex-shrink-0 px-4 py-1.5 rounded-lg border text-sm font-semibold transition-all ${
+                personalizedScoring
+                  ? "bg-white text-zinc-900 border-white"
+                  : "bg-white/5 text-white/50 border-white/15 hover:border-white/30 hover:text-white/70"
+              }`}
+            >
+              {personalizedScoring ? "On" : "Off"}
+            </button>
+          </div>
+
           <RecommendationWeightsPanel
             initialWeights={weights}
             onChange={(w) => { setWeights(w); markDirty(); }}

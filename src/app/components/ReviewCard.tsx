@@ -175,11 +175,21 @@ export function ReviewCard({
 
         {/* Collapsed view: title and truncated review on left, star on right */}
         {!isExpanded && (
-          <div className="pr-44 relative">
-            {title && <h4 className="text-white font-bold text-base mb-2">{title}</h4>}
-            <p className="text-white/75 text-sm line-clamp-3">{review}</p>
-            <div className="absolute -top-10 right-1 flex-shrink-0">
-              <StarPolarDiagram scores={scores} size={160} showTotal={true} showLabels={true} showNumbers={true} />
+          <div className="flex items-start gap-3 sm:gap-4">
+            <div className="flex-1 min-w-0">
+              {title && <h4 className="text-white font-bold text-base mb-2">{title}</h4>}
+              <p className="text-white/75 text-sm line-clamp-3">{review}</p>
+            </div>
+            <div className="flex-shrink-0">
+              {/* Mobile: small star, no labels, just the center score */}
+              <div className="sm:hidden">
+                <StarPolarDiagram scores={scores} size={72} showTotal={true} showLabels={false} showNumbers={false} />
+              </div>
+              {/* Desktop: full labeled star, pulled up to align with header.
+                  pr/pl give the tip labels room so they aren't clipped by the card's overflow-hidden. */}
+              <div className="hidden sm:block -mt-10 px-6">
+                <StarPolarDiagram scores={scores} size={160} showTotal={true} showLabels={true} showNumbers={true} />
+              </div>
             </div>
           </div>
         )}

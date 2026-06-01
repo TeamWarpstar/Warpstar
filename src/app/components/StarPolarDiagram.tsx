@@ -8,10 +8,15 @@ interface StarPolarDiagramProps {
     aesthetics: number;
     polish:     number;
   };
-  size?:        number;
-  showTotal?:   boolean;
-  showLabels?:  boolean;
-  showNumbers?: boolean;
+  size?:          number;
+  showTotal?:     boolean;
+  showLabels?:    boolean;
+  showNumbers?:   boolean;
+  /** Override the computed total — used by personalized scoring to resize the
+   *  star and update the centre number without changing individual tip lengths. */
+  overrideTotal?:   number;
+  /** When true, renders the centre score in italic to signal it's personalized. */
+  isPersonalized?:  boolean;
 }
 
 const FACTORS = [
@@ -98,18 +103,24 @@ function gridStarPath(level: number, rMin: number, rMax: number): string {
 
 export function StarPolarDiagram({
   scores,
-  size        = 280,
-  showTotal   = true,
-  showLabels  = true,
-  showNumbers = true,
+  size          = 280,
+  showTotal     = true,
+  showLabels    = true,
+  showNumbers   = true,
+  overrideTotal,
+  isPersonalized = false,
 }: StarPolarDiagramProps) {
   const cx   = size / 2;
   const cy   = size / 2;
 
-  const totalScore = (
+  const rawTotal = (
     scores.gameplay + scores.content + scores.narrative +
     scores.aesthetics + scores.polish
   ) / 5;
+
+  // Use overrideTotal when provided (personalized scoring) — affects star size
+  // and the centre number, but individual tip lengths stay based on raw scores.
+  const totalScore = overrideTotal !== undefined ? overrideTotal : rawTotal;
 
   const isGold = totalScore >= 9;
   const GOLD   = "#f5c542";
@@ -303,6 +314,7 @@ export function StarPolarDiagram({
             style={{
               fontSize: size * 0.17,
               fontWeight: 700,
+              fontStyle: isPersonalized ? "italic" : "normal",
               color: "#ffffff",
               lineHeight: 1.1,
               textShadow:

@@ -2,7 +2,7 @@
 import { useNavigate } from "react-router";
 import { useAuth } from "../context/AuthContext";
 import { updateMe } from "../../api/users";
-import { getGenres, getPlatforms, Genre } from "../../api/games";
+import { getGenres, Genre } from "../../api/games";
 import { Check, ChevronRight, ChevronLeft, User, Image, Gamepad2, Monitor, Upload, Loader2, SlidersHorizontal } from "lucide-react";
 import { RecommendationWeightsPanel } from "./RecommendationWeightsPanel";
 import { ImageRepositioner } from "./ImageRepositioner";

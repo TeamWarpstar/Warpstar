@@ -24,42 +24,28 @@ export interface AuthResponse {
  * Exchange Google credential for Warpstar auth tokens.
  */
 export async function googleLogin(googleCredential: string): Promise<AuthResponse> {
-  try {
-    console.log("[auth.ts] Making POST request to /api/auth/google");
-    const data = await apiFetch<AuthResponse>("/api/auth/google", {
-      method: "POST",
-      body: JSON.stringify({ credential: googleCredential }),
-    });
-    console.log("[auth.ts] API response received successfully", data);
+  const data = await apiFetch<AuthResponse>("/api/auth/google", {
+    method: "POST",
+    body: JSON.stringify({ credential: googleCredential }),
+  });
 
-    // Store tokens (handle both camelCase and snake_case)
-    const accessToken = data.accessToken || data.access_token;
-    const refreshToken = data.refreshToken || data.refresh_token;
-    
-    if (!accessToken || !refreshToken) {
-      throw new Error("No tokens in auth response: " + JSON.stringify(data));
-    }
-    
-    console.log("[auth.ts] Storing access and refresh tokens...");
-    localStorage.setItem("ws_access_token", accessToken);
-    localStorage.setItem("ws_refresh_token", refreshToken);
-    console.log("[auth.ts] Tokens stored successfully");
+  // Store tokens (handle both camelCase and snake_case)
+  const accessToken = data.accessToken || data.access_token;
+  const refreshToken = data.refreshToken || data.refresh_token;
 
-    // Normalize response to camelCase
-    console.log("[auth.ts] Original response:", data);
-    console.log("[auth.ts] is_new_user field:", data.is_new_user);
-    
-    return {
-      ...data,
-      accessToken: accessToken,
-      refreshToken: refreshToken,
-      is_new_user: data.is_new_user,
-    };
-  } catch (error) {
-    console.error("[auth.ts] googleLogin failed:", error);
-    console.error("[auth.ts] Error details:", error instanceof Error ? { message: error.message, stack: error.stack } : String(error));
-    throw error;
+  if (!accessToken || !refreshToken) {
+    throw new Error("No tokens in auth response: " + JSON.stringify(data));
   }
+
+  localStorage.setItem("ws_access_token", accessToken);
+  localStorage.setItem("ws_refresh_token", refreshToken);
+
+  return {
+    ...data,
+    accessToken,
+    refreshToken,
+    is_new_user: data.is_new_user,
+  };
 }
 
 export async function logout() {

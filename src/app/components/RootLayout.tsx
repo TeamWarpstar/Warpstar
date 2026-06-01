@@ -1,12 +1,23 @@
-﻿import { useEffect } from "react";
+﻿import { useEffect, useState } from "react";
 import { Outlet, useNavigate } from "react-router";
 import { Header } from "./Header";
 import { useAuth } from "../context/AuthContext";
-import warpstarWhiteLogo from "../../imports/warpstarwhite.png";
+import { LoadingScreen } from "./LoadingScreen";
+
+// Minimum time (ms) to show the loading screen so the bar finish animation plays
+const LOADING_EXIT_DELAY = 900;
 
 export function RootLayout() {
   const { user, isLoading } = useAuth();
   const navigate = useNavigate();
+  const [showLoader, setShowLoader] = useState(true);
+
+  useEffect(() => {
+    if (isLoading) return;
+    // Auth resolved — let the bar animate to 100%, then unmount
+    const t = setTimeout(() => setShowLoader(false), LOADING_EXIT_DELAY);
+    return () => clearTimeout(t);
+  }, [isLoading]);
 
   useEffect(() => {
     if (isLoading) return;
@@ -17,15 +28,8 @@ export function RootLayout() {
     }
   }, [user, isLoading, navigate]);
 
-  // Show spinner only while restoring session from token
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <img src={warpstarWhiteLogo} alt="Warpstar" className="h-12 w-auto animate-pulse" />
-        </div>
-      </div>
-    );
+  if (showLoader) {
+    return <LoadingScreen isFinishing={!isLoading} />;
   }
 
   return (

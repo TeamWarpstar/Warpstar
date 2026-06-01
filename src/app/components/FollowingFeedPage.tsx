@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
-import { Loader2, Users } from "lucide-react";
+import { Users } from "lucide-react";
 import { ReviewCard } from "./ReviewCard";
+import { LoadingScreen } from "./LoadingScreen";
 import { useAuth } from "../context/AuthContext";
 import { getFollowingReviews, FollowingReview } from "../../api/reviews";
 
@@ -11,6 +12,7 @@ export function FollowingFeedPage() {
   const { user } = useAuth();
   const [reviews,     setReviews]     = useState<FollowingReview[]>([]);
   const [loading,     setLoading]     = useState(true);
+  const [showLoader,  setShowLoader]  = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [total,       setTotal]       = useState(0);
   const [error,       setError]       = useState("");
@@ -30,6 +32,15 @@ export function FollowingFeedPage() {
       })
       .finally(() => setLoading(false));
   }, [user?.id]);
+
+  // Keep the minigame loader mounted briefly after loading finishes so the
+  // progress bar can animate to 100% before unmounting.
+  useEffect(() => {
+    if (!loading) {
+      const t = setTimeout(() => setShowLoader(false), 900);
+      return () => clearTimeout(t);
+    }
+  }, [loading]);
 
   const hasMore = reviews.length < total;
 
@@ -60,11 +71,7 @@ export function FollowingFeedPage() {
     </div>
   );
 
-  if (loading) return (
-    <div className="flex items-center justify-center h-64">
-      <Loader2 className="w-8 h-8 text-white/40 animate-spin" />
-    </div>
-  );
+  if (showLoader) return <LoadingScreen isFinishing={!loading} />;
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">

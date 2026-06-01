@@ -83,6 +83,12 @@ export async function getFollowingReviews(
   return apiFetch(`/api/feed/reviews?skip=${skip}&limit=${limit}`);
 }
 
+export async function getRecentReviews(
+  limit = 10,
+): Promise<{ results: FollowingReview[] }> {
+  return apiFetch(`/api/reviews/recent?limit=${limit}`, { skipAuth: true });
+}
+
 // ---------------------------------------------------------------------------
 // Comments
 // ---------------------------------------------------------------------------

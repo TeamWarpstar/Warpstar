@@ -2,7 +2,7 @@
 import { Link } from "react-router";
 import {
   ThumbsUp, ThumbsDown, HelpCircle, X,
-  Heart, History, Tag, Monitor, Award, Clock, Users,
+  Heart, History, Tag, Monitor, Award, Clock, Users, UserCheck,
 } from "lucide-react";
 import { StarPolarDiagram } from "./StarPolarDiagram";
 import { ImageWithFallback } from "./ImageWithFallback";
@@ -10,6 +10,7 @@ import { scoreStyle } from "./scoreStyle";
 import { createPortal } from "react-dom";
 import { FeedbackType, RecommendationReason, RecommendationReasonType } from "../../api/recommendations";
 import { useTheme } from "../context/ThemeContext";
+import { useScoring } from "../context/ScoringContext";
 
 interface GameCardProps {
   id: string;
@@ -37,27 +38,30 @@ interface GameCardProps {
 type ReasonStyle = { icon: typeof Heart; color: string; bg: string; label: string };
 
 const REASON_STYLES_DARK: Record<RecommendationReasonType, ReasonStyle> = {
-  feedback:   { icon: Heart,   color: "text-pink-300",   bg: "bg-pink-500/15 border-pink-400/30",     label: "Your feedback" },
-  history:    { icon: History, color: "text-purple-300", bg: "bg-purple-500/15 border-purple-400/30", label: "Your history"  },
-  genre:      { icon: Tag,     color: "text-sky-300",    bg: "bg-sky-500/15 border-sky-400/30",       label: "Your genres"   },
-  platform:   { icon: Monitor, color: "text-cyan-300",   bg: "bg-cyan-500/15 border-cyan-400/30",     label: "Your platforms"},
-  quality:    { icon: Award,   color: "text-amber-300",  bg: "bg-amber-500/15 border-amber-400/30",   label: "Reception"     },
-  recency:    { icon: Clock,   color: "text-emerald-300",bg: "bg-emerald-500/15 border-emerald-400/30",label: "Recency"      },
-  popularity: { icon: Users,   color: "text-orange-300", bg: "bg-orange-500/15 border-orange-400/30", label: "Popularity"    },
+  feedback:   { icon: Heart,      color: "text-pink-300",   bg: "bg-pink-500/15 border-pink-400/30",       label: "Your feedback"  },
+  history:    { icon: History,    color: "text-purple-300", bg: "bg-purple-500/15 border-purple-400/30",   label: "Your history"   },
+  social:     { icon: UserCheck,  color: "text-teal-300",   bg: "bg-teal-500/15 border-teal-400/30",       label: "Your network"   },
+  genre:      { icon: Tag,        color: "text-sky-300",    bg: "bg-sky-500/15 border-sky-400/30",         label: "Your genres"    },
+  platform:   { icon: Monitor,    color: "text-cyan-300",   bg: "bg-cyan-500/15 border-cyan-400/30",       label: "Your platforms" },
+  quality:    { icon: Award,      color: "text-amber-300",  bg: "bg-amber-500/15 border-amber-400/30",     label: "Reception"      },
+  recency:    { icon: Clock,      color: "text-emerald-300",bg: "bg-emerald-500/15 border-emerald-400/30", label: "Recency"        },
+  popularity: { icon: Users,      color: "text-orange-300", bg: "bg-orange-500/15 border-orange-400/30",   label: "Popularity"     },
 };
 
 const REASON_STYLES_LIGHT: Record<RecommendationReasonType, ReasonStyle> = {
-  feedback:   { icon: Heart,   color: "text-pink-700",    bg: "bg-pink-50 border-pink-200",        label: "Your feedback" },
-  history:    { icon: History, color: "text-purple-700",  bg: "bg-purple-50 border-purple-200",    label: "Your history"  },
-  genre:      { icon: Tag,     color: "text-sky-700",     bg: "bg-sky-50 border-sky-200",          label: "Your genres"   },
-  platform:   { icon: Monitor, color: "text-cyan-700",    bg: "bg-cyan-50 border-cyan-200",        label: "Your platforms"},
-  quality:    { icon: Award,   color: "text-amber-700",   bg: "bg-amber-50 border-amber-200",      label: "Reception"     },
-  recency:    { icon: Clock,   color: "text-emerald-700", bg: "bg-emerald-50 border-emerald-200",  label: "Recency"      },
-  popularity: { icon: Users,   color: "text-orange-700",  bg: "bg-orange-50 border-orange-200",    label: "Popularity"    },
+  feedback:   { icon: Heart,      color: "text-pink-700",    bg: "bg-pink-50 border-pink-200",        label: "Your feedback"  },
+  history:    { icon: History,    color: "text-purple-700",  bg: "bg-purple-50 border-purple-200",    label: "Your history"   },
+  social:     { icon: UserCheck,  color: "text-teal-700",    bg: "bg-teal-50 border-teal-200",        label: "Your network"   },
+  genre:      { icon: Tag,        color: "text-sky-700",     bg: "bg-sky-50 border-sky-200",          label: "Your genres"    },
+  platform:   { icon: Monitor,    color: "text-cyan-700",    bg: "bg-cyan-50 border-cyan-200",        label: "Your platforms" },
+  quality:    { icon: Award,      color: "text-amber-700",   bg: "bg-amber-50 border-amber-200",      label: "Reception"      },
+  recency:    { icon: Clock,      color: "text-emerald-700", bg: "bg-emerald-50 border-emerald-200",  label: "Recency"        },
+  popularity: { icon: Users,      color: "text-orange-700",  bg: "bg-orange-50 border-orange-200",    label: "Popularity"     },
 };
 
 export function GameCard({ id, title, coverArt, platforms, developer, year, genres, scores, igdbRating, feedback, onFeedback, reasons }: GameCardProps) {
-  const { isDark }     = useTheme();
+  const { isDark }                                       = useTheme();
+  const { personalizedScoring, computeScore }            = useScoring();
   const [hovered,      setHovered]      = useState(false);
   const [showDiagram,  setShowDiagram]  = useState(false);
   const [showWhy,      setShowWhy]      = useState(false);
@@ -105,15 +109,17 @@ export function GameCard({ id, title, coverArt, platforms, developer, year, genr
     setPopoverStyle({ left, top, width: POPOVER_WIDTH });
   }, [showDiagram]);
 
-  const totalScore = (
-    scores.gameplay + scores.content + scores.narrative +
-    scores.aesthetics + scores.polish
-  ) / 5;
-
-  const hasWarpstarReviews = totalScore > 0;
+  // personalizedScore is the weights-adjusted total when personalized scoring is
+  // on; it falls back to the plain average when the feature is off or the user
+  // has no custom weights. rawTotal is still used to decide whether Warpstar
+  // reviews exist (all-zero means no reviews, not a genuinely scored game).
+  const rawTotal         = (scores.gameplay + scores.content + scores.narrative + scores.aesthetics + scores.polish) / 5;
+  const totalScore       = computeScore(scores);
+  const hasWarpstarReviews = rawTotal > 0;
   const displayScore       = hasWarpstarReviews ? totalScore : (igdbRating ?? 0);
   const scoreColor         = scoreStyle(displayScore);
-  const ratingLabel        = hasWarpstarReviews ? "Warpstar" : "IGDB";
+  const isPersonalized     = personalizedScoring && hasWarpstarReviews;
+  const ratingLabel        = isPersonalized ? "Personalized" : hasWarpstarReviews ? "Warpstar" : "IGDB";
 
   // Star size for the card thumbnail — small, no labels
   const CARD_STAR_SIZE = 75;
@@ -151,6 +157,8 @@ export function GameCard({ id, title, coverArt, platforms, developer, year, genr
                   showTotal={true}
                   showLabels={false}
                   showNumbers={false}
+                  overrideTotal={isPersonalized ? totalScore : undefined}
+                  isPersonalized={isPersonalized}
                 />
               </div>
             )}
@@ -264,7 +272,15 @@ export function GameCard({ id, title, coverArt, platforms, developer, year, genr
             {/* Star diagram — full size with labels and numbers */}
             {hasWarpstarReviews ? (
               <div className="flex items-center justify-center pt-4 pb-2">
-                <StarPolarDiagram scores={scores} size={DIAGRAM_SIZE} showTotal={true} showLabels={true} showNumbers={true} />
+                <StarPolarDiagram
+                  scores={scores}
+                  size={DIAGRAM_SIZE}
+                  showTotal={true}
+                  showLabels={true}
+                  showNumbers={true}
+                  overrideTotal={isPersonalized ? totalScore : undefined}
+                  isPersonalized={isPersonalized}
+                />
               </div>
             ) : (
               <div className="px-5 py-6 text-center text-sm text-white/30">
