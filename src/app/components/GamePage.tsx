@@ -4,7 +4,7 @@ import { StarPolarDiagram } from "./StarPolarDiagram";
 import { ReviewCard } from "./ReviewCard";
 import { useState, useEffect } from "react";
 import { ImageWithFallback } from "./ImageWithFallback";
-import { Edit3, Heart, Loader2, Tag, Monitor, Building2 } from "lucide-react";
+import { Edit3, Heart, Loader2, Tag, Monitor, Building2, ArrowDown, ArrowUp } from "lucide-react";
 import { getGame, getGameReviews, getSimilarGames, Game } from "../../api/games";
 import { toggleFavoriteGame, getUserByUsername } from "../../api/users";
 import { deleteReview } from "../../api/reviews";
@@ -16,6 +16,23 @@ const SCORE_FACTORS = [
   { key: "content" as const, label: "Content", color: "#a95eff" },
   { key: "polish" as const, label: "Polish", color: "#61bb74" },
   { key: "narrative" as const, label: "Narrative", color: "#f55f5f" },
+];
+
+// Review sort options for a game's review list. "top"/"hot" are special
+// (overall score and deviation-from-average); the rest sort by a single factor.
+type GameReviewSort =
+  | "top" | "hot" | "recent"
+  | "gameplay" | "content" | "narrative" | "aesthetics" | "polish";
+
+const GAME_REVIEW_SORTS: { value: GameReviewSort; label: string }[] = [
+  { value: "top",        label: "Rating"       },
+  { value: "hot",        label: "Hottest Take" },
+  { value: "recent",     label: "Date"         },
+  { value: "gameplay",   label: "Gameplay"     },
+  { value: "content",    label: "Content"      },
+  { value: "narrative",  label: "Narrative"    },
+  { value: "aesthetics", label: "Aesthetics"   },
+  { value: "polish",     label: "Polish"       },
 ];
 
 function mapReview(r: any, onDelete?: (id: string) => void, isOwn?: boolean, displayName?: string) {
@@ -60,7 +77,8 @@ export function GamePage() {
   const [reviews, setReviews] = useState<any[]>([]);
   const [similar, setSimilar] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sortBy, setSortBy] = useState<"top" | "hot">("top");
+  const [sortBy, setSortBy] = useState<GameReviewSort>("top");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [favoriting, setFavoriting] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [userDisplayNames, setUserDisplayNames] = useState<Record<string, string>>({});
@@ -198,16 +216,21 @@ export function GamePage() {
     scores.aesthetics + scores.polish
   ) / 5;
 
-  const sortedReviews =
-    sortBy === "hot"
-      // Hottest take: review whose overall score deviates most from the
+  // Numeric key each review sorts on, for the active dimension.
+  const sortKey = (r: any): number => {
+    switch (sortBy) {
+      // Hottest take: how far the review's overall score deviates from the
       // game's average, in either direction.
-      ? [...reviews].sort((a, b) => {
-          const devA = Math.abs(reviewOverall(a) - gameOverallAvg);
-          const devB = Math.abs(reviewOverall(b) - gameOverallAvg);
-          return devB - devA;
-        })
-      : [...reviews].sort((a, b) => reviewOverall(b) - reviewOverall(a));
+      case "hot":    return Math.abs(reviewOverall(r) - gameOverallAvg);
+      case "recent": return new Date(r.createdAt ?? 0).getTime();
+      case "top":    return reviewOverall(r);
+      // Single factor: gameplay / content / narrative / aesthetics / polish
+      default:       return r[sortBy] ?? 0;
+    }
+  };
+
+  const dirMul = sortDir === "asc" ? -1 : 1;
+  const sortedReviews = [...reviews].sort((a, b) => (sortKey(b) - sortKey(a)) * dirMul);
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6 sm:py-8">
@@ -737,20 +760,25 @@ export function GamePage() {
                 Reviews
               </h2>
 
-              <div className="flex gap-2">
-                {(["top", "hot"] as const).map(s => (
-                  <button
-                    key={s}
-                    onClick={() => setSortBy(s)}
-                    className={`px-3 sm:px-4 py-2 rounded-lg font-semibold transition-all text-sm sm:text-base ${
-                      sortBy === s
-                        ? "bg-white text-zinc-900"
-                        : "bg-white/5 text-white/60 border border-white/10 hover:border-white/25"
-                    }`}
-                  >
-                    {s === "top" ? "Top Rated" : "Hottest Take"}
-                  </button>
-                ))}
+              <div className="flex items-stretch gap-2">
+                <select
+                  value={sortBy}
+                  onChange={e => setSortBy(e.target.value as GameReviewSort)}
+                  aria-label="Sort reviews"
+                  className="bg-white/5 border border-white/10 rounded-lg px-3 sm:px-4 py-2 text-sm sm:text-base font-semibold text-white/80 focus:outline-none focus:border-white/40 hover:border-white/25 transition-colors cursor-pointer [&>option]:bg-zinc-900 [&>option]:text-white"
+                >
+                  {GAME_REVIEW_SORTS.map(o => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+                <button
+                  onClick={() => setSortDir(d => (d === "desc" ? "asc" : "desc"))}
+                  className="flex items-center justify-center w-10 bg-white/5 border border-white/10 rounded-lg text-white/70 hover:border-white/40 hover:text-white transition-colors"
+                  title={sortDir === "desc" ? "Highest / newest first" : "Lowest / oldest first"}
+                  aria-label="Toggle sort direction"
+                >
+                  {sortDir === "desc" ? <ArrowDown className="w-4 h-4" /> : <ArrowUp className="w-4 h-4" />}
+                </button>
               </div>
             </div>
 

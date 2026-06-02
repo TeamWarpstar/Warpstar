@@ -478,8 +478,9 @@ export function SettingsPage() {
           initialImage={imageToReposition.image}
           onConfirm={handleRepositionConfirm}
           onCancel={() => setImageToReposition(null)}
-          aspectRatio={imageToReposition.type === "profile" ? 1 : 16 / 9}
-          frameSize={imageToReposition.type === "profile" ? { width: 300, height: 300 } : { width: 400, height: 225 }}
+          aspectRatio={imageToReposition.type === "profile" ? 1 : 6.5}
+          frameSize={imageToReposition.type === "profile" ? { width: 600, height: 600 } : { width: 1300, height: 200 }}
+          circular={imageToReposition.type === "profile"}
           title={imageToReposition.type === "profile" ? "Reposition Profile Picture" : "Reposition Banner"}
         />
       )}

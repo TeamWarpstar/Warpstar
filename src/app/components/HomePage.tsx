@@ -1,5 +1,6 @@
 ﻿import { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, Loader2, Info } from "lucide-react";
+import { Link } from "react-router";
+import { ChevronLeft, ChevronRight, Loader2, Info, Compass } from "lucide-react";
 import { GameCard } from "./GameCard";
 import { ReviewCard } from "./ReviewCard";
 import { getRecentReviews, FollowingReview } from "../../api/reviews";
@@ -241,7 +242,15 @@ export function HomePage() {
 
       {/* Top Rated */}
       <section>
-        <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-3 sm:mb-6">Top Rated</h2>
+        <div className="flex items-center justify-between mb-3 sm:mb-6">
+          <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white">Top Rated</h2>
+          <Link
+            to="/explore"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white/70 text-sm font-semibold hover:border-white/30 hover:text-white transition-all"
+          >
+            <Compass className="w-4 h-4" /> Explore all
+          </Link>
+        </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-4 lg:gap-6">
           {trending.map(g => <GameCard key={g.id} {...gameToCardProps(g)} />)}
         </div>

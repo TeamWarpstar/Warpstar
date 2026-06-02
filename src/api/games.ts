@@ -39,16 +39,23 @@ export interface Genre    { id: string; name: string; }
 export interface Theme    { id: string; name: string; }
 
 export async function getGames(params: {
-  q?:        string;
-  genre?:    string;
-  platform?: string;
-  theme?:    string;
-  sort?:     string;
-  skip?:     number;
-  limit?:    number;
+  q?:         string;
+  genre?:     string;
+  platform?:  string;
+  theme?:     string;
+  sort?:      string;
+  direction?: "asc" | "desc";
+  skip?:      number;
+  limit?:     number;
 } = {}): Promise<GamesResponse> {
+  // Name reads most naturally A–Z; everything else defaults high→low. Callers
+  // can still override via an explicit `direction`.
+  const resolved = {
+    ...params,
+    direction: params.direction ?? (params.sort === "name" ? "asc" : "desc"),
+  };
   const qs = new URLSearchParams();
-  Object.entries(params).forEach(([k, v]) => { if (v !== undefined) qs.set(k, String(v)); });
+  Object.entries(resolved).forEach(([k, v]) => { if (v !== undefined) qs.set(k, String(v)); });
   return apiFetch<GamesResponse>(`/api/games/?${qs}`);
 }
 

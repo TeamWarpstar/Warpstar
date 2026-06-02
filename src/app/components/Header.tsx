@@ -191,7 +191,6 @@ function SearchBox({ className = "", onNavigate }: SearchBoxProps) {
 
         {/* Input */}
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30 pointer-events-none" />
           <input
             ref={inputRef}
             type="text"
@@ -201,7 +200,7 @@ function SearchBox({ className = "", onNavigate }: SearchBoxProps) {
             onBlur={handleBlur}
             onKeyDown={e => { if (e.key === "Enter") handleSubmit(); }}
             placeholder={placeholder}
-            className="w-full bg-transparent pl-9 pr-10 py-3 text-white placeholder:text-white/30 focus:outline-none text-sm"
+            className="w-full bg-transparent pl-3 pr-10 py-3 text-white placeholder:text-white/30 focus:outline-none text-sm"
           />
           {query && (
             <button type="button"
@@ -364,9 +363,8 @@ export function Header() {
         {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-6 ml-auto">
           <Link to="/" className="text-white/70 hover:text-white transition-colors">Home</Link>
-          {/* <Link to="/discover" className="text-white/70 hover:text-white transition-colors">Discover</Link> */}
+          <Link to="/explore" className="text-white/70 hover:text-white transition-colors">Explore</Link>
           {user && <Link to="/following" className="text-white/70 hover:text-white transition-colors">Following</Link>}
-          {user && <Link to={profileUrl} className="text-white/70 hover:text-white transition-colors">Profile</Link>}
           <Link to="/settings" className="text-white/70 hover:text-white transition-colors">
             <Settings className="w-5 h-5" />
           </Link>
@@ -442,11 +440,10 @@ export function Header() {
           <SearchBox onNavigate={closeMobile} />
           <nav className="flex flex-col gap-1">
             <Link to="/" onClick={closeMobile} className="px-4 py-3 text-white/70 hover:text-white hover:bg-white/5 rounded-xl transition-colors">Home</Link>
-            {/* <Link to="/discover" onClick={closeMobile} className="px-4 py-3 text-white/70 hover:text-white hover:bg-white/5 rounded-xl transition-colors">Discover</Link> */}
+            <Link to="/explore" onClick={closeMobile} className="px-4 py-3 text-white/70 hover:text-white hover:bg-white/5 rounded-xl transition-colors">Explore</Link>
             {user ? (
               <>
                 <Link to="/following" onClick={closeMobile} className="px-4 py-3 text-white/70 hover:text-white hover:bg-white/5 rounded-xl transition-colors">Following</Link>
-                <Link to={profileUrl} onClick={closeMobile} className="px-4 py-3 text-white/70 hover:text-white hover:bg-white/5 rounded-xl transition-colors">Profile</Link>
                 <Link to="/drafts" onClick={closeMobile} className="px-4 py-3 text-white/70 hover:text-white hover:bg-white/5 rounded-xl transition-colors">Drafts</Link>
                 <Link to="/feedback" onClick={closeMobile} className="px-4 py-3 text-white/70 hover:text-white hover:bg-white/5 rounded-xl transition-colors">Liked &amp; Disliked</Link>
                 <Link to="/settings" onClick={closeMobile} className="px-4 py-3 text-white/70 hover:text-white hover:bg-white/5 rounded-xl transition-colors">Settings</Link>

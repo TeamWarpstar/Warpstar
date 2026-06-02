@@ -169,7 +169,7 @@ export function NotificationsMenu() {
       <button
         type="button"
         disabled
-        className="relative text-white/30 cursor-default"
+        className="relative flex items-center justify-center text-white/30 cursor-default"
         aria-label="Notifications"
       >
         <Bell className="w-5 h-5" />
@@ -183,7 +183,7 @@ export function NotificationsMenu() {
         type="button"
         onClick={handleToggle}
         aria-label="Notifications"
-        className="relative text-white/70 hover:text-white transition-colors"
+        className="relative flex items-center justify-center text-white/70 hover:text-white transition-colors"
       >
         <Bell className="w-5 h-5" />
         {unread > 0 && (

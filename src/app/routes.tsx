@@ -59,6 +59,7 @@ export const router = createBrowserRouter([
           { path: "genre/:genreName", Component: GenrePage },
           //{ path: "discover", Component: DiscoverPage },
           { path: "search", Component: SearchPage },
+          { path: "explore", Component: SearchPage },
         ],
       },
     ],

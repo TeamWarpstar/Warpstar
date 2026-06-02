@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams, Link } from "react-router";
-import { Search, X, Loader2, User } from "lucide-react";
+import { Search, X, Loader2, User, ArrowDown, ArrowUp } from "lucide-react";
 import { getGames, getGenres, Game, Genre } from "../../api/games";
 import { searchUsers } from "../../api/users";
 import { GameCard } from "./GameCard";
 import { PageJumper } from "./PageJumper";
 
 type SearchType = "games" | "genres" | "users";
+type SortDir    = "asc" | "desc";
 
 const SEARCH_TYPES: { value: SearchType; label: string;}[] = [
   { value: "games",  label: "Games",  },
@@ -15,12 +16,20 @@ const SEARCH_TYPES: { value: SearchType; label: string;}[] = [
 ];
 
 const SORT_OPTIONS = [
+  { value: "topRated",        label: "Rating"        },
+  { value: "gameplayAvg",     label: "Gameplay"      },
+  { value: "contentAvg",      label: "Content"       },
+  { value: "narrativeAvg",    label: "Narrative"     },
+  { value: "aestheticsAvg",   label: "Aesthetics"    },
+  { value: "polishAvg",       label: "Polish"        },
   { value: "reviewTotal",     label: "Most Reviews"  },
-  { value: "igdbRating",      label: "Highest Rated" },
-  { value: "igdbRatingCount", label: "Most Popular"  },
   { value: "releaseDate",     label: "Release Date"  },
-  { value: "name",            label: "Name A–Z"      },
+  { value: "name",            label: "Name"          },
 ];
+
+// Sensible default direction per sort (name reads A–Z; everything else high→low).
+const DEFAULT_DIR: Record<string, SortDir> = { name: "asc" };
+const dirFor = (sort: string): SortDir => DEFAULT_DIR[sort] ?? "desc";
 
 const PAGE_SIZE = 20;
 
@@ -34,6 +43,7 @@ export function SearchPage() {
   const [inputValue,  setInputValue]  = useState(initialQuery);
   const [searchType,  setSearchType]  = useState<SearchType>(initialType);
   const [sort,        setSort]        = useState("reviewTotal");
+  const [sortDir,     setSortDir]     = useState<SortDir>("desc");
 
   // Results
   const [gameResults,  setGameResults]  = useState<Game[]>([]);
@@ -68,19 +78,21 @@ export function SearchPage() {
   // Initial / query-change / sort-change / page-jump fetch (replaces results)
   // ---------------------------------------------------------------------------
   useEffect(() => {
-    if (!query.trim()) {
+    // Genres and users are search-only; games support browsing with no query
+    // (explore mode), so only bail early for the non-game tabs.
+    if (searchType !== "games" && !query.trim()) {
       setGameResults([]); setGenreResults([]); setUserResults([]);
       setTotal(0); setSearched(false);
       return;
     }
 
     setLoading(true);
-    setSearched(true);
+    setSearched(!!query.trim());
 
     const run = async () => {
       try {
         if (searchType === "games") {
-          const res = await getGames({ q: query, sort, limit: PAGE_SIZE, skip });
+          const res = await getGames({ q: query.trim() || undefined, sort, direction: sortDir, limit: PAGE_SIZE, skip });
           setGameResults(res.results ?? []);
           setTotal(res.total ?? 0);
           setGenreResults([]); setUserResults([]);
@@ -107,7 +119,7 @@ export function SearchPage() {
     };
 
     run();
-  }, [query, searchType, sort, skip]);
+  }, [query, searchType, sort, sortDir, skip]);
 
   // ---------------------------------------------------------------------------
   // Infinite scroll — appends game results
@@ -117,14 +129,14 @@ export function SearchPage() {
     setLoadingMore(true);
     try {
       const nextSkip = gameResults.length;
-      const res = await getGames({ q: query, sort, limit: PAGE_SIZE, skip: nextSkip });
+      const res = await getGames({ q: query.trim() || undefined, sort, direction: sortDir, limit: PAGE_SIZE, skip: nextSkip });
       setGameResults(prev => [...prev, ...(res.results ?? [])]);
       setTotal(res.total ?? 0);
       setSkip(nextSkip);
     } finally {
       setLoadingMore(false);
     }
-  }, [loadingMore, hasMore, searchType, gameResults.length, query, sort]);
+  }, [loadingMore, hasMore, searchType, gameResults.length, query, sort, sortDir]);
 
   
 
@@ -145,12 +157,21 @@ export function SearchPage() {
     setSearchType(type);
     setSkip(0);
     setSort("reviewTotal");
+    setSortDir("desc");
     setGameResults([]); setGenreResults([]); setUserResults([]);
     if (query) setSearchParams({ q: query, type });
   };
 
   const handleSortChange = (newSort: string) => {
     setSort(newSort);
+    setSortDir(dirFor(newSort));   // reset to the natural direction for this dimension
+    setSkip(0);
+    setGameResults([]);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const toggleSortDir = () => {
+    setSortDir(d => (d === "desc" ? "asc" : "desc"));
     setSkip(0);
     setGameResults([]);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -222,25 +243,38 @@ export function SearchPage() {
           ))}
         </div>
 
-        {searchType === "games" && query && (
-          <select
-            value={sort}
-            onChange={e => handleSortChange(e.target.value)}
-            className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white/70 text-sm focus:outline-none focus:border-white/30"
-          >
-            {SORT_OPTIONS.map(o => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
+        {searchType === "games" && (
+          <div className="flex items-stretch gap-2">
+            <select
+              value={sort}
+              onChange={e => handleSortChange(e.target.value)}
+              className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white/70 text-sm focus:outline-none focus:border-white/30 cursor-pointer [&>option]:bg-zinc-900"
+            >
+              {SORT_OPTIONS.map(o => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={toggleSortDir}
+              className="flex items-center justify-center w-9 bg-white/5 border border-white/10 rounded-xl text-white/70 hover:border-white/30 hover:text-white transition-colors"
+              title={sortDir === "desc" ? "Highest / newest first" : "Lowest / oldest first"}
+              aria-label="Toggle sort direction"
+            >
+              {sortDir === "desc" ? <ArrowDown className="w-4 h-4" /> : <ArrowUp className="w-4 h-4" />}
+            </button>
+          </div>
         )}
       </div>
 
       {/* Result count */}
-      {searched && !loading && (
+      {!loading && (searched || (searchType === "games" && hasResults)) && (
         <p className="text-white/40 text-sm mb-6">
-          {hasResults
-            ? `${total.toLocaleString()} result${total !== 1 ? "s" : ""} for "${query}"`
-            : `No results for "${query}"`
+          {searched
+            ? (hasResults
+                ? `${total.toLocaleString()} result${total !== 1 ? "s" : ""} for "${query}"`
+                : `No results for "${query}"`)
+            : `Exploring ${total.toLocaleString()} game${total !== 1 ? "s" : ""}`
           }
         </p>
       )}
@@ -252,12 +286,12 @@ export function SearchPage() {
         </div>
       )}
 
-      {/* Empty state */}
-      {!loading && !searched && (
+      {/* Empty state — only for the search-only tabs (genres / users) */}
+      {!loading && !searched && searchType !== "games" && (
         <div className="flex flex-col items-center justify-center py-24 text-center">
           <Search className="w-16 h-16 text-white/10 mb-4" />
           <p className="text-white/30 text-lg">Start typing to search</p>
-          <p className="text-white/20 text-sm mt-1">Search for games, genres, or users</p>
+          <p className="text-white/20 text-sm mt-1">Search for {searchType}</p>
         </div>
       )}
 

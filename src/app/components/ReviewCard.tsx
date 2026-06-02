@@ -4,6 +4,7 @@ import { StarPolarDiagram } from "./StarPolarDiagram";
 import { ImageWithFallback } from "./ImageWithFallback";
 import { getComments, postComment, deleteComment, Comment } from "../../api/reviews";
 import { useAuth } from "../context/AuthContext";
+import { useScoring } from "../context/ScoringContext";
 import { useState } from "react";
 
 const FACTORS = [
@@ -60,6 +61,7 @@ export function ReviewCard({
   showGame = false, gameId, gameName, gameCoverUrl,
 }: ReviewCardProps) {
   const { user } = useAuth();
+  const { personalizedScoring, computeScore } = useScoring();
   const [isExpanded,      setIsExpanded]      = useState(false);
   const [liked,           setLiked]           = useState(false);
   const [disliked,        setDisliked]         = useState(false);
@@ -74,6 +76,13 @@ export function ReviewCard({
     scores.gameplay + scores.content + scores.narrative +
     scores.aesthetics + scores.polish
   ) / 5;
+
+  // Personalized scoring: re-weight the review's factor scores using the
+  // viewer's preferences. The star tips stay raw; only the centre number
+  // (overrideTotal) and styling change.
+  const personalizedTotal = computeScore(scores);
+  const isPersonalized    = personalizedScoring && !!user;
+  const overrideTotal     = isPersonalized ? personalizedTotal : undefined;
 
   const badgeBg =
     totalScore >= 9.5 ? "#2563eb" :
@@ -183,12 +192,12 @@ export function ReviewCard({
             <div className="flex-shrink-0">
               {/* Mobile: small star, no labels, just the center score */}
               <div className="sm:hidden">
-                <StarPolarDiagram scores={scores} size={72} showTotal={true} showLabels={false} showNumbers={false} />
+                <StarPolarDiagram scores={scores} size={72} showTotal={true} showLabels={false} showNumbers={false} overrideTotal={overrideTotal} isPersonalized={isPersonalized} />
               </div>
               {/* Desktop: full labeled star, pulled up to align with header.
                   pr/pl give the tip labels room so they aren't clipped by the card's overflow-hidden. */}
               <div className="hidden sm:block -mt-10 px-6">
-                <StarPolarDiagram scores={scores} size={160} showTotal={true} showLabels={true} showNumbers={true} />
+                <StarPolarDiagram scores={scores} size={160} showTotal={true} showLabels={true} showNumbers={true} overrideTotal={overrideTotal} isPersonalized={isPersonalized} />
               </div>
             </div>
           </div>
@@ -229,7 +238,7 @@ export function ReviewCard({
               })}
             </div>
             <div className="flex-shrink-0 flex items-start justify-center pt-1">
-              <StarPolarDiagram scores={scores} size={290} showTotal={true} showLabels={false} showNumbers={true} />
+              <StarPolarDiagram scores={scores} size={290} showTotal={true} showLabels={false} showNumbers={true} overrideTotal={overrideTotal} isPersonalized={isPersonalized} />
             </div>
           </div>
         )}

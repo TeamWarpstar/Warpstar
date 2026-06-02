@@ -62,8 +62,10 @@ export async function getUserReviews(
   userId: string,
   skip   = 0,
   limit  = 20,
+  sort: ReviewSort = "recent",
+  dir:  SortDir    = "desc",
 ): Promise<{ total: number; skip: number; limit: number; results: Review[] }> {
-  return apiFetch(`/api/reviews/user/${userId}?skip=${skip}&limit=${limit}`);
+  return apiFetch(`/api/reviews/user/${userId}?skip=${skip}&limit=${limit}&sort=${sort}&direction=${dir}`);
 }
 
 export interface FollowingReview extends Review {
@@ -76,11 +78,31 @@ export interface FollowingReview extends Review {
   };
 }
 
+// Sort options shared across review lists. Keys match the backend REVIEW_SORTS map.
+export type ReviewSort =
+  | "recent" | "overall"
+  | "gameplay" | "content" | "narrative" | "aesthetics" | "polish";
+
+export type SortDir = "asc" | "desc";
+
+// Labels name the dimension only; direction is controlled by a separate toggle.
+export const REVIEW_SORT_OPTIONS: { value: ReviewSort; label: string }[] = [
+  { value: "recent",     label: "Date"       },
+  { value: "overall",    label: "Rating"     },
+  { value: "gameplay",   label: "Gameplay"   },
+  { value: "content",    label: "Content"    },
+  { value: "narrative",  label: "Narrative"  },
+  { value: "aesthetics", label: "Aesthetics" },
+  { value: "polish",     label: "Polish"     },
+];
+
 export async function getFollowingReviews(
   skip  = 0,
   limit = 20,
+  sort: ReviewSort = "recent",
+  dir:  SortDir    = "desc",
 ): Promise<{ total: number; skip: number; limit: number; results: FollowingReview[] }> {
-  return apiFetch(`/api/feed/reviews?skip=${skip}&limit=${limit}`);
+  return apiFetch(`/api/feed/reviews?skip=${skip}&limit=${limit}&sort=${sort}&direction=${dir}`);
 }
 
 export async function getRecentReviews(

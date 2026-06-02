@@ -7,6 +7,7 @@ interface ImageRepositionerProps {
   onCancel: () => void;
   aspectRatio?: number; // e.g., 1 for square, 16/9 for banner
   frameSize?: { width: number; height: number }; // in pixels
+  circular?: boolean; // render the crop frame as a circle (e.g. avatars)
   title?: string;
 }
 
@@ -16,6 +17,7 @@ export function ImageRepositioner({
   onCancel,
   aspectRatio = 1,
   frameSize = { width: 300, height: 300 },
+  circular = false,
   title = "Reposition Image",
 }: ImageRepositionerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -67,11 +69,31 @@ export function ImageRepositioner({
       image.height * scale
     );
 
-    // Draw frame border
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.3)";
-    ctx.lineWidth = 2;
-    ctx.strokeRect(0, 0, frameSize.width, frameSize.height);
-  }, [image, scale, offsetX, offsetY, frameSize]);
+    if (circular) {
+      // Dim everything outside the circle so the crop shape is obvious.
+      const cx = frameSize.width / 2;
+      const cy = frameSize.height / 2;
+      const r  = Math.min(cx, cy);
+      ctx.save();
+      ctx.fillStyle = "rgba(10, 10, 10, 0.7)";
+      ctx.beginPath();
+      ctx.rect(0, 0, frameSize.width, frameSize.height);
+      ctx.arc(cx, cy, r, 0, Math.PI * 2, true); // counter-clockwise hole
+      ctx.fill("evenodd");
+      // Circle outline
+      ctx.beginPath();
+      ctx.arc(cx, cy, r - 1, 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.restore();
+    } else {
+      // Rectangular frame border
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.3)";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(0, 0, frameSize.width, frameSize.height);
+    }
+  }, [image, scale, offsetX, offsetY, frameSize, circular]);
 
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     setIsDragging(true);
@@ -81,8 +103,16 @@ export function ImageRepositioner({
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!isDragging) return;
 
-    const deltaX = e.clientX - dragStart.x;
-    const deltaY = e.clientY - dragStart.y;
+    // The canvas may be rendered at a higher internal resolution than its
+    // on-screen size (for output quality), so convert the cursor's screen-space
+    // movement into canvas-space before applying it to the offsets.
+    const canvas = canvasRef.current;
+    const rect   = canvas?.getBoundingClientRect();
+    const scaleX = canvas && rect && rect.width  ? canvas.width  / rect.width  : 1;
+    const scaleY = canvas && rect && rect.height ? canvas.height / rect.height : 1;
+
+    const deltaX = (e.clientX - dragStart.x) * scaleX;
+    const deltaY = (e.clientY - dragStart.y) * scaleY;
 
     setOffsetX((prev) => prev + deltaX);
     setOffsetY((prev) => prev + deltaY);
@@ -120,8 +150,18 @@ export function ImageRepositioner({
   };
 
   const handleConfirm = () => {
-    if (!canvasRef.current) return;
-    onConfirm(canvasRef.current.toDataURL("image/jpeg"));
+    if (!image) return;
+    // Render a clean copy without the on-screen frame guides/overlay so they
+    // don't get baked into the saved image.
+    const out  = document.createElement("canvas");
+    out.width  = frameSize.width;
+    out.height = frameSize.height;
+    const octx = out.getContext("2d");
+    if (!octx) return;
+    octx.fillStyle = "#0a0a0a";
+    octx.fillRect(0, 0, frameSize.width, frameSize.height);
+    octx.drawImage(image, offsetX, offsetY, image.width * scale, image.height * scale);
+    onConfirm(out.toDataURL("image/jpeg"));
   };
 
   return (
@@ -138,7 +178,7 @@ export function ImageRepositioner({
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
-            className="cursor-move border border-white/30 rounded-lg"
+            className={`cursor-move border border-white/30 ${circular ? "rounded-full" : "rounded-lg"}`}
             style={{ maxWidth: "100%" }}
           />
         </div>

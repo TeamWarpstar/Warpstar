@@ -1,5 +1,5 @@
 ﻿import { useParams, Link } from "react-router";
-import { User, Calendar, Loader2, X } from "lucide-react";
+import { User, Calendar, Loader2, X, ArrowDown, ArrowUp } from "lucide-react";
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { ImageWithFallback } from "./ImageWithFallback";
@@ -7,20 +7,8 @@ import { ReviewCard } from "./ReviewCard";
 import { GameCard } from "./GameCard";
 import { useAuth } from "../context/AuthContext";
 import { getUserByUsername, followUser, getFollowers, getFollowing, BackendUser } from "../../api/users";
-import { getUserReviews } from "../../api/reviews";
+import { getUserReviews, ReviewSort, SortDir, REVIEW_SORT_OPTIONS } from "../../api/reviews";
 import { getGame, Game } from "../../api/games";
-
-const SORT_OPTIONS = [
-  { value: "newest", label: "Newest" },
-  { value: "oldest", label: "Oldest" },
-  { value: "highestOverall", label: "Highest Overall" },
-  { value: "lowestOverall", label: "Lowest Overall" },
-  { value: "highestGameplay", label: "Highest Gameplay" },
-  { value: "highestContent", label: "Highest Content" },
-  { value: "highestNarrative", label: "Highest Narrative" },
-  { value: "highestAesthetics", label: "Highest Aesthetics" },
-  { value: "highestPolish", label: "Highest Polish" },
-];
 
 const FAVORITE_SORT_OPTIONS = [
   { value: "lastFavorited", label: "Last Favorited" },
@@ -60,7 +48,8 @@ export function ProfilePage() {
   const [favoriteGames,   setFavoriteGames]   = useState<Game[]>([]);
   const [loading,         setLoading]         = useState(true);
   const [activeTab,       setActiveTab]       = useState<"reviews" | "favorites">("reviews");
-  const [sortBy,          setSortBy]          = useState("newest");
+  const [sortBy,          setSortBy]          = useState<ReviewSort>("recent");
+  const [sortDir,         setSortDir]         = useState<SortDir>("desc");
   const [favoriteSortBy,  setFavoriteSortBy]  = useState("lastFavorited");
   const [following,       setFollowing]       = useState(false);
   const [followerCount,   setFollowerCount]   = useState(0);
@@ -183,7 +172,7 @@ export function ProfilePage() {
       {/* Banner */}
       <div className="relative mb-8">
         <div className="h-32 sm:h-48 rounded-xl overflow-hidden bg-gradient-to-r from-zinc-900 via-zinc-800 to-zinc-900">
-          <ImageWithFallback src={bannerSrc} alt="Profile banner" className="w-full h-full object-cover opacity-60" />
+          <ImageWithFallback src={bannerSrc} alt="Profile banner" className="w-full h-full object-cover" />
         </div>
         <div className="absolute -bottom-10 sm:-bottom-16 left-4 sm:left-8">
           <div className="w-20 h-20 sm:w-32 sm:h-32 rounded-full bg-zinc-700 border-4 border-[#0a0a0a] flex items-center justify-center overflow-hidden">
@@ -257,43 +246,35 @@ export function ProfilePage() {
         reviews.length === 0
           ? <p className="text-white/40 text-center py-20">No reviews yet.</p>
           : <>
-              <div className="mb-6 flex items-center justify-end">
+              <div className="mb-6 flex items-center justify-end gap-2">
                 <select
                   value={sortBy}
-                  onChange={e => setSortBy(e.target.value)}
-                  className="profile-sort-select bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-white/40 text-sm"
+                  onChange={e => setSortBy(e.target.value as ReviewSort)}
+                  className="profile-sort-select bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-white/40 text-sm cursor-pointer [&>option]:bg-zinc-900"
                 >
-                  {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  {REVIEW_SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
+                <button
+                  type="button"
+                  onClick={() => setSortDir(d => (d === "desc" ? "asc" : "desc"))}
+                  className="flex items-center justify-center w-9 bg-white/10 border border-white/20 rounded-lg text-white/70 hover:border-white/40 hover:text-white transition-colors"
+                  title={sortDir === "desc" ? "Highest / newest first" : "Lowest / oldest first"}
+                  aria-label="Toggle sort direction"
+                >
+                  {sortDir === "desc" ? <ArrowDown className="w-4 h-4" /> : <ArrowUp className="w-4 h-4" />}
+                </button>
               </div>
               <div className="space-y-4">
                 {(() => {
-                  const sorted = [...reviews].sort((a, b) => {
-                    const getOverall = (r: any) => (r.gameplay + r.content + r.narrative + r.aesthetics + r.polish) / 5;
-                    
+                  const sortKey = (r: any): number => {
                     switch (sortBy) {
-                      case "newest":
-                        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-                      case "oldest":
-                        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-                      case "highestOverall":
-                        return getOverall(b) - getOverall(a);
-                      case "lowestOverall":
-                        return getOverall(a) - getOverall(b);
-                      case "highestGameplay":
-                        return (b.gameplay ?? 0) - (a.gameplay ?? 0);
-                      case "highestContent":
-                        return (b.content ?? 0) - (a.content ?? 0);
-                      case "highestNarrative":
-                        return (b.narrative ?? 0) - (a.narrative ?? 0);
-                      case "highestAesthetics":
-                        return (b.aesthetics ?? 0) - (a.aesthetics ?? 0);
-                      case "highestPolish":
-                        return (b.polish ?? 0) - (a.polish ?? 0);
-                      default:
-                        return 0;
+                      case "recent":  return new Date(r.createdAt ?? 0).getTime();
+                      case "overall": return (r.gameplay + r.content + r.narrative + r.aesthetics + r.polish) / 5;
+                      default:        return r[sortBy] ?? 0; // gameplay / content / narrative / aesthetics / polish
                     }
-                  });
+                  };
+                  const dirMul = sortDir === "asc" ? -1 : 1;
+                  const sorted = [...reviews].sort((a, b) => (sortKey(b) - sortKey(a)) * dirMul);
                   return sorted.map((review, i) => (
                     <ReviewCard
                       key={review.id ?? i}
