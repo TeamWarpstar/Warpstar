@@ -29,10 +29,9 @@ function WeightSlider({ label, description, value, color, onChange }: WeightSlid
           min={0} max={10} step={0.5}
           value={value}
           onChange={e => onChange(parseFloat(e.target.value))}
-          className="flex-1 h-1.5 rounded-full appearance-none cursor-pointer"
+          className="weight-slider flex-1 h-1.5 rounded-full cursor-pointer"
           style={{
             background: `linear-gradient(to right, ${color} ${value * 10}%, rgba(255,255,255,0.1) ${value * 10}%)`,
-            accentColor: color,
           }}
         />
         <span className="text-xs text-white/25 w-4">10</span>

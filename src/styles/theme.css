@@ -265,6 +265,52 @@
       #d4d4d8 100%
     );
   }
+
+  /* Recommendation weight sliders — the colored fill comes from the element's
+     inline gradient background, so the tracks stay transparent. The key fix is
+     defining an explicit, visible thumb: without these rules the thumb is
+     invisible on most browsers once appearance:none is set, making the slider
+     look unresponsive. */
+  .weight-slider {
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  .weight-slider::-webkit-slider-runnable-track {
+    -webkit-appearance: none;
+    height: 6px;
+    border-radius: 999px;
+    background: transparent;
+  }
+
+  .weight-slider::-moz-range-track {
+    height: 6px;
+    border-radius: 999px;
+    background: transparent;
+  }
+
+  .weight-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    margin-top: -5px; /* centre the 16px thumb on the 6px track */
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #ffffff;
+    border: 2px solid #18181b;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+    cursor: pointer;
+  }
+
+  .weight-slider::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #ffffff;
+    border: 2px solid #18181b;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+    cursor: pointer;
+  }
 }
 
 /* =============================================

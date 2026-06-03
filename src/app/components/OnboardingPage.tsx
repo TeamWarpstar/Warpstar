@@ -6,7 +6,7 @@ import { getGenres, Genre } from "../../api/games";
 import { Check, ChevronRight, ChevronLeft, User, Image, Gamepad2, Monitor, Upload, Loader2, SlidersHorizontal } from "lucide-react";
 import { RecommendationWeightsPanel } from "./RecommendationWeightsPanel";
 import { ImageRepositioner } from "./ImageRepositioner";
-import { RecommendationWeights, DEFAULT_WEIGHTS, saveWeights } from "../../api/recommendations";
+import { RecommendationWeights, DEFAULT_WEIGHTS } from "../../api/recommendations";
 import warpstarWhiteLogo from "../../imports/warpstarwhite.png";
 
 // ---------------------------------------------------------------------------
@@ -218,6 +218,7 @@ export function OnboardingPage() {
         platforms:         selectedPlatforms,
         googleName:        user?.googleName,
         googleAvatar:      user?.googleAvatar,
+        weights,
       };
 
       // Only update profilePicture if user explicitly set one during onboarding
@@ -229,17 +230,15 @@ export function OnboardingPage() {
         newPreferences.bannerImage = bannerImage;
       }
 
-      // Save profile + recommendation weights in parallel. onboardingComplete
-      // is what gates the redirect guard on this page, so it must be set here
-      // or users will be sent back through the flow on every visit.
-      await Promise.all([
-        updateMe({
-          username:           username.trim(),
-          preferences:        newPreferences,
-          onboardingComplete: true,
-        }),
-        saveWeights(weights),
-      ]);
+      // Single write — weights live inside preferences (see above) so they
+      // can't be clobbered by a parallel saveWeights call. onboardingComplete
+      // gates the redirect guard on this page, so it must be set here or users
+      // get sent back through the flow on every visit.
+      await updateMe({
+        username:           username.trim(),
+        preferences:        newPreferences,
+        onboardingComplete: true,
+      });
       await refreshUser();
       navigate("/", { replace: true });
     } catch (err: unknown) {

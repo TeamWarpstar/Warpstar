@@ -9,7 +9,7 @@ import { ImageRepositioner } from "./ImageRepositioner";
 import { getGenres, Genre } from "../../api/games";
 import { PLATFORM_PRESETS, PLATFORM_GROUPS } from "./OnboardingPage";
 import { useBlocker } from "react-router";
-import { RecommendationWeights, DEFAULT_WEIGHTS, saveWeights } from "../../api/recommendations";
+import { RecommendationWeights, DEFAULT_WEIGHTS, clearRecommendationsCache } from "../../api/recommendations";
 
 export function SettingsPage() {
   const { user, refreshUser }                              = useAuth();
@@ -128,23 +128,26 @@ export function SettingsPage() {
         }
       }
 
-      // Save profile, privacy, and game preferences together
-      await Promise.all([
-        updateMe({
-          preferences: {
-            ...user?.preferences,
-            displayName:    displayName.trim(),
-            profilePicture,
-            bannerImage,
-            showProfile,
-            showReviews,
-            emailNotifications,
-            topGenres:  selectedGenres,
-            platforms:  selectedPlatforms,
-          },
-        }),
-        saveWeights(weights),
-      ]);
+      // Save profile, privacy, and game preferences in a single write. Weights
+      // are included here (rather than via a separate parallel saveWeights call)
+      // so they can't be clobbered by this full-object preferences replace.
+      await updateMe({
+        preferences: {
+          ...user?.preferences,
+          displayName:    displayName.trim(),
+          profilePicture,
+          bannerImage,
+          showProfile,
+          showReviews,
+          emailNotifications,
+          topGenres:  selectedGenres,
+          platforms:  selectedPlatforms,
+          weights,
+        },
+      });
+      // Recommendations depend on weights — drop the cached results so the next
+      // load reflects the new preferences.
+      clearRecommendationsCache();
 
       await refreshUser();
       setSaved(true);
