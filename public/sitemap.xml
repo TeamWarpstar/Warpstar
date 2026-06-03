@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Static sitemap covering Warpstar's stable entry points. Individual game and
+  genre pages are dynamic; to list every one of them automatically, proxy
+  /sitemap.xml to the backend's GET /sitemap.xml endpoint (see nginx note).
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://warpstar.space/</loc>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://warpstar.space/explore</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+</urlset>

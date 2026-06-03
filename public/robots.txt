@@ -1,0 +1,12 @@
+# https://warpstar.space robots policy
+User-agent: *
+Allow: /
+
+# Personal / utility pages — no SEO value, keep them out of the index
+Disallow: /login
+Disallow: /onboarding
+Disallow: /settings
+Disallow: /drafts
+Disallow: /feedback
+
+Sitemap: https://warpstar.space/sitemap.xml
