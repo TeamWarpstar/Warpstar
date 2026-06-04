@@ -25,9 +25,9 @@ const SCORE_FACTORS = [
   { key: "content"    as const, label: "Content",    color: "#a95eff",
     description: "How much content is there, and how engaging is it?" },
   { key: "polish"     as const, label: "Polish",     color: "#61bb74",
-    description: "How refined is the overall presentation and execution?" },
+    description: "How refined and polished is the overall presentation and execution?" },
   { key: "narrative"  as const, label: "Narrative",  color: "#f55f5f",
-    description: "How good is this game at telling a story?" },
+    description: "How good is this game at creating good stories through gameplay, dialogue, characters, and world-building?" },
 ];
 
 const N = 5;
