@@ -17,7 +17,15 @@ interface StarPolarDiagramProps {
   overrideTotal?:   number;
   /** When true, renders the centre score in italic to signal it's personalized. */
   isPersonalized?:  boolean;
+  /** Number of Warpstar reviews backing these scores. Gold status requires a
+   *  minimum number of reviews, so callers showing an aggregate game score
+   *  should pass this. Individual reviews omit it (never gold). */
+  reviewCount?:     number;
 }
+
+// A star turns gold only for exceptional, well-reviewed games.
+const GOLD_MIN_SCORE   = 9.5;
+const GOLD_MIN_REVIEWS = 3;
 
 const FACTORS = [
   { key: "gameplay"   as const, label: "Gameplay",   color: "#6373ff" },
@@ -109,6 +117,7 @@ export function StarPolarDiagram({
   showNumbers   = true,
   overrideTotal,
   isPersonalized = false,
+  reviewCount,
 }: StarPolarDiagramProps) {
   const cx   = size / 2;
   const cy   = size / 2;
@@ -122,7 +131,7 @@ export function StarPolarDiagram({
   // and the centre number, but individual tip lengths stay based on raw scores.
   const totalScore = overrideTotal !== undefined ? overrideTotal : rawTotal;
 
-  const isGold = totalScore >= 9;
+  const isGold = totalScore >= GOLD_MIN_SCORE && (reviewCount ?? 0) >= GOLD_MIN_REVIEWS;
   const GOLD   = "#f5c542";
 
   // rMax is the fixed outer boundary — used for grid, labels, and the ghost outline
@@ -177,8 +186,8 @@ export function StarPolarDiagram({
 
           {/* Center radial shadow — dark at center, fades out */}
           <radialGradient id={shadowId} cx="50%" cy="50%" r="50%">
-            <stop offset="0%"   stopColor="rgba(0,0,0,0.7)" />
-            <stop offset="40%"  stopColor="rgba(0,0,0,0.25)" />
+            <stop offset="0%"   stopColor="rgba(0,0,0,0.42)" />
+            <stop offset="40%"  stopColor="rgba(0,0,0,0.15)" />
             <stop offset="100%" stopColor="rgba(0,0,0,0)" />
           </radialGradient>
 
@@ -256,11 +265,11 @@ export function StarPolarDiagram({
         {/* Outer seam strokes — dark base, then gold glow for gold stars */}
         <path d={starPath} fill="none" stroke="rgba(0,0,0,0.55)" strokeWidth={isGold ? 2 : 3} />
         <path d={starPath} fill="none"
-          stroke={isGold ? "rgba(255,220,80,0.9)" : "rgba(255,255,255,0.18)"}
-          strokeWidth={isGold ? 2 : 1} />
+          stroke={isGold ? "rgba(245,197,66,0.55)" : "rgba(255,255,255,0.18)"}
+          strokeWidth={isGold ? 1.5 : 1} />
         {isGold && (
           <path d={starPath} fill="none"
-            stroke="rgba(255,255,255,0.45)" strokeWidth="0.75" />
+            stroke="rgba(255,255,255,0.2)" strokeWidth="0.5" />
         )}
 
         {/* Labels — name and/or score next to each tip */}
@@ -312,13 +321,13 @@ export function StarPolarDiagram({
           <div
             className="star-total"
             style={{
-              fontSize: size * 0.17,
+              fontSize: size * 0.20,
               fontWeight: 700,
               fontStyle: isPersonalized ? "italic" : "normal",
               color: "#ffffff",
               lineHeight: 1.1,
               textShadow:
-                "0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,1), 0 0 20px rgba(0,0,0,1)",
+                "0 0 5px rgba(0,0,0,0.6), 0 0 11px rgba(0,0,0,0.4)",
             }}
           >
             {Number.isInteger(totalScore)

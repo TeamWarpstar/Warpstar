@@ -159,6 +159,7 @@ export function FollowingFeedPage() {
                 gameId={r.gameId}
                 gameName={r.gameName}
                 gameCoverUrl={r.gameCoverUrl}
+                containsSpoilers={r.containsSpoilers}
               />
             ))}
           </div>

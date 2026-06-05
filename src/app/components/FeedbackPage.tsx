@@ -32,6 +32,7 @@ function gameToCardProps(g: Game) {
       polish:     g.polishAvg     ?? 0,
     },
     igdbRating: g.igdbRating ?? 0,
+    reviewTotal: g.reviewTotal ?? 0,
   };
 }
 

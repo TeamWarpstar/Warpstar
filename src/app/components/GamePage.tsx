@@ -4,11 +4,12 @@ import { StarPolarDiagram } from "./StarPolarDiagram";
 import { ReviewCard } from "./ReviewCard";
 import { useState, useEffect } from "react";
 import { ImageWithFallback } from "./ImageWithFallback";
-import { Edit3, Heart, Loader2, Tag, Monitor, Building2, ArrowDown, ArrowUp } from "lucide-react";
+import { Edit3, Heart, Loader2, Tag, Monitor, Building2, ArrowDown, ArrowUp, Info } from "lucide-react";
 import { getGame, getGameReviews, getSimilarGames, Game } from "../../api/games";
 import { toggleFavoriteGame, getUserByUsername } from "../../api/users";
 import { deleteReview } from "../../api/reviews";
 import { useAuth } from "../context/AuthContext";
+import { useScoring } from "../context/ScoringContext";
 
 const SCORE_FACTORS = [
   { key: "gameplay" as const, label: "Gameplay", color: "#6373ff" },
@@ -66,12 +67,14 @@ function mapReview(r: any, onDelete?: (id: string) => void, isOwn?: boolean, dis
     createdAt: r.createdAt ?? undefined,
     isOwnReview: isOwn ?? false,
     onDelete: onDelete,
+    containsSpoilers: r.containsSpoilers ?? false,
   };
 }
 
 export function GamePage() {
   const { gameId } = useParams<{ gameId: string }>();
   const { user, refreshUser } = useAuth();
+  const { personalizedScoring, togglePersonalizedScoring, computeScore } = useScoring();
 
   const [game, setGame] = useState<Game | null>(null);
   const [reviews, setReviews] = useState<any[]>([]);
@@ -192,6 +195,39 @@ export function GamePage() {
     aesthetics: game.aestheticsAvg,
     polish: game.polishAvg,
   };
+
+  // Personalized scoring — re-weights the overall score using the viewer's
+  // factor preferences. Only meaningful for games that have Warpstar reviews.
+  const hasWarpstarReviews = game.reviewTotal > 0;
+  const personalizedTotal  = computeScore(scores);
+  const isPersonalized      = personalizedScoring && hasWarpstarReviews;
+  const overrideTotal       = isPersonalized ? personalizedTotal : undefined;
+
+  // "My Scores" toggle — shown to signed-in users on reviewed games.
+  const myScoresToggle = (user && hasWarpstarReviews) ? (
+    <div className="flex items-center gap-1.5">
+      <span className="text-xs text-white/40 font-medium">My Scores</span>
+      <button
+        onClick={togglePersonalizedScoring}
+        className={`px-3 py-1 rounded-lg border text-xs font-semibold transition-all ${
+          personalizedScoring
+            ? "bg-white text-zinc-900 border-white"
+            : "bg-white/5 border-white/10 text-white/50 hover:border-white/25 hover:text-white/70"
+        }`}
+        aria-pressed={personalizedScoring}
+      >
+        {personalizedScoring ? "On" : "Off"}
+      </button>
+      <div className="relative group">
+        <button className="p-1 text-white/30 hover:text-white/60 transition-colors" aria-label="About personalized scores">
+          <Info className="w-3.5 h-3.5" />
+        </button>
+        <div className="absolute right-0 top-full mt-2 w-56 bg-zinc-900 border border-white/15 rounded-lg p-3 text-xs text-white/60 leading-relaxed shadow-xl z-50 hidden group-hover:block pointer-events-none">
+          Scores are re-weighted using your factor preferences from Settings. Games that excel in what you care about score higher than their community average.
+        </div>
+      </div>
+    </div>
+  ) : null;
 
   const releaseYear = game.releaseDate
     ? new Date(game.releaseDate).toLocaleDateString(undefined, {
@@ -453,6 +489,9 @@ export function GamePage() {
           </div>
           {/* Desktop Scores */}
           <div className="hidden lg:block bg-white/5 border border-white/10 rounded-xl p-5 sm:p-6">
+            {myScoresToggle && (
+              <div className="flex justify-end mb-4">{myScoresToggle}</div>
+            )}
             <div className="flex flex-col sm:flex-row items-center gap-6">
 
               <div className="flex-shrink-0">
@@ -462,6 +501,9 @@ export function GamePage() {
                   showTotal={true}
                   showLabels={false}
                   showNumbers={true}
+                  reviewCount={game.reviewTotal}
+                  overrideTotal={overrideTotal}
+                  isPersonalized={isPersonalized}
                 />
               </div> 
 
@@ -664,6 +706,9 @@ export function GamePage() {
 
             {/* Mobile Score Card */}
             <div className="bg-white/5 border border-white/10 rounded-lg p-3">
+              {myScoresToggle && (
+                <div className="flex justify-end mb-3">{myScoresToggle}</div>
+              )}
               <div className="flex gap-3">
 
                 <div className="flex-shrink-0">
@@ -673,6 +718,9 @@ export function GamePage() {
                     showTotal={true}
                     showLabels={false}
                     showNumbers={false}
+                    reviewCount={game.reviewTotal}
+                    overrideTotal={overrideTotal}
+                    isPersonalized={isPersonalized}
                   />
                 </div>
 

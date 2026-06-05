@@ -28,6 +28,8 @@ interface GameCardProps {
     polish: number;
   };
   igdbRating: number;
+  // Number of Warpstar reviews — used to gate the gold star.
+  reviewTotal?: number;
   // Thumbs feedback — only rendered when onFeedback is provided
   feedback?:   FeedbackType | null;
   onFeedback?: (type: FeedbackType | null) => void;
@@ -59,7 +61,7 @@ const REASON_STYLES_LIGHT: Record<RecommendationReasonType, ReasonStyle> = {
   popularity: { icon: Users,      color: "text-orange-700",  bg: "bg-orange-50 border-orange-200",    label: "Popularity"     },
 };
 
-export function GameCard({ id, title, coverArt, platforms, developer, year, genres, scores, igdbRating, feedback, onFeedback, reasons }: GameCardProps) {
+export function GameCard({ id, title, coverArt, platforms, developer, year, genres, scores, igdbRating, reviewTotal, feedback, onFeedback, reasons }: GameCardProps) {
   const { isDark }                                       = useTheme();
   const { personalizedScoring, computeScore }            = useScoring();
   const [hovered,      setHovered]      = useState(false);
@@ -159,6 +161,7 @@ export function GameCard({ id, title, coverArt, platforms, developer, year, genr
                   showNumbers={false}
                   overrideTotal={isPersonalized ? totalScore : undefined}
                   isPersonalized={isPersonalized}
+                  reviewCount={reviewTotal}
                 />
               </div>
             )}
@@ -280,6 +283,7 @@ export function GameCard({ id, title, coverArt, platforms, developer, year, genr
                   showNumbers={true}
                   overrideTotal={isPersonalized ? totalScore : undefined}
                   isPersonalized={isPersonalized}
+                  reviewCount={reviewTotal}
                 />
               </div>
             ) : (

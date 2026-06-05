@@ -127,6 +127,7 @@ export function GenrePage() {
                 genres={game.genres ?? []}
                 scores={{ gameplay: game.gameplayAvg, content: game.contentAvg, narrative: game.narrativeAvg, aesthetics: game.aestheticsAvg, polish: game.polishAvg }}
                 igdbRating={game.igdbRating ?? 0}
+                reviewTotal={game.reviewTotal ?? 0}
               />
             ))}
           </div>

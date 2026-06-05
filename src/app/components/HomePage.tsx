@@ -35,6 +35,7 @@ function gameToCardProps(g: Game & { [k: string]: any }) {
       polish:     g.polishAvg     ?? 0,
     },
     igdbRating: g.igdbRating ?? 0,
+    reviewTotal: g.reviewTotal ?? 0,
   };
 }
 
@@ -312,6 +313,7 @@ export function HomePage() {
                   gameId={r.gameId}
                   gameName={r.gameName}
                   gameCoverUrl={r.gameCoverUrl}
+                  containsSpoilers={r.containsSpoilers}
                 />
               );
             })()}

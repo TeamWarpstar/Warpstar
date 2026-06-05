@@ -1,4 +1,4 @@
-﻿import { ThumbsUp, ThumbsDown, MessageCircle, User, Pin, Trash2, Send, ChevronDown, ChevronUp } from "lucide-react";
+﻿import { ThumbsUp, ThumbsDown, MessageCircle, User, Pin, Trash2, Send, ChevronDown, ChevronUp, EyeOff } from "lucide-react";
 import { Link } from "react-router";
 import { StarPolarDiagram } from "./StarPolarDiagram";
 import { ImageWithFallback } from "./ImageWithFallback";
@@ -51,6 +51,39 @@ interface ReviewCardProps {
   gameId?: string;
   gameName?: string;
   gameCoverUrl?: string;
+  containsSpoilers?: boolean;
+}
+
+// Blurs its children behind a "contains spoilers" notice until revealed.
+function SpoilerGate({
+  hidden,
+  onReveal,
+  children,
+}: {
+  hidden: boolean;
+  onReveal: () => void;
+  children: React.ReactNode;
+}) {
+  if (!hidden) return <>{children}</>;
+  return (
+    <div className="relative">
+      <div className="blur-[6px] select-none pointer-events-none" aria-hidden>
+        {children}
+      </div>
+      <button
+        type="button"
+        onClick={onReveal}
+        className="absolute inset-0 flex flex-col items-center justify-center gap-0.5 text-center"
+      >
+        <span className="flex items-center gap-1.5 text-xs font-semibold text-amber-300/90">
+          <EyeOff className="w-3.5 h-3.5" /> Contains spoilers
+        </span>
+        <span className="text-xs text-white/60 underline underline-offset-2 hover:text-white/90">
+          View anyway
+        </span>
+      </button>
+    </div>
+  );
 }
 
 export function ReviewCard({
@@ -58,11 +91,12 @@ export function ReviewCard({
   likes, dislikes, comments: commentCount,
   createdAt,
   isPinned = false, isOwnReview = false, onDelete,
-  showGame = false, gameId, gameName, gameCoverUrl,
+  showGame = false, gameId, gameName, gameCoverUrl, containsSpoilers = false,
 }: ReviewCardProps) {
   const { user } = useAuth();
   const { personalizedScoring, computeScore } = useScoring();
   const [isExpanded,      setIsExpanded]      = useState(false);
+  const [spoilerRevealed, setSpoilerRevealed] = useState(false);
   const [liked,           setLiked]           = useState(false);
   const [disliked,        setDisliked]         = useState(false);
   const [showComments,    setShowComments]     = useState(false);
@@ -83,6 +117,10 @@ export function ReviewCard({
   const personalizedTotal = computeScore(scores);
   const isPersonalized    = personalizedScoring && !!user;
   const overrideTotal     = isPersonalized ? personalizedTotal : undefined;
+
+  // When the review is marked as containing spoilers, its written text stays
+  // blurred until the viewer chooses to reveal it.
+  const spoilerHidden = containsSpoilers && !spoilerRevealed;
 
   const badgeBg =
     totalScore >= 9.5 ? "#2563eb" :
@@ -187,7 +225,9 @@ export function ReviewCard({
           <div className="flex items-start gap-3 sm:gap-4">
             <div className="flex-1 min-w-0">
               {title && <h4 className="text-white font-bold text-base mb-2">{title}</h4>}
-              <p className="text-white/75 text-sm line-clamp-3">{review}</p>
+              <SpoilerGate hidden={spoilerHidden} onReveal={() => setSpoilerRevealed(true)}>
+                <p className="text-white/75 text-sm line-clamp-3">{review}</p>
+              </SpoilerGate>
             </div>
             <div className="flex-shrink-0">
               {/* Mobile: small star, no labels, just the center score */}
@@ -232,7 +272,14 @@ export function ReviewCard({
                         );
                       })}
                     </div>
-                    {blurb && <p className="text-white/45" style={{ fontSize: 13, lineHeight: 1.55 }}>{blurb}</p>}
+                    {blurb && (
+                      <p
+                        className={`text-white/45 ${spoilerHidden ? "blur-[5px] select-none" : ""}`}
+                        style={{ fontSize: 13, lineHeight: 1.55 }}
+                      >
+                        {blurb}
+                      </p>
+                    )}
                   </div>
                 );
               })}
@@ -245,7 +292,11 @@ export function ReviewCard({
 
         {/* Expanded content: review text */}
         {isExpanded && review && (
-          <p className="mb-4 text-sm leading-relaxed text-white/75">{review}</p>
+          <div className="mb-4">
+            <SpoilerGate hidden={spoilerHidden} onReveal={() => setSpoilerRevealed(true)}>
+              <p className="text-sm leading-relaxed text-white/75">{review}</p>
+            </SpoilerGate>
+          </div>
         )}
 
         {/* Footer with actions — only when expanded */}

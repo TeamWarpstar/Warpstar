@@ -37,6 +37,7 @@ function gameToCardProps(g: Game & { [k: string]: any }) {
       polish:     g.polishAvg     ?? 0,
     },
     igdbRating: g.igdbRating ?? 0,
+    reviewTotal: g.reviewTotal ?? 0,
   };
 }
 
@@ -309,6 +310,7 @@ export function ProfilePage() {
                       gameId={review.gameId}
                       gameName={review.gameName}
                       gameCoverUrl={review.gameCoverUrl}
+                      containsSpoilers={review.containsSpoilers}
                     />
                   ));
                 })()}
