@@ -321,9 +321,10 @@ export function StarPolarDiagram({
           <div
             className="star-total"
             style={{
-              fontSize: size * 0.20,
+              fontSize: isPersonalized ? size * 0.20 : size * 0.20,
               fontWeight: 700,
               fontStyle: isPersonalized ? "italic" : "normal",
+              transform: isPersonalized ? "translateX(-4%)" : undefined,
               color: "#ffffff",
               lineHeight: 1.1,
               textShadow:
