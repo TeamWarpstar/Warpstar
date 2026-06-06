@@ -24,6 +24,7 @@ export interface WarpstarUser {
   followers:          string[];
   following:          string[];
   preferences:        Record<string, unknown>;
+  role?:              string;
 }
 
 interface AuthContextType {
@@ -95,6 +96,7 @@ function mapBackendUser(u: BackendUser): WarpstarUser {
     platforms:          u.preferences?.platforms   as string[] | undefined,
     googleName:         u.preferences?.googleName  as string | undefined,
     googleAvatar:       googleAvatarValue,
+    role:               u.role,
   };
 }
 

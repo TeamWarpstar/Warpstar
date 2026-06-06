@@ -394,6 +394,9 @@ export function Header() {
                   <Link to={profileUrl} onClick={() => setShowUserMenu(false)} className="block px-4 py-3 text-white/70 hover:bg-white/5 hover:text-white transition-colors text-sm">View Profile</Link>
                   <Link to="/drafts" onClick={() => setShowUserMenu(false)} className="block px-4 py-3 text-white/70 hover:bg-white/5 hover:text-white transition-colors text-sm border-t border-white/10">Drafts</Link>
                   <Link to="/feedback" onClick={() => setShowUserMenu(false)} className="block px-4 py-3 text-white/70 hover:bg-white/5 hover:text-white transition-colors text-sm border-t border-white/10">Liked &amp; Disliked</Link>
+                  {(user.role === "developer" || user.role === "admin") && (
+                    <Link to="/request-game" onClick={() => setShowUserMenu(false)} className="block px-4 py-3 text-white/70 hover:bg-white/5 hover:text-white transition-colors text-sm border-t border-white/10">Request a Game</Link>
+                  )}
                   <Link to="/settings" onClick={() => setShowUserMenu(false)} className="block px-4 py-3 text-white/70 hover:bg-white/5 hover:text-white transition-colors text-sm border-t border-white/10">Settings</Link>
                   {user.topGenres && user.topGenres.length > 0 && (
                     <div className="px-4 py-3 border-t border-white/10">
@@ -446,6 +449,9 @@ export function Header() {
                 <Link to="/following" onClick={closeMobile} className="px-4 py-3 text-white/70 hover:text-white hover:bg-white/5 rounded-xl transition-colors">Following</Link>
                 <Link to="/drafts" onClick={closeMobile} className="px-4 py-3 text-white/70 hover:text-white hover:bg-white/5 rounded-xl transition-colors">Drafts</Link>
                 <Link to="/feedback" onClick={closeMobile} className="px-4 py-3 text-white/70 hover:text-white hover:bg-white/5 rounded-xl transition-colors">Liked &amp; Disliked</Link>
+                {(user.role === "developer" || user.role === "admin") && (
+                  <Link to="/request-game" onClick={closeMobile} className="px-4 py-3 text-white/70 hover:text-white hover:bg-white/5 rounded-xl transition-colors">Request a Game</Link>
+                )}
                 <Link to="/settings" onClick={closeMobile} className="px-4 py-3 text-white/70 hover:text-white hover:bg-white/5 rounded-xl transition-colors">Settings</Link>
                 <button onClick={() => { handleSignOut(); closeMobile(); }} className="text-left px-4 py-3 text-white/60 hover:text-white hover:bg-white/5 rounded-xl transition-colors">Sign Out</button>
               </>

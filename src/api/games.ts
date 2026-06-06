@@ -82,3 +82,10 @@ export async function getGenres(): Promise<Genre[]> {
 export async function getThemes(): Promise<Theme[]> {
   return apiFetch<Theme[]>("/api/games/meta/themes");
 }
+
+export async function requestGameByIgdbId(igdbId: number): Promise<Game> {
+  return apiFetch<Game>("/api/games/request", {
+    method: "POST",
+    body:   JSON.stringify({ igdb_id: igdbId }),
+  });
+}

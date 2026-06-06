@@ -13,6 +13,7 @@ import { SearchPage } from "./components/SearchPage";
 import { SplashPage } from "./components/SplashPage";
 import { OnboardingPage } from "./components/OnboardingPage";
 import { FollowingFeedPage } from "./components/FollowingFeedPage";
+import { RequestGamePage } from "./components/RequestGamePage";
 import { AuthProvider } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { ScoringProvider } from "./context/ScoringContext";
@@ -60,6 +61,7 @@ export const router = createBrowserRouter([
           //{ path: "discover", Component: DiscoverPage },
           { path: "search", Component: SearchPage },
           { path: "explore", Component: SearchPage },
+          { path: "request-game", Component: RequestGamePage },
         ],
       },
     ],

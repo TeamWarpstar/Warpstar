@@ -8,6 +8,7 @@ export interface BackendUser {
   followers:     string[];
   following:     string[];
   preferences:   Record<string, unknown>;
+  role?:         string;
 }
 
 export async function getMe(): Promise<BackendUser> {
