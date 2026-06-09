@@ -194,7 +194,7 @@ export function NotificationsMenu() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-[calc(100vw-2rem)] sm:w-96 max-w-md max-h-[480px] bg-[#111111] border border-white/10 rounded-2xl overflow-hidden shadow-2xl shadow-black/60 z-[200] flex flex-col">
+        <div className="fixed left-3 right-3 top-16 w-auto sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-2 sm:w-96 max-w-md max-h-[480px] bg-[#111111] border border-white/10 rounded-2xl overflow-hidden shadow-2xl shadow-black/60 z-[200] flex flex-col">
           <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
             <h3 className="text-white font-semibold text-sm">Notifications</h3>
             {items.length > 0 && (

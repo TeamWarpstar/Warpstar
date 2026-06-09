@@ -15,7 +15,8 @@ interface StarPolarDiagramProps {
   /** Override the computed total — used by personalized scoring to resize the
    *  star and update the centre number without changing individual tip lengths. */
   overrideTotal?:   number;
-  /** When true, renders the centre score in italic to signal it's personalized. */
+  /** Marks the score as personalized. Currently has no visual effect (the
+   *  score renders upright); kept so callers can flag personalized totals. */
   isPersonalized?:  boolean;
   /** Number of Warpstar reviews backing these scores. Gold status requires a
    *  minimum number of reviews, so callers showing an aggregate game score
@@ -69,6 +70,32 @@ function smoothStarPath(scoreMap: Record<string, number>, rMin: number, rMax: nu
     d += ` C ${(cur[0]+(nxt[0]-prev[0])*t).toFixed(2)},${(cur[1]+(nxt[1]-prev[1])*t).toFixed(2)} ${(nxt[0]-(nn[0]-cur[0])*t).toFixed(2)},${(nxt[1]-(nn[1]-cur[1])*t).toFixed(2)} ${nxt[0].toFixed(2)},${nxt[1].toFixed(2)}`;
   }
   return d + " Z";
+}
+
+// Area centroid (centre of mass) of the star polygon — the point the eye reads
+// as the star's middle. For a lopsided star this sits away from the hub, toward
+// the heavier/longer tips, which is exactly where the centre number should go so
+// it looks centred in the colored shape rather than pinned to the convergence
+// point. Computed from the 10 polygon vertices via the standard shoelace
+// centroid; the smoothed outline's centroid is effectively identical.
+function starCentroid(scoreMap: Record<string, number>, rMin: number, rMax: number): [number, number] {
+  const pts: [number, number][] = [];
+  for (let i = 0; i < N; i++) {
+    pts.push(outerPt(i, scoreMap[FACTORS[i].key], rMin, rMax));
+    pts.push(innerPt(i, rMin));
+  }
+  let A = 0, cx = 0, cy = 0;
+  for (let i = 0; i < pts.length; i++) {
+    const [x0, y0] = pts[i];
+    const [x1, y1] = pts[(i + 1) % pts.length];
+    const cross = x0 * y1 - x1 * y0;
+    A  += cross;
+    cx += (x0 + x1) * cross;
+    cy += (y0 + y1) * cross;
+  }
+  A *= 0.5;
+  if (Math.abs(A) < 1e-6) return [0, 0];
+  return [cx / (6 * A), cy / (6 * A)];
 }
 
 function wedgePath(i: number, rMax: number): string {
@@ -144,6 +171,14 @@ export function StarPolarDiagram({
   const instanceId = useId().replace(/:/g, "");
   const scoreMap = scores as unknown as Record<string, number>;
   const starPath     = smoothStarPath(scoreMap, rMin, rMaxScaled);
+
+  // Shift the star so its centre of mass sits at the origin — where the centre
+  // number is overlaid — so the number looks centred in the colored shape on
+  // lopsided stars instead of pinned to the hub. Labelled stars keep the fixed
+  // frame their tip labels depend on, so they're left at the hub.
+  const [centroidX, centroidY] = showLabels ? [0, 0] : starCentroid(scoreMap, rMin, rMaxScaled);
+  const contentTransform = `translate(${(-centroidX).toFixed(2)} ${(-centroidY).toFixed(2)})`;
+
   const ghostStarPath = smoothStarPath(
     { gameplay: 10, aesthetics: 10, content: 10, polish: 10, narrative: 10 },
     rMax * 0.5, rMax
@@ -213,6 +248,7 @@ export function StarPolarDiagram({
           ))}
         </defs>
 
+        <g transform={contentTransform}>
         {/* Ghost star — full size outline at max, always visible */}
         <path d={ghostStarPath} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
 
@@ -313,6 +349,7 @@ export function StarPolarDiagram({
             </g>
           );
         })}
+        </g>
       </svg>
 
       {/* Center total */}
@@ -321,10 +358,8 @@ export function StarPolarDiagram({
           <div
             className="star-total"
             style={{
-              fontSize: isPersonalized ? size * 0.20 : size * 0.20,
+              fontSize: size * 0.20,
               fontWeight: 700,
-              fontStyle: isPersonalized ? "italic" : "normal",
-              transform: isPersonalized ? "translateX(-4%)" : undefined,
               color: "#ffffff",
               lineHeight: 1.1,
               textShadow:

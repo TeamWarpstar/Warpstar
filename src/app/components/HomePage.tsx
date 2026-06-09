@@ -1,8 +1,10 @@
 ﻿import { useEffect, useState } from "react";
 import { Link } from "react-router";
-import { ChevronLeft, ChevronRight, Loader2, Info, Compass } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, Compass } from "lucide-react";
 import { GameCard } from "./GameCard";
 import { ReviewCard } from "./ReviewCard";
+import { ScoreInfoButton } from "./ScoreInfoButton";
+import { useIsMobile } from "./ui/use-mobile";
 import { getRecentReviews, FollowingReview } from "../../api/reviews";
 import { getGames, Game } from "../../api/games";
 import {
@@ -42,6 +44,7 @@ function gameToCardProps(g: Game & { [k: string]: any }) {
 export function HomePage() {
   const { user }                                           = useAuth();
   const { personalizedScoring, togglePersonalizedScoring } = useScoring();
+  const isMobile = useIsMobile();
   const [recommended,    setRecommended]    = useState<Game[]>([]);
   const [trending,       setTrending]       = useState<Game[]>([]);
   const [loadingShell,   setLoadingShell]   = useState(true);   // top rated rail
@@ -50,7 +53,9 @@ export function HomePage() {
   const [feedback,       setFeedback]       = useState<Record<string, FeedbackType>>({});
   const [recentReviews,  setRecentReviews]  = useState<FollowingReview[]>([]);
   const [recentIdx,      setRecentIdx]      = useState(0);
-  const REC_PAGE_SIZE = 4;
+  // One recommendation at a time on mobile (big enough to use the thumbs
+  // feedback on a touch screen); a 4-up grid on larger screens.
+  const REC_PAGE_SIZE = isMobile ? 1 : 4;
 
   useEffect(() => {
     setLoadingShell(true);
@@ -113,8 +118,11 @@ export function HomePage() {
     }
   };
 
-  const recSlice   = recommended.slice(recPage * REC_PAGE_SIZE, (recPage + 1) * REC_PAGE_SIZE);
   const maxRecPage = Math.max(0, Math.ceil(recommended.length / REC_PAGE_SIZE) - 1);
+  // Clamp so toggling between the mobile (1-up) and desktop (4-up) page sizes
+  // can't leave us on a now-out-of-range page with an empty slice.
+  const recPageSafe = Math.min(recPage, maxRecPage);
+  const recSlice    = recommended.slice(recPageSafe * REC_PAGE_SIZE, (recPageSafe + 1) * REC_PAGE_SIZE);
 
   if (loadingShell) return (
     <div className="flex items-center justify-center h-64">
@@ -134,8 +142,7 @@ export function HomePage() {
           </h2>
           {user && (
             <div className="flex items-center gap-1.5">
-              <span className="sm:hidden text-xs text-white/40 font-medium"> Personalized Scores</span>
-              <span className="hidden sm:block text-xs text-white/40 font-medium">Personalized Scores</span>
+              <span className="text-xs text-white/40 font-medium">My Scores</span>
               <button
                 onClick={togglePersonalizedScoring}
                 className={`px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all ${
@@ -147,14 +154,7 @@ export function HomePage() {
               >
                 {personalizedScoring ? "On" : "Off"}
               </button>
-              <div className="relative group">
-                <button className="p-1 text-white/30 hover:text-white/60 transition-colors" aria-label="About personalized scores">
-                  <Info className="w-3.5 h-3.5" />
-                </button>
-                <div className="absolute right-0 top-full mt-2 w-56 bg-zinc-900 border border-white/15 rounded-lg p-3 text-xs text-white/60 leading-relaxed shadow-xl z-50 hidden group-hover:block pointer-events-none">
-                  Scores are re-weighted using your factor preferences from Settings. Games that excel in what you care about score higher than their community average.
-                </div>
-              </div>
+              <ScoreInfoButton />
             </div>
           )}
         </div>
@@ -172,13 +172,13 @@ export function HomePage() {
           </button>
 
           {loadingRec ? (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 lg:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 sm:gap-4 lg:gap-6 max-w-[260px] mx-auto sm:max-w-none sm:mx-0">
               {Array.from({ length: REC_PAGE_SIZE }).map((_, i) => (
                 <div key={i} className="aspect-[3/4] rounded-lg sm:rounded-xl bg-white/5 border border-white/10 animate-pulse" />
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 lg:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 sm:gap-4 lg:gap-6 max-w-[260px] mx-auto sm:max-w-none sm:mx-0">
               {recSlice.map(g => (
                 <GameCard
                   key={g.id}
@@ -194,7 +194,7 @@ export function HomePage() {
           {/* Right arrow — hidden on mobile, fades out when at last page */}
           <button
             onClick={() => setRecPage(p => Math.min(maxRecPage, p + 1))}
-            disabled={recPage >= maxRecPage}
+            disabled={recPageSafe >= maxRecPage}
             className="hidden sm:flex absolute -right-5 lg:-right-7 top-1/2 -translate-y-1/2 z-10 w-10 h-10 items-center justify-center bg-zinc-900 border border-white/25 rounded-full text-white shadow-lg hover:bg-zinc-800 hover:border-white/50 hover:scale-110 transition-all duration-150 disabled:opacity-0 disabled:pointer-events-none"
             aria-label="Next page"
           >
@@ -202,16 +202,17 @@ export function HomePage() {
           </button>
         </div>
 
-        {/* Page dots — clickable, visible on all screen sizes */}
+        {/* Page dots — desktop only; mobile pages one-at-a-time and would have
+            too many dots, so it uses the counter + prev/next row below instead. */}
         {!loadingRec && maxRecPage > 0 && (
-          <div className="flex justify-center items-center gap-2 mt-5">
+          <div className="hidden sm:flex justify-center items-center gap-2 mt-5">
             {Array.from({ length: maxRecPage + 1 }).map((_, i) => (
               <button
                 key={i}
                 onClick={() => setRecPage(i)}
                 aria-label={`Go to page ${i + 1}`}
                 className={`h-1.5 rounded-full transition-all duration-200 ${
-                  i === recPage
+                  i === recPageSafe
                     ? "bg-white w-6"
                     : "bg-white/25 w-1.5 hover:bg-white/50"
                 }`}
@@ -220,19 +221,23 @@ export function HomePage() {
           </div>
         )}
 
-        {/* Mobile-only prev/next row — shown below grid since side arrows don't fit */}
+        {/* Mobile-only prev/next row — shown below the single card since side
+            arrows don't fit; the counter stands in for the dot strip. */}
         {!loadingRec && maxRecPage > 0 && (
-          <div className="flex sm:hidden justify-center gap-3 mt-4">
+          <div className="flex sm:hidden justify-center items-center gap-3 mt-4">
             <button
               onClick={() => setRecPage(p => Math.max(0, p - 1))}
-              disabled={recPage === 0}
+              disabled={recPageSafe === 0}
               className="flex items-center gap-1.5 px-4 py-2 bg-white/5 border border-white/15 rounded-full text-white/60 text-sm disabled:opacity-30 hover:bg-white/10 transition-all"
             >
               <ChevronLeft className="w-4 h-4" /> Prev
             </button>
+            <span className="text-xs text-white/40 font-medium tabular-nums min-w-[3.5rem] text-center">
+              {recPageSafe + 1} / {maxRecPage + 1}
+            </span>
             <button
               onClick={() => setRecPage(p => Math.min(maxRecPage, p + 1))}
-              disabled={recPage >= maxRecPage}
+              disabled={recPageSafe >= maxRecPage}
               className="flex items-center gap-1.5 px-4 py-2 bg-white/5 border border-white/15 rounded-full text-white/60 text-sm disabled:opacity-30 hover:bg-white/10 transition-all"
             >
               Next <ChevronRight className="w-4 h-4" />

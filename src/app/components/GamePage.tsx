@@ -4,7 +4,8 @@ import { StarPolarDiagram } from "./StarPolarDiagram";
 import { ReviewCard } from "./ReviewCard";
 import { useState, useEffect } from "react";
 import { ImageWithFallback } from "./ImageWithFallback";
-import { Edit3, Heart, Loader2, Tag, Monitor, Building2, ArrowDown, ArrowUp, Info } from "lucide-react";
+import { Edit3, Heart, Loader2, Tag, Monitor, Building2, ArrowDown, ArrowUp } from "lucide-react";
+import { ScoreInfoButton } from "./ScoreInfoButton";
 import { getGame, getGameReviews, getSimilarGames, Game } from "../../api/games";
 import { toggleFavoriteGame, getUserByUsername } from "../../api/users";
 import { deleteReview } from "../../api/reviews";
@@ -218,14 +219,7 @@ export function GamePage() {
       >
         {personalizedScoring ? "On" : "Off"}
       </button>
-      <div className="relative group">
-        <button className="p-1 text-white/30 hover:text-white/60 transition-colors" aria-label="About personalized scores">
-          <Info className="w-3.5 h-3.5" />
-        </button>
-        <div className="absolute right-0 top-full mt-2 w-56 bg-zinc-900 border border-white/15 rounded-lg p-3 text-xs text-white/60 leading-relaxed shadow-xl z-50 hidden group-hover:block pointer-events-none">
-          Scores are re-weighted using your factor preferences from Settings. Games that excel in what you care about score higher than their community average.
-        </div>
-      </div>
+      <ScoreInfoButton />
     </div>
   ) : null;
 
@@ -596,11 +590,11 @@ export function GamePage() {
 
             <div className="flex gap-4">
 
-              <div className="flex-shrink-0 w-32 rounded-xl overflow-hidden border border-white/10 shadow-2xl">
+              <div className="flex-shrink-0 self-start w-28 sm:w-32 rounded-xl overflow-hidden border border-white/10 shadow-2xl">
                 <ImageWithFallback
                   src={game.coverUrl ?? ""}
                   alt={game.name}
-                  className="w-full aspect-[3/4] object-cover"
+                  className="block w-full aspect-[3/4] object-cover"
                 />
               </div>
 
@@ -682,16 +676,42 @@ export function GamePage() {
 
             <div className="space-y-3">
 
+              {(game.genres ?? []).length > 0 && (
+                <div>
+                  <div className="flex items-center gap-1.5 text-xs text-white/40 mb-2">
+                    <Tag className="w-3 h-3" />
+                    Genres
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {game.genres.map(g => (
+                      <Link
+                        key={g}
+                        to={`/genre/${g.toLowerCase()}`}
+                        className="px-2.5 py-1 bg-white/5 border border-white/10 rounded-full text-xs text-white/60 hover:border-white/30 hover:text-white transition-colors"
+                      >
+                        {g}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {(game.platforms ?? []).length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {game.platforms.map((p: string) => (
-                    <span
-                      key={p}
-                      className="px-2 sm:px-3 py-1 bg-white/8 text-white/70 rounded-md border border-white/15 text-sm"
-                    >
-                      {p}
-                    </span>
-                  ))}
+                <div>
+                  <div className="flex items-center gap-1.5 text-xs text-white/40 mb-2">
+                    <Monitor className="w-3 h-3" />
+                    Platforms
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {game.platforms.map((p: string) => (
+                      <span
+                        key={p}
+                        className="px-2 sm:px-3 py-1 bg-white/8 text-white/70 rounded-md border border-white/15 text-sm"
+                      >
+                        {p}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               )}
 

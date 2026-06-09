@@ -171,10 +171,11 @@ export function GameCard({ id, title, coverArt, platforms, developer, year, genr
               <h3 className="text-white font-bold text-base leading-tight line-clamp-2 drop-shadow !text-white">{title}</h3>
             </div>
 
-            {/* Thumbs feedback + "Why?" — only rendered for recommendation cards */}
+            {/* Thumbs feedback + "Why?" — only rendered for recommendation cards.
+                Always visible on touch (no hover); larger tap targets on mobile. */}
             {(onFeedback || hasReasons) && (
               <div
-                className={`absolute top-2 left-2 flex gap-1.5 z-10 transition-opacity duration-200 ${hovered ? "opacity-100" : "opacity-0 sm:opacity-90"}`}
+                className={`absolute top-2 left-2 flex gap-1.5 z-10 transition-opacity duration-200 ${hovered ? "opacity-100" : "opacity-100 sm:opacity-90"}`}
               >
                 {onFeedback && (
                   <>
@@ -185,11 +186,11 @@ export function GameCard({ id, title, coverArt, platforms, developer, year, genr
                         onFeedback(feedback === "up" ? null : "up");
                       }}
                       aria-label={feedback === "up" ? "Remove like" : "More like this"}
-                      className={`p-1.5 rounded-full backdrop-blur-md border transition-all ${
+                      className={`p-2 sm:p-1.5 rounded-full backdrop-blur-md border transition-all ${
                         feedback === "up" ? activeUpBtn : inactiveBtn
                       }`}
                     >
-                      <ThumbsUp className="w-3.5 h-3.5" />
+                      <ThumbsUp className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                     </button>
                     <button
                       onClick={(e) => {
@@ -198,11 +199,11 @@ export function GameCard({ id, title, coverArt, platforms, developer, year, genr
                         onFeedback(feedback === "down" ? null : "down");
                       }}
                       aria-label={feedback === "down" ? "Remove dislike" : "Not interested"}
-                      className={`p-1.5 rounded-full backdrop-blur-md border transition-all ${
+                      className={`p-2 sm:p-1.5 rounded-full backdrop-blur-md border transition-all ${
                         feedback === "down" ? activeDownBtn : inactiveBtn
                       }`}
                     >
-                      <ThumbsDown className="w-3.5 h-3.5" />
+                      <ThumbsDown className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                     </button>
                   </>
                 )}
@@ -214,9 +215,9 @@ export function GameCard({ id, title, coverArt, platforms, developer, year, genr
                       setShowWhy(true);
                     }}
                     aria-label="Why this was recommended"
-                    className={`p-1.5 rounded-full backdrop-blur-md border transition-all ${inactiveBtn} ${helpBtnHover}`}
+                    className={`p-2 sm:p-1.5 rounded-full backdrop-blur-md border transition-all ${inactiveBtn} ${helpBtnHover}`}
                   >
-                    <HelpCircle className="w-3.5 h-3.5" />
+                    <HelpCircle className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                   </button>
                 )}
               </div>

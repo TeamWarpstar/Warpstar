@@ -211,7 +211,7 @@ export function SettingsPage() {
             <div>
               <label className="block text-white/70 mb-2 font-semibold">Profile Picture</label>
               <div className="flex items-center gap-4">
-                <div className="w-20 h-20 rounded-full bg-zinc-700 flex items-center justify-center overflow-hidden ring-2 ring-white/15">
+                <div className="flex-shrink-0 w-20 h-20 rounded-full bg-zinc-700 flex items-center justify-center overflow-hidden ring-2 ring-white/15">
                   {profilePicture
                     ? <img src={profilePicture} alt="Profile" className="w-full h-full object-cover" />
                     : <User className="w-10 h-10 text-white" />
@@ -226,7 +226,7 @@ export function SettingsPage() {
 
             <div>
               <label className="block text-white/70 mb-2 font-semibold">Profile Banner</label>
-              <div className="relative h-32 rounded-lg overflow-hidden bg-gradient-to-r from-zinc-900 via-zinc-800 to-zinc-900 mb-3 cursor-pointer group" onClick={() => handleFileUpload("banner")}>
+              <div className="relative w-full max-w-md aspect-[13/2] rounded-lg overflow-hidden bg-gradient-to-r from-zinc-900 via-zinc-800 to-zinc-900 mb-3 cursor-pointer group" onClick={() => handleFileUpload("banner")}>
                 {bannerImage
                   ? <img src={bannerImage} alt="Banner" className="w-full h-full object-cover" />
                   : <div className="absolute inset-0 flex items-center justify-center"><Upload className="w-8 h-8 text-white/30 group-hover:text-white/60 transition-colors" /></div>
